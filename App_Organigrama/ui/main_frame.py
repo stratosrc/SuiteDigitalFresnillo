@@ -565,9 +565,7 @@ class MainFrame(ctk.CTkFrame):
         self._update_window_title()
 
     def _update_window_title(self) -> None:
-        suffix = " *" if self.is_dirty else ""
-        project_name = self.current_project_path.name if self.current_project_path is not None else "sin_guardar.json"
-        self.master.title(f"Organigramas | {project_name}{suffix}")
+        self.master.title(f"Organigramas")
 
     def _load_document_into_ui(self, document: OrgGridDocument) -> None:
         self._metadata_sync_paused = True

@@ -30,6 +30,7 @@ from App_Organigrama.ui.theme import (
 
 
 GridPoint = tuple[float, float]
+SELECTION_BLINK_INTERVAL_MS = 420
 
 
 class OrgGridCanvas(ctk.CTkFrame):
@@ -66,6 +67,8 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.block_mode = False
         self.selected_node_id: str | None = None
         self.selected_connection_id: str | None = None
+        self.selection_blink_visible = True
+        self.selection_blink_after_id: str | None = None
         self.pending_connection_source_id: str | None = None
         self.pending_source_port: str | None = None
         self.hover_port: tuple[str, str] | None = None
@@ -107,6 +110,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.document = document
         self.selected_node_id = None
         self.selected_connection_id = None
+        self._sync_selection_blink()
         self.pending_connection_source_id = None
         self.pending_source_port = None
         self.hover_port = None
@@ -219,9 +223,10 @@ class OrgGridCanvas(ctk.CTkFrame):
                 screen_x, screen_y = self._world_to_screen(world_x, world_y)
                 points.extend((screen_x, screen_y))
             selected = route.connection.id == self.selected_connection_id
+            selected_fill = SELECTION_COLOR if self.selection_blink_visible else PRIMARY_BUTTON
             self.canvas.create_line(
                 *points,
-                fill=SELECTION_COLOR if selected else PRIMARY_BUTTON,
+                fill=selected_fill if selected else PRIMARY_BUTTON,
                 width=max(2, int(self.rendering_engine.base_line_width * self.zoom * (1.7 if selected else 1.0))),
                 capstyle="butt",
                 joinstyle="miter",
@@ -236,18 +241,21 @@ class OrgGridCanvas(ctk.CTkFrame):
                 delta_x = self.drag_screen_point[0] - screen_layout.center_x
                 delta_y = self.drag_screen_point[1] - screen_layout.center_y
                 screen_layout = self._offset_screen_layout(screen_layout, delta_x, delta_y)
-            outline = (
-                SELECTION_COLOR
-                if node.id in {self.selected_node_id, self.pending_connection_source_id}
-                else node.color
-            )
-            outline_width = 3 if outline == SELECTION_COLOR else 1
+            selected = node.id == self.selected_node_id
+            pending_connection_source = node.id == self.pending_connection_source_id
+            outline = node.color
+            if selected:
+                outline = SELECTION_COLOR if self.selection_blink_visible else ""
+            elif pending_connection_source:
+                outline = SELECTION_COLOR
+            outline_width = 3 if selected or pending_connection_source else 1
             tag = ("node", f"node:{node.id}")
-            self.canvas.create_rectangle(
+            self._create_rounded_rectangle(
                 screen_layout.box.left,
                 screen_layout.box.top,
                 screen_layout.box.right,
                 screen_layout.box.bottom,
+                radius=max(0, int(12 * self.zoom)),
                 fill=node.color,
                 outline=outline,
                 width=outline_width,
@@ -288,6 +296,47 @@ class OrgGridCanvas(ctk.CTkFrame):
                     anchor="n",
                     tags=tag,
                 )
+
+    def _create_rounded_rectangle(
+        self,
+        left: float,
+        top: float,
+        right: float,
+        bottom: float,
+        radius: int,
+        **options: object,
+    ) -> int:
+        radius = min(radius, int((right - left) / 2), int((bottom - top) / 2))
+        if radius <= 0:
+            return self.canvas.create_rectangle(left, top, right, bottom, **options)
+
+        points = [
+            left + radius,
+            top,
+            right - radius,
+            top,
+            right,
+            top,
+            right,
+            top + radius,
+            right,
+            bottom - radius,
+            right,
+            bottom,
+            right - radius,
+            bottom,
+            left + radius,
+            bottom,
+            left,
+            bottom,
+            left,
+            bottom - radius,
+            left,
+            top + radius,
+            left,
+            top,
+        ]
+        return self.canvas.create_polygon(points, smooth=True, splinesteps=12, **options)
 
     def _draw_blocked_points(self) -> None:
         size = max(5, int(7 * self.zoom))
@@ -552,9 +601,7 @@ class OrgGridCanvas(ctk.CTkFrame):
             self.pending_source_port = None
             self.hover_port = None
             if new_connection is not None:
-                self.selected_connection_id = new_connection.id
-                self.selected_node_id = None
-                self._emit_selection_change()
+                self._set_selection(connection_id=new_connection.id)
                 self._mark_document_changed()
         self.request_redraw()
 
@@ -656,19 +703,17 @@ class OrgGridCanvas(ctk.CTkFrame):
             self.document.remove_node(node_id)
             self.node_history = [item for item in self.node_history if item != node_id]
             self.last_node_id = self.node_history[-1] if self.node_history else None
-            self.selected_node_id = None
             self.pending_connection_source_id = None
             self.pending_source_port = None
-            self._emit_selection_change()
+            self._set_selection()
             self._mark_document_changed()
             return
 
         if self.selected_connection_id is not None:
             removed = self.document.remove_connection(self.selected_connection_id)
-            self.selected_connection_id = None
             self.pending_connection_source_id = None
             self.pending_source_port = None
-            self._emit_selection_change()
+            self._set_selection()
             if removed:
                 self._mark_document_changed()
             else:
@@ -784,7 +829,33 @@ class OrgGridCanvas(ctk.CTkFrame):
     ) -> None:
         self.selected_node_id = node_id
         self.selected_connection_id = connection_id
+        self._sync_selection_blink()
         self._emit_selection_change()
+
+    def _sync_selection_blink(self) -> None:
+        if self.selected_node_id is not None or self.selected_connection_id is not None:
+            if self.selection_blink_after_id is None:
+                self.selection_blink_visible = True
+                self._schedule_selection_blink()
+            return
+
+        if self.selection_blink_after_id is not None:
+            self.after_cancel(self.selection_blink_after_id)
+            self.selection_blink_after_id = None
+        self.selection_blink_visible = True
+
+    def _schedule_selection_blink(self) -> None:
+        self.selection_blink_after_id = self.after(SELECTION_BLINK_INTERVAL_MS, self._toggle_selection_blink)
+
+    def _toggle_selection_blink(self) -> None:
+        self.selection_blink_after_id = None
+        if self.selected_node_id is None and self.selected_connection_id is None:
+            self.selection_blink_visible = True
+            return
+
+        self.selection_blink_visible = not self.selection_blink_visible
+        self.request_redraw()
+        self._schedule_selection_blink()
 
     def _cancel_connection(self, _event: tk.Event[tk.Canvas] | None = None) -> None:
         self.pending_connection_source_id = None
@@ -935,3 +1006,12 @@ class OrgGridCanvas(ctk.CTkFrame):
             logo_center_y=layout.logo_center_y + delta_y,
             logo_image_size=layout.logo_image_size,
         )
+
+    def destroy(self) -> None:
+        if self.selection_blink_after_id is not None:
+            self.after_cancel(self.selection_blink_after_id)
+            self.selection_blink_after_id = None
+        if self.redraw_after_id is not None:
+            self.after_cancel(self.redraw_after_id)
+            self.redraw_after_id = None
+        super().destroy()

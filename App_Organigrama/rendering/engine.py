@@ -119,11 +119,11 @@ class RenderingEngine:
     base_node_min_height: float = 87.0
     base_logo_radius: float = 44.0
     base_line_width: float = 2.1
-    base_text_padding_x: float = 18.0
-    base_text_padding_y: float = 24.0
-    base_text_gap: float = 5.0
-    base_name_font_size: float = 14.0
-    base_role_font_size: float = 11.0
+    base_text_padding_x: float = 2.0
+    base_text_padding_y: float = 22.0
+    base_text_gap: float = 2.0
+    base_name_font_size: float = 16.0
+    base_role_font_size: float = 14.0
 
     def normalize_orientation(self, orientation: str) -> str:
         return VERTICAL_ORIENTATION if orientation == VERTICAL_ORIENTATION else HORIZONTAL_ORIENTATION
@@ -134,20 +134,20 @@ class RenderingEngine:
             return PageLayout(
                 width=612.0,
                 height=792.0,
-                margin_left=42.0,
-                margin_top=36.0,
-                margin_right=42.0,
-                margin_bottom=42.0,
+                margin_left=12.0,
+                margin_top=16.0,
+                margin_right=12.0,
+                margin_bottom=12.0,
                 header_height=132.0,
             )
 
         return PageLayout(
             width=792.0,
             height=612.0,
-            margin_left=42.0,
-            margin_top=32.0,
-            margin_right=42.0,
-            margin_bottom=36.0,
+            margin_left=12.0,
+            margin_top=16.0,
+            margin_right=12.0,
+            margin_bottom=12.0,
             header_height=112.0,
         )
 
@@ -175,7 +175,7 @@ class RenderingEngine:
             text_padding_y=self.base_text_padding_y,
             text_gap=self.base_text_gap,
             logo_radius=self.base_logo_radius,
-            logo_center_offset_y=-2.0,
+            logo_center_offset_y=-17.0,
             connection_line_width=self.base_line_width,
         )
 

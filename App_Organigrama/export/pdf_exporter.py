@@ -124,7 +124,7 @@ class PdfOrgChartExporter:
             pdf.drawImage(
                 str(WATERMARK_LOGO_PATH),
                 (page_layout.width / 2) - 232,
-                (page_layout.height / 2) - 297,
+                (page_layout.height / 2) - 310,
                 width=465,
                 height=633,
                 mask="auto",
@@ -210,7 +210,7 @@ class PdfOrgChartExporter:
         x, y, width, height = transform.box_to_pdf(layout.box)
         pdf.setFillColor(HexColor(node.color))
         pdf.setStrokeColor(HexColor(node.color))
-        pdf.roundRect(x, y, width, height, 0, fill=True, stroke=True)
+        pdf.roundRect(x, y, width, height, 5, fill=True, stroke=True)
 
         if show_logo:
             self._draw_node_logo(pdf, transform, layout, node.color)

@@ -43,7 +43,7 @@ HELP_DIALOG = {
             [
                 "Deshacer: Permite revertir la última acción realizada.",
                 "Rehacer: Se utiliza para rehacer una acción antes deshecha.",
-                "Eliminar recuadro: Elimina el cuadro de censura seleccionado actual.",
+                "Eliminar recuadro: Elimina el cuadro de testado seleccionado actual.",
                 "Salir: Cierra de forma segura la aplicación.",
             ],
         ),
@@ -57,9 +57,9 @@ HELP_DIALOG = {
             ],
         ),
         (
-            "3. HERRAMIENTAS DE TESTADO (CENSURA)",
+            "3. HERRAMIENTAS DE TESTADO",
             [
-                "Testar un dato: Simplemente haz clic izquierdo y arrastra el cursor sobre el texto que deseas censurar.",
+                "Testar un dato: Simplemente haz clic izquierdo y arrastra el cursor sobre el texto que deseas testar.",
                 "Barra de buscar: Sirve para encontrar un elemento predeterminado dentro del catálogo.",
                 "Información Reservada: Clasifica y testa un dato bajo el fundamento de información reservada.",
                 "Confidencial: Clasifica y testa un dato por contener información confidencial.",
