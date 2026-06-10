@@ -1,13 +1,14 @@
 """PDF loading, rendering, and export helpers."""
 
+from __future__ import annotations
+
 import os
-import tkinter as tk
-from tkinter import filedialog, messagebox
+from typing import Mapping, Optional, Protocol, TypedDict
 
 import fitz
 from PIL import Image, ImageTk
 
-from App_TestData.testdata_components.config.ui_strings import NAVIGATION_LABELS, PDF_MANAGER_MESSAGES
+from App_TestData.testdata_components.config.ui_strings import PDF_MANAGER_MESSAGES
 from App_TestData.testdata_components.constants import (
     CANVAS_DEFAULT_WIDTH,
     CANVAS_MIN_WIDTH,
@@ -16,14 +17,11 @@ from App_TestData.testdata_components.constants import (
     PDF_SUMMARY_PAGE_MARGIN_X,
     PDF_SUMMARY_PAGE_TITLE_HEIGHT,
     PDF_WATERMARK_LOGO_PATH,
-    RECTANGLE_FILL_COLOR_ACTIVE,
-    RECTANGLE_FONT_NAME,
-    RECTANGLE_FONT_SIZE,
-    RECTANGLE_OUTLINE_COLOR_NORMAL,
-    RECTANGLE_OUTLINE_COLOR_SELECTED,
-    RECTANGLE_OUTLINE_WIDTH_NORMAL,
-    RECTANGLE_OUTLINE_WIDTH_SELECTED,
-    RECTANGLE_TEXT_COLOR,
+)
+from App_TestData.testdata_components.logic.document_state import (
+    CommitteeData,
+    DocumentState,
+    RectangleData,
 )
 from App_TestData.testdata_components.logic.editing_functions import iter_rectangles_in_order
 from App_TestData.testdata_components.logic.zoom_functions import get_auto_zoom
@@ -34,14 +32,57 @@ _SEGOE_FITZ_FONT = None
 PDF_FONT_REGULAR = "SegoeUI"
 
 
-def _fitz_font_kwargs():
+class DrawnRectangle(TypedDict, total=False):
+    """Canvas item identifiers returned after drawing a rectangle."""
+
+    canvas_rect_id: int
+    canvas_text_id: int
+
+
+class PdfUiCallbacks(Protocol):
+    """Callbacks used by the PDF manager to communicate with the UI layer."""
+
+    def request_pdf_file_path(self) -> Optional[str]:
+        """Ask the UI for a PDF path."""
+
+    def clear_document_view(self) -> None:
+        """Clear all rendered document artifacts from the UI."""
+
+    def set_status(self, message: str) -> None:
+        """Update the user-visible status text."""
+
+    def show_error(self, title: str, message: str) -> None:
+        """Show an error message."""
+
+    def get_canvas_width(self) -> int:
+        """Return the current PDF canvas width."""
+
+    def draw_page_image(self, image: ImageTk.PhotoImage, width: int, height: int) -> None:
+        """Draw a rendered PDF page."""
+
+    def update_page_controls(self, current_page: int, total_pages: int) -> None:
+        """Synchronize page navigation controls."""
+
+    def update_zoom_label(self) -> None:
+        """Synchronize the zoom label."""
+
+    def draw_rectangle(
+        self,
+        rectangle: RectangleData,
+        coords: tuple[float, float, float, float],
+        is_selected: bool,
+    ) -> DrawnRectangle:
+        """Draw one redaction rectangle and return its canvas item ids."""
+
+
+def _fitz_font_kwargs() -> dict[str, str]:
     """Return the font configuration used to write text into PDFs."""
     if os.path.exists(SEGOE_UI_FONT_FILE):
         return {"fontname": PDF_FONT_REGULAR, "fontfile": SEGOE_UI_FONT_FILE}
     return {}
 
 
-def _fitz_text_width(text, fontsize):
+def _fitz_text_width(text: str, fontsize: float) -> float:
     """Estimate the rendered width of text in the export font."""
     global _SEGOE_FITZ_FONT
 
@@ -56,157 +97,136 @@ def _fitz_text_width(text, fontsize):
 class PDFManager:
     """Coordinate PDF loading, rendering, and export."""
 
-    def __init__(self, app):
-        self.app = app
+    def __init__(
+        self,
+        state: DocumentState,
+        callbacks: PdfUiCallbacks,
+        concept_categories: Mapping[int, str],
+    ) -> None:
+        self._state = state
+        self._callbacks = callbacks
+        self._concept_categories = concept_categories
 
-    def load_pdf(self):
-        """Load a PDF file and reset the related application state."""
-        file_path = filedialog.askopenfilename(
-            parent=self.app,
-            title=PDF_MANAGER_MESSAGES["load_dialog_title"],
-            filetypes=[(PDF_MANAGER_MESSAGES["load_dialog_filetypes_label"], "*.pdf")],
-        )
+    def init_new_job(self) -> bool:
+        """Reset the active job and load a newly selected PDF."""
+        self.reset_current_job()
+        return self.load_new_job_pdf()
+
+    def reset_current_job(self) -> None:
+        """Clear all document data and rendered UI artifacts."""
+        self._state.reset_for_new_job()
+        self._callbacks.clear_document_view()
+
+    def load_new_job_pdf(self) -> bool:
+        """Ask the user for a PDF and load it into the reset job state."""
+        file_path = self._callbacks.request_pdf_file_path()
 
         if not file_path:
-            return
+            self._callbacks.set_status(PDF_MANAGER_MESSAGES["new_job_cancelled_status"])
+            return False
 
         if not os.path.isfile(file_path):
-            messagebox.showerror(
+            self._callbacks.show_error(
                 PDF_MANAGER_MESSAGES["missing_file_title"],
                 PDF_MANAGER_MESSAGES["missing_file_message"].format(file_path=file_path),
-                parent=self.app,
             )
-            return
+            return False
 
-        self.app.current_pdf_path = file_path
-        self.app.current_page = 0
-        self.app.censored_rectangles.clear()
-        self.app.undo_stack.clear()
-        self.app.redo_stack.clear()
-        self.app.next_rectangle_id = 1
-        self.app.selected_rect_id = None
-        self.app.current_zoom = None
+        self._state.current_pdf_path = file_path
 
         try:
-            if self.app.pdf_document:
-                self.app.pdf_document.close()
-
-            self.app.pdf_document = fitz.open(file_path)
-            self.render_current_page()
-            self.app.message_label.configure(text=PDF_MANAGER_MESSAGES["loaded_status"])
+            self._state.pdf_document = fitz.open(file_path)
+            if self.render_current_page():
+                self._callbacks.set_status(PDF_MANAGER_MESSAGES["loaded_status"])
+                return True
+            return False
         except fitz.FileError:
-            self.app.message_label.configure(text=PDF_MANAGER_MESSAGES["invalid_pdf_status"])
-            messagebox.showerror(
+            self._state.reset_for_new_job()
+            self._callbacks.clear_document_view()
+            self._callbacks.set_status(PDF_MANAGER_MESSAGES["invalid_pdf_status"])
+            self._callbacks.show_error(
                 PDF_MANAGER_MESSAGES["invalid_pdf_title"],
                 PDF_MANAGER_MESSAGES["invalid_pdf_message"],
-                parent=self.app,
             )
+            return False
         except Exception as error:
-            self.app.message_label.configure(text=PDF_MANAGER_MESSAGES["load_error_status"])
-            messagebox.showerror(
+            self._state.reset_for_new_job()
+            self._callbacks.clear_document_view()
+            self._callbacks.set_status(PDF_MANAGER_MESSAGES["load_error_status"])
+            self._callbacks.show_error(
                 PDF_MANAGER_MESSAGES["load_error_title"],
                 PDF_MANAGER_MESSAGES["load_error_message"].format(error=error),
-                parent=self.app,
             )
+            return False
 
-    def render_current_page(self):
+    def render_current_page(self) -> bool:
         """Render the active page on the Tk canvas and redraw rectangles."""
-        if not self.app.pdf_document:
-            return
+        if not self._state.pdf_document:
+            return False
 
         try:
-            page = self.app.pdf_document[self.app.current_page]
+            page = self._state.pdf_document[self._state.current_page]
             pdf_width = page.rect.width
 
-            canvas_width = self.app.pdf_canvas.winfo_width() - CANVAS_PADDING
+            canvas_width = self._callbacks.get_canvas_width() - CANVAS_PADDING
             if canvas_width < CANVAS_MIN_WIDTH:
                 canvas_width = CANVAS_DEFAULT_WIDTH
 
-            if self.app.current_zoom is None:
-                self.app.current_zoom = get_auto_zoom(pdf_width, canvas_width)
-                self.app._update_zoom_label()
+            if self._state.current_zoom is None:
+                self._state.current_zoom = get_auto_zoom(pdf_width, canvas_width)
+                self._callbacks.update_zoom_label()
 
-            matrix = fitz.Matrix(self.app.current_zoom, self.app.current_zoom)
-            pixmap = page.get_pixmap(matrix=matrix)
+            matrix = fitz.Matrix(self._state.current_zoom, self._state.current_zoom)
+            pixmap = page.get_pixmap(matrix=matrix, colorspace=fitz.csRGB, alpha=False)
 
             image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
-            self.app.pdf_page_image = ImageTk.PhotoImage(image)
+            self._state.pdf_page_image = ImageTk.PhotoImage(image)
+            self._callbacks.draw_page_image(self._state.pdf_page_image, pixmap.width, pixmap.height)
 
-            self.app.pdf_canvas.delete("all")
-            self.app.pdf_canvas.create_image(0, 0, anchor=tk.NW, image=self.app.pdf_page_image)
-            self.app.pdf_canvas.config(scrollregion=(0, 0, pixmap.width, pixmap.height))
-
-            total_pages = len(self.app.pdf_document)
-            file_name = os.path.basename(self.app.current_pdf_path)
-            self.app.message_label.configure(
-                text=PDF_MANAGER_MESSAGES["file_status"].format(file_name=file_name)
+            total_pages = len(self._state.pdf_document)
+            file_name = os.path.basename(self._state.current_pdf_path or "")
+            self._callbacks.set_status(
+                PDF_MANAGER_MESSAGES["file_status"].format(file_name=file_name)
             )
+            self._callbacks.update_page_controls(self._state.current_page, total_pages)
 
-            self.app.page_entry.delete(0, tk.END)
-            self.app.page_entry.insert(0, str(self.app.current_page + 1))
-            self.app.total_pages_label.configure(
-                text=NAVIGATION_LABELS["total_pages"].format(total_pages=total_pages)
-            )
-
-            for rect_data in self.app.censored_rectangles:
+            for rect_data in self._state.censored_rectangles:
                 rect_data["canvas_rect_id"] = None
                 rect_data["canvas_text_id"] = None
 
-                if rect_data["page"] != self.app.current_page:
+                if rect_data["page"] != self._state.current_page:
                     continue
 
                 x1, y1, x2, y2 = self.pdf_rect_to_canvas(rect_data)
-                is_selected = rect_data["id"] == self.app.selected_rect_id
+                is_selected = rect_data["id"] == self._state.selected_rect_id
                 rect_tag = rect_data.get("rect_tag", f"rect-{rect_data['id']}")
                 rect_data["rect_tag"] = rect_tag
 
-                rect_data["canvas_rect_id"] = self.app.pdf_canvas.create_rectangle(
-                    x1,
-                    y1,
-                    x2,
-                    y2,
-                    fill=RECTANGLE_FILL_COLOR_ACTIVE,
-                    outline=(
-                        RECTANGLE_OUTLINE_COLOR_SELECTED
-                        if is_selected
-                        else RECTANGLE_OUTLINE_COLOR_NORMAL
-                    ),
-                    width=(
-                        RECTANGLE_OUTLINE_WIDTH_SELECTED
-                        if is_selected
-                        else RECTANGLE_OUTLINE_WIDTH_NORMAL
-                    ),
-                    tags=(rect_tag, "censored_rect"),
+                drawn_items = self._callbacks.draw_rectangle(
+                    rect_data,
+                    (x1, y1, x2, y2),
+                    is_selected,
                 )
-                rect_data["canvas_text_id"] = self.app.pdf_canvas.create_text(
-                    (x1 + x2) / 2,
-                    (y1 + y2) / 2,
-                    text=rect_data.get(
-                        "display_text",
-                        rect_data.get("concept_name", rect_data.get("label", "")),
-                    ),
-                    fill=RECTANGLE_TEXT_COLOR,
-                    font=(RECTANGLE_FONT_NAME, RECTANGLE_FONT_SIZE, "bold"),
-                    tags=(rect_tag, "censored_text"),
-                )
+                rect_data.update(drawn_items)
+            return True
         except Exception as error:
-            self.app.message_label.configure(text=PDF_MANAGER_MESSAGES["render_error_status"])
-            messagebox.showerror(
+            self._callbacks.set_status(PDF_MANAGER_MESSAGES["render_error_status"])
+            self._callbacks.show_error(
                 PDF_MANAGER_MESSAGES["render_error_title"],
                 PDF_MANAGER_MESSAGES["render_error_message"].format(error=error),
-                parent=self.app,
             )
+            return False
 
-    def canvas_to_pdf_rect(self, x1, y1, x2, y2):
+    def canvas_to_pdf_rect(self, x1: float, y1: float, x2: float, y2: float) -> tuple[float, float, float, float]:
         """Convert canvas coordinates into PDF coordinates."""
-        zoom = self.app.current_zoom or 1
+        zoom = self._state.current_zoom or 1
         left, right = sorted((x1 / zoom, x2 / zoom))
         top, bottom = sorted((y1 / zoom, y2 / zoom))
         return left, top, right, bottom
 
-    def pdf_rect_to_canvas(self, rect_data):
+    def pdf_rect_to_canvas(self, rect_data: RectangleData) -> tuple[float, float, float, float]:
         """Convert PDF rectangle coordinates into canvas coordinates."""
-        zoom = self.app.current_zoom or 1
+        zoom = self._state.current_zoom or 1
         return (
             rect_data["x1"] * zoom,
             rect_data["y1"] * zoom,
@@ -214,13 +234,13 @@ class PDFManager:
             rect_data["y2"] * zoom,
         )
 
-    def generate_pdf(self, output_path, committee_data=None):
+    def generate_pdf(self, output_path: str, committee_data: Optional[CommitteeData] = None) -> None:
         """Generate the exported PDF including redactions and summary pages."""
-        if not self.app.current_pdf_path:
+        if not self._state.current_pdf_path or not self._state.pdf_document:
             raise ValueError("No PDF loaded.")
 
-        output_document = fitz.open(stream=self.app.pdf_document.tobytes(), filetype="pdf")
-        ordered_rectangles = iter_rectangles_in_order(self.app.censored_rectangles)
+        output_document = fitz.open(stream=self._state.pdf_document.tobytes(), filetype="pdf")
+        ordered_rectangles = iter_rectangles_in_order(self._state.censored_rectangles)
 
         try:
             self._assign_final_numbers(ordered_rectangles)
@@ -394,7 +414,7 @@ class PDFManager:
 
     def _legal_reference_for_concept(self, concept_id):
         """Return the legal reference derived from the concept category."""
-        category = self.app.catalogue_categories.get(concept_id, "normal")
+        category = self._concept_categories.get(concept_id, "normal")
         if category == "sensitive":
             return "artículo 3, sección X, inciso a"
         if category == "biometric":

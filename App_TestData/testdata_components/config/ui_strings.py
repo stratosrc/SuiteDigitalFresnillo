@@ -4,7 +4,7 @@ APP_WINDOW_TITLE = "Test Data"
 
 FILE_MENU_LABELS = {
     "button": "Archivo",
-    "load_pdf": "Cargar PDF",
+    "new_job": "Nuevo Trabajo",
     "save_pdf": "Guardar PDF Testado",
 }
 
@@ -23,7 +23,7 @@ ACTION_LABELS = {
 }
 
 CONTENT_LABELS = {
-    "empty_state": "Carga un PDF.",
+    "empty_state": "Inicia un nuevo trabajo.",
 }
 
 NAVIGATION_LABELS = {
@@ -194,6 +194,7 @@ PDF_MANAGER_MESSAGES = {
     "load_dialog_filetypes_label": "Archivos PDF",
     "missing_file_title": "Error",
     "missing_file_message": "El archivo no existe: {file_path}",
+    "new_job_cancelled_status": "Nuevo trabajo cancelado.",
     "loaded_status": "PDF cargado correctamente.",
     "invalid_pdf_status": "Error: Archivo PDF inválido.",
     "invalid_pdf_title": "Error",

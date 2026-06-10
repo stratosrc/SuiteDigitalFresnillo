@@ -132,12 +132,12 @@ class PdfOrgChartExporter:
             pdf.restoreState()
 
         if BANNER_LOGO_PATH.exists():
-            banner_width = 172.5
-            banner_height = 77.625
+            banner_width = 200
+            banner_height = 100
             pdf.drawImage(
                 str(BANNER_LOGO_PATH),
-                12,
-                page_layout.height - banner_height - 10,
+                1,
+                page_layout.height - banner_height + 12,
                 width=banner_width,
                 height=banner_height,
                 mask="auto",
@@ -152,7 +152,7 @@ class PdfOrgChartExporter:
             title_y = page_layout.height - 98
             period_y = title_y - 28
 
-        title_font_size = self._fit_text_size(pdf, title, PDF_FONT_BOLD, 28.0, page_layout.width - 210)
+        title_font_size = self._fit_text_size(pdf, title, PDF_FONT_BOLD, 20.0, page_layout.width - 210)
         pdf.setFillColor(HexColor("#263238"))
         pdf.setFont(PDF_FONT_BOLD, title_font_size)
         pdf.drawCentredString(page_layout.width / 2, title_y, title)
@@ -219,7 +219,7 @@ class PdfOrgChartExporter:
         for line in layout.lines:
             font_name = PDF_FONT_BOLD if line.is_bold else PDF_FONT_REGULAR
             pdf.setFont(font_name, line.font_size * transform.scale)
-            baseline_world_y = layout.box.top + line.top + line.font_size
+            baseline_world_y = layout.box.top + line.top + line.font_size 
             pdf.drawCentredString(
                 transform.world_to_pdf_x(layout.center_x),
                 transform.world_to_pdf_center_y(baseline_world_y),

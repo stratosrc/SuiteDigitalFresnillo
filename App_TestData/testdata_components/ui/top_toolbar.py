@@ -27,7 +27,7 @@ def build_menu_toolbar(parent, callbacks: dict):
         activebackground=BUTTON_BG_ACTIVE,
         activeforeground=TEXT_LIGHT,
     )
-    file_menu.add_command(label=FILE_MENU_LABELS["load_pdf"], command=callbacks["on_load_pdf"])
+    file_menu.add_command(label=FILE_MENU_LABELS["new_job"], command=callbacks["on_new_job"])
     file_menu.add_command(label=FILE_MENU_LABELS["save_pdf"], command=callbacks["on_open_export_dialog"])
 
     file_button = create_toolbar_button(
