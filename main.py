@@ -1,5 +1,6 @@
 import sys
 
+#TestCommand 
 
 def _run_testdata():
     from App_TestData.App import TestDataGeneratorApp
