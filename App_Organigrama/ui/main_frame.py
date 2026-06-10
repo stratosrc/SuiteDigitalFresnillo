@@ -17,6 +17,7 @@ from App_Organigrama.services.image_exporter import export_pdf_as_image
 from App_Organigrama.services.persistence_manager import PersistenceManager
 from App_Organigrama.ui.dialogs import OrientationDialog
 from App_Organigrama.ui.grid_canvas import OrgGridCanvas
+from App_Organigrama.ui.help_dialog import show_help_dialog
 from App_Organigrama.ui.theme import (
     APP_BACKGROUND,
     BORDER_COLOR,
@@ -117,6 +118,20 @@ class MainFrame(ctk.CTkFrame):
             font=make_font(12),
         )
         self.file_button.grid(row=0, column=0, padx=(0, 4), sticky="w")
+
+        self.help_button = ctk.CTkButton(
+            topbar,
+            text="Ayuda",
+            command=self._show_help_dialog,
+            height=24,
+            width=78,
+            corner_radius=0,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            text_color=TEXT_LIGHT,
+            font=make_font(12),
+        )
+        self.help_button.grid(row=0, column=1, padx=(0, 4), sticky="w")
 
         exit_button = ctk.CTkButton(
             topbar,
@@ -371,6 +386,9 @@ class MainFrame(ctk.CTkFrame):
             self.file_button.winfo_rooty() + self.file_button.winfo_height(),
         )
         self.file_menu.grab_release()
+
+    def _show_help_dialog(self) -> None:
+        show_help_dialog(self)
 
     def _update_delete_state(self, has_selection: bool) -> None:
         self.delete_button.configure(state="normal" if has_selection else "disabled")
