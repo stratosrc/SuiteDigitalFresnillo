@@ -12,6 +12,7 @@ from components.styles.styles import (
     SURFACE_BG,
     TEXT_DARK,
     TEXT_LIGHT,
+    BUTTON_BG2,
 )
 
 
@@ -41,6 +42,26 @@ def create_toolbar_button(
         font=build_font(12, "bold" if danger else None),
     )
 
+def create_bottom_toolbar_button(
+    parent,
+    text: str,
+    command,
+    width: int = 130,
+    danger: bool = False,
+):
+    """Create a standard toolbar button."""
+    return ctk.CTkButton(
+        parent,
+        text=text,
+        command=command,
+        width=width,
+        height=25,
+        corner_radius=0,
+        fg_color=BUTTON_BG2 if not danger else DANGER_BG,
+        hover_color=BUTTON_BG_ACTIVE if not danger else DANGER_BG_ACTIVE,
+        text_color=TEXT_LIGHT,
+        font=build_font(12, "bold" if danger else None),
+    )
 
 def create_entry(parent, textvariable=None, width: int | None = None):
     """Create a standard text entry."""
