@@ -104,11 +104,13 @@ class PdfOrgChartExporter:
             - page_layout.header_height
         )
         content_origin_y = page_layout.margin_top + page_layout.header_height
+        content_top_margin = self.rendering_engine.content_top_margin
         content_width = max(bounds.width, 1.0)
         content_height = max(bounds.height, 1.0)
-        scale = min(1.0, available_width / content_width, available_height / content_height)
+        usable_height = max(1.0, available_height - content_top_margin)
+        scale = min(1.0, available_width / content_width, usable_height / content_height)
         offset_x = page_layout.margin_left + ((available_width - (content_width * scale)) / 2)
-        offset_y = content_origin_y + ((available_height - (content_height * scale)) / 2)
+        offset_y = content_origin_y + content_top_margin
         return PdfTransform(
             scale=scale,
             offset_x=offset_x,

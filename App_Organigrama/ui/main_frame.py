@@ -576,10 +576,8 @@ class MainFrame(ctk.CTkFrame):
         self._metadata_sync_paused = False
         self.grid_canvas.set_document(document)
         self.grid_canvas.zoom = 1.0
-        self.grid_canvas.pan_x = 560.0
-        self.grid_canvas.pan_y = 320.0
         self.grid_canvas.set_block_mode(False)
-        self.grid_canvas.request_redraw()
+        self.grid_canvas.fit_document_to_content_top()
         self._update_zoom_label(100)
         self._update_delete_state(False)
         self._update_window_title()

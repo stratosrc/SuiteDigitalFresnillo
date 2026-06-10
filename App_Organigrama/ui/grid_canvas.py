@@ -120,7 +120,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.route_cache = []
         self._routes_dirty = True
         self._invalidate_layout_cache()
-        self.request_redraw()
+        self.after_idle(self.fit_document_to_content_top)
         self._emit_selection_change()
 
     def set_block_mode(self, enabled: bool) -> None:
@@ -135,8 +135,8 @@ class OrgGridCanvas(ctk.CTkFrame):
     def set_show_logos(self, enabled: bool) -> None:
         self.document.show_logos = enabled
         self._invalidate_layout_cache()
-        self.request_redraw()
         self._emit_document_change()
+        self.fit_document_to_content_top()
 
     def zoom_percent(self) -> int:
         return int(round(self.zoom * 100))
@@ -171,6 +171,31 @@ class OrgGridCanvas(ctk.CTkFrame):
         world_x, world_y = self.rendering_engine.grid_to_world(node.grid_x, node.grid_y)
         self.pan_x = (width / 2) - (world_x * self.zoom)
         self.pan_y = (height / 2) - (world_y * self.zoom)
+        self.request_redraw()
+
+    def fit_document_to_content_top(self) -> None:
+        if not self.document.nodes:
+            self.pan_x = 560.0
+            self.pan_y = 320.0
+            self.route_cache = []
+            self._routes_dirty = False
+            self.request_redraw()
+            return
+
+        routes = self.router.route_document(self.document)
+        route_points = [list(route.points) for route in routes]
+        bounds = self.rendering_engine.compute_document_bounds(
+            self.document,
+            route_points,
+            include_blocked_points=False,
+        )
+
+        canvas_width = max(self.canvas.winfo_width(), 1)
+        content_width = max(bounds.width * self.zoom, 1.0)
+        self.pan_x = ((canvas_width - content_width) / 2) - (bounds.left * self.zoom)
+        self.pan_y = self.rendering_engine.content_top_margin - (bounds.top * self.zoom)
+        self.route_cache = routes
+        self._routes_dirty = False
         self.request_redraw()
 
     def delete_selected_item(self) -> None:
@@ -878,7 +903,10 @@ class OrgGridCanvas(ctk.CTkFrame):
         if routes_dirty:
             self._routes_dirty = True
         self._emit_document_change()
-        self.request_redraw()
+        if routes_dirty:
+            self.fit_document_to_content_top()
+        else:
+            self.request_redraw()
 
     def _mark_recent_node(self, node_id: str) -> None:
         if node_id not in self.document.nodes:
