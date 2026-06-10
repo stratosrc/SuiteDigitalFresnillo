@@ -89,10 +89,6 @@ class MainFrame(ctk.CTkFrame):
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_command(label="Abrir proyecto", command=self.open_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
-        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Guardar proyecto como", command=self.save_project_as)
-        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
@@ -594,7 +590,12 @@ class MainFrame(ctk.CTkFrame):
         if self._is_operation_running():
             self._show_operation_warning()
             return
-        if not self._confirm_discard_changes():
+
+        if not messagebox.askyesno(
+            "Confirmar salida",
+            "¿Estás seguro de que quieres salir?",
+            parent=self,
+        ):
             return
         self.master.destroy()
 

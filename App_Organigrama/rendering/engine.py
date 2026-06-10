@@ -297,6 +297,7 @@ class RenderingEngine:
         self,
         document: OrgGridDocument,
         routes: list[list[tuple[float, float]]] | None = None,
+        include_blocked_points: bool = True,
     ) -> DocumentBounds:
         bounds: DocumentBounds | None = None
 
@@ -304,9 +305,10 @@ class RenderingEngine:
             node_box = self.get_node_box(node, include_logo=document.show_logos)
             bounds = DocumentBounds.from_box(node_box) if bounds is None else bounds.include_box(node_box)
 
-        for point_x, point_y in document.blocked_points:
-            obstacle_box = self.get_obstacle_box(point_x, point_y)
-            bounds = DocumentBounds.from_box(obstacle_box) if bounds is None else bounds.include_box(obstacle_box)
+        if include_blocked_points:
+            for point_x, point_y in document.blocked_points:
+                obstacle_box = self.get_obstacle_box(point_x, point_y)
+                bounds = DocumentBounds.from_box(obstacle_box) if bounds is None else bounds.include_box(obstacle_box)
 
         if routes:
             for route in routes:

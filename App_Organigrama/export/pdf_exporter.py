@@ -72,7 +72,6 @@ class PdfOrgChartExporter:
         if document.nodes:
             transform = self._build_transform(document, page_layout, routes)
             self._draw_connections(canvas, transform, routes)
-            self._draw_blocked_points(canvas, transform, document)
             self._draw_nodes(canvas, transform, document)
 
         canvas.save()
@@ -96,7 +95,7 @@ class PdfOrgChartExporter:
         routes: list,
     ) -> PdfTransform:
         route_points = [list(route.points) for route in routes]
-        bounds = self.rendering_engine.compute_document_bounds(document, route_points)
+        bounds = self.rendering_engine.compute_document_bounds(document, route_points, include_blocked_points=False)
         available_width = page_layout.width - page_layout.margin_left - page_layout.margin_right
         available_height = (
             page_layout.height
@@ -194,15 +193,6 @@ class PdfOrgChartExporter:
                     transform.world_to_pdf_x(end_x),
                     transform.world_to_pdf_center_y(end_y),
                 )
-
-    def _draw_blocked_points(self, pdf: Canvas, transform: PdfTransform, document: OrgGridDocument) -> None:
-        pdf.setStrokeColor(HexColor("#E11D48"))
-        pdf.setLineWidth(max(0.8, 2.0 * transform.scale))
-        for grid_x, grid_y in document.blocked_points:
-            obstacle_box = self.rendering_engine.get_obstacle_box(grid_x, grid_y)
-            x, y, width, height = transform.box_to_pdf(obstacle_box)
-            pdf.line(x, y, x + width, y + height)
-            pdf.line(x, y + height, x + width, y)
 
     def _draw_nodes(self, pdf: Canvas, transform: PdfTransform, document: OrgGridDocument) -> None:
         for node in document.nodes.values():
