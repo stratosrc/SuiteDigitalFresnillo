@@ -1,0 +1,61 @@
+import customtkinter as ctk
+
+from components.styles.styles import (
+    APP_BG,
+    BORDER_BG,
+    BUTTON_BG,
+    BUTTON_BG_ACTIVE,
+    BUTTON_BG_PRESSED,
+    CTK_FONT_FAMILY,
+    DARK_BG,
+    DARK_BG_ACTIVE,
+    DANGER_BG,
+    DANGER_BG_ACTIVE,
+    GHOST_AVAILABLE_FILL,
+    GHOST_OCCUPIED_FILL,
+    GRID_AXIS,
+    GRID_LINE,
+    SELECTED_OUTLINE,
+    SURFACE_BG,
+    TEXT_DARK,
+    TEXT_LIGHT,
+    TEXT_MUTED,
+)
+
+
+APP_BACKGROUND = APP_BG
+SURFACE_BACKGROUND = SURFACE_BG
+DARK_BACKGROUND = DARK_BG
+DARK_BACKGROUND_ACTIVE = DARK_BG_ACTIVE
+BORDER_COLOR = BORDER_BG
+PRIMARY_BUTTON = BUTTON_BG
+PRIMARY_BUTTON_ACTIVE = BUTTON_BG_ACTIVE
+PRIMARY_BUTTON_PRESSED = BUTTON_BG_PRESSED
+DANGER_BUTTON = DANGER_BG
+DANGER_BUTTON_ACTIVE = DANGER_BG_ACTIVE
+FONT_FAMILY = CTK_FONT_FAMILY
+
+SELECTION_COLOR = "#22C55E"
+PORT_HOVER_COLOR = "#00E5FF"
+PORT_ACTIVE_COLOR = "#22C55E"
+PORT_MARKER_OUTLINE = "#FFFFFF"
+OBSTACLE_COLOR = "#E11D48"
+OBSTACLE_PREVIEW_COLOR = "#FB7185"
+ROUTE_PREVIEW_COLOR = "#F59E0B"
+
+WINDOW_WIDTH = 1120
+WINDOW_HEIGHT = 760
+WINDOW_MIN_WIDTH = 920
+WINDOW_MIN_HEIGHT = 620
+
+
+def apply_theme() -> None:
+    ctk.set_appearance_mode("Light")
+    ctk.set_default_color_theme("blue")
+
+
+def make_font(size: int, weight: str | None = None) -> ctk.CTkFont:
+    font_options: dict[str, str | int] = {"family": FONT_FAMILY, "size": size}
+    if weight is not None:
+        font_options["weight"] = weight
+    return ctk.CTkFont(**font_options)
