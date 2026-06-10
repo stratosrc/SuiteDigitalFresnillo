@@ -114,7 +114,7 @@ class RenderingEngine:
     """Single source of truth for node sizing, text wrapping and coordinate mapping."""
 
     content_top_margin: float = 10.0
-    base_cell_width: float = 290.0
+    base_cell_width: float = 250.0
     base_cell_height: float = 240.0
     base_node_width: float = 210.0
     base_node_min_height: float = 87.0

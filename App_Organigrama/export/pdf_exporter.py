@@ -134,12 +134,12 @@ class PdfOrgChartExporter:
             pdf.restoreState()
 
         if BANNER_LOGO_PATH.exists():
-            banner_width = 200
-            banner_height = 100
+            banner_width = 250
+            banner_height = 125
             pdf.drawImage(
                 str(BANNER_LOGO_PATH),
                 1,
-                page_layout.height - banner_height + 12,
+                page_layout.height - banner_height + 15,
                 width=banner_width,
                 height=banner_height,
                 mask="auto",
