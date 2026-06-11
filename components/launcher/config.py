@@ -24,4 +24,12 @@ APPLICATIONS_CONFIG = [
         "module_path": "App_Organigrama.App",
         "description": "Gestión del diseño y estructura institucional",
     },
+    {
+        "app_id": "directorio",
+        "name": "Directorio",
+        "icon_path": "App_Directorio/assets/directorio.png",
+        "script_path": "App_Directorio/App.py",
+        "module_path": "App_Directorio.App",
+        "description": "Gestión y Diseño del Directorio de Área",
+    },
 ]

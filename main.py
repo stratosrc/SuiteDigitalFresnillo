@@ -16,6 +16,13 @@ def _run_organigrama():
     app.mainloop()
 
 
+def _run_directorio():
+    from App_Directorio.App import AppDirectorio
+
+    app = AppDirectorio()
+    app.mainloop()
+
+
 def _run_launcher():
     from components.launcher.app import SuiteLauncher
 
@@ -31,6 +38,9 @@ def main():
             return
         if app_id == "organigrama":
             _run_organigrama()
+            return
+        if app_id == "directorio":
+            _run_directorio()
             return
 
     _run_launcher()
