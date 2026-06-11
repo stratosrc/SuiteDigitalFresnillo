@@ -1,47 +1,26 @@
 import sys
 
-#TestCommand 
-
-def _run_testdata():
-    from App_TestData.App import TestDataGeneratorApp
-
-    app = TestDataGeneratorApp()
-    app.mainloop()
+from components.shared.app_registry import get_application, run_application
 
 
-def _run_organigrama():
-    from App_Organigrama.App import AppOrganigrama
-
-    app = AppOrganigrama()
-    app.mainloop()
-
-
-def _run_directorio():
-    from App_Directorio.App import AppDirectorio
-
-    app = AppDirectorio()
-    app.mainloop()
-
-
-def _run_launcher():
+def _run_launcher() -> None:
     from components.launcher.app import SuiteLauncher
 
     app = SuiteLauncher()
     app.mainloop()
 
 
-def main():
+def main() -> None:
     if len(sys.argv) >= 3 and sys.argv[1] == "--app":
         app_id = sys.argv[2].strip().lower()
-        if app_id == "testdata":
-            _run_testdata()
-            return
-        if app_id == "organigrama":
-            _run_organigrama()
-            return
-        if app_id == "directorio":
-            _run_directorio()
-            return
+        definition = get_application(app_id)
+        if definition is None:
+            raise SystemExit(f"Unknown application id: {app_id}")
+        if not definition.is_available:
+            raise SystemExit(f"Application '{definition.name}' is not available in this build.")
+
+        run_application(app_id)
+        return
 
     _run_launcher()
 

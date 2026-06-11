@@ -3,7 +3,7 @@ import subprocess
 import sys
 from tkinter import messagebox
 
-from components.launcher.paths import base_path, build_path, is_frozen
+from components.launcher.paths import base_path, is_frozen
 
 
 class ApplicationRunner:
@@ -15,8 +15,8 @@ class ApplicationRunner:
         app_id = app_config.get("app_id") or app_config["name"]
         if self._is_already_running(app_id):
             messagebox.showinfo(
-                "Aplicación en ejecución",
-                f"{app_config['name']} ya está abierta. Cierra esa ventana antes de iniciar otra instancia.",
+                "Aplicacion en ejecucion",
+                f"{app_config['name']} ya esta abierta. Cierra esa ventana antes de iniciar otra instancia.",
                 parent=self.parent,
             )
             return
@@ -40,17 +40,16 @@ class ApplicationRunner:
         module_path = app_config.get("module_path")
         if not module_path:
             messagebox.showwarning(
-                "Aplicación no disponible",
-                f"No se encontró el módulo para {app_config['name']}.",
+                "Aplicacion no disponible",
+                f"No se encontro el modulo para {app_config['name']}.",
                 parent=self.parent,
             )
             return None
 
-        script_path = build_path(app_config["script_path"])
-        if not os.path.exists(script_path):
+        if not app_config.get("available", True):
             messagebox.showwarning(
-                "Aplicación no disponible",
-                f"No se encontró el script para {app_config['name']}:\n{script_path}",
+                "Aplicacion no disponible",
+                f"El modulo {app_config['name']} no esta incluido actualmente en el proyecto.",
                 parent=self.parent,
             )
             return None
@@ -63,7 +62,7 @@ class ApplicationRunner:
             )
         except OSError as exc:
             messagebox.showerror(
-                "Error al abrir aplicación",
+                "Error al abrir aplicacion",
                 f"No fue posible iniciar {app_config['name']}:\n{exc}",
                 parent=self.parent,
             )
@@ -73,8 +72,16 @@ class ApplicationRunner:
         app_id = app_config.get("app_id")
         if not app_id:
             messagebox.showwarning(
-                "Aplicación no disponible",
-                f"No se encontró el identificador interno para {app_config['name']}.",
+                "Aplicacion no disponible",
+                f"No se encontro el identificador interno para {app_config['name']}.",
+                parent=self.parent,
+            )
+            return None
+
+        if not app_config.get("available", True):
+            messagebox.showwarning(
+                "Aplicacion no disponible",
+                f"El modulo {app_config['name']} no esta incluido actualmente en el proyecto.",
                 parent=self.parent,
             )
             return None
@@ -87,7 +94,7 @@ class ApplicationRunner:
             )
         except OSError as exc:
             messagebox.showerror(
-                "Error al abrir aplicación",
+                "Error al abrir aplicacion",
                 f"No fue posible iniciar {app_config['name']}:\n{exc}",
                 parent=self.parent,
             )

@@ -8,16 +8,15 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 from PIL import Image, ImageOps
 
-from App_Organigrama.export.pdf_exporter import PdfOrgChartExporter
+from App_Organigrama.config.assets import TOOLBAR_LOGO_PATH
+from App_Organigrama.exporters import PdfOrgChartExporter
 from App_Organigrama.models.document import OrgGridDocument
 from App_Organigrama.rendering.engine import RenderingEngine
 from App_Organigrama.routing.manhattan_router import ManhattanRouter
-from App_Organigrama.services.assets import TOOLBAR_LOGO_PATH
 from App_Organigrama.services.image_exporter import export_pdf_as_image
-from App_Organigrama.services.persistence_manager import PersistenceManager
-from App_Organigrama.ui.dialogs import OrientationDialog
-from App_Organigrama.ui.grid_canvas import OrgGridCanvas
-from App_Organigrama.ui.help_dialog import show_help_dialog
+from App_Organigrama.services.persistence import PersistenceManager
+from App_Organigrama.ui.canvas import OrgGridCanvas
+from App_Organigrama.ui.modals import OrientationDialog, show_help_dialog
 from App_Organigrama.ui.theme import (
     APP_BACKGROUND,
     BORDER_COLOR,
@@ -31,11 +30,8 @@ from App_Organigrama.ui.theme import (
     SURFACE_BACKGROUND,
     TEXT_DARK,
     TEXT_LIGHT,
-    BUTTON_BG,
-    BUTTON_BG_ACTIVE,
     make_font,
 )
-from components.styles.styles import BUTTON_BG_PRESSED
 
 class MainFrame(ctk.CTkFrame):
     def __init__(self, master: ctk.CTk) -> None:

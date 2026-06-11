@@ -1,0 +1,49 @@
+import customtkinter as ctk
+
+from components.styles.styles import (
+    APP_BG,
+    BORDER_BG,
+    BUTTON_BG,
+    BUTTON_BG_ACTIVE,
+    BUTTON_BG_PRESSED,
+    CTK_FONT_FAMILY,
+    DARK_BG,
+    DANGER_BG,
+    DANGER_BG_ACTIVE,
+    HEADER_LOGO_SIZE as SHARED_HEADER_LOGO_SIZE,
+    SURFACE_BG,
+    TEXT_DARK as SHARED_TEXT_DARK,
+    TEXT_LIGHT as SHARED_TEXT_LIGHT,
+)
+
+
+APP_BACKGROUND = APP_BG
+SURFACE_BACKGROUND = SURFACE_BG
+DARK_BACKGROUND = DARK_BG
+BORDER_COLOR = BORDER_BG
+PRIMARY_BUTTON = BUTTON_BG
+PRIMARY_BUTTON_ACTIVE = BUTTON_BG_ACTIVE
+PRIMARY_BUTTON_PRESSED = BUTTON_BG_PRESSED
+DANGER_BUTTON = DANGER_BG
+DANGER_BUTTON_ACTIVE = DANGER_BG_ACTIVE
+TEXT_DARK = SHARED_TEXT_DARK
+TEXT_LIGHT = SHARED_TEXT_LIGHT
+FONT_FAMILY = CTK_FONT_FAMILY
+HEADER_LOGO_SIZE = SHARED_HEADER_LOGO_SIZE
+
+WINDOW_WIDTH = 1120
+WINDOW_HEIGHT = 760
+WINDOW_MIN_WIDTH = 920
+WINDOW_MIN_HEIGHT = 620
+
+
+def apply_theme() -> None:
+    ctk.set_appearance_mode("Light")
+    ctk.set_default_color_theme("blue")
+
+
+def make_font(size: int, weight: str | None = None) -> ctk.CTkFont:
+    font_options: dict[str, str | int] = {"family": FONT_FAMILY, "size": size}
+    if weight is not None:
+        font_options["weight"] = weight
+    return ctk.CTkFont(**font_options)
