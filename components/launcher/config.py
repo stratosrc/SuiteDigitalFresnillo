@@ -27,9 +27,9 @@ APPLICATIONS_CONFIG = [
     {
         "app_id": "directorio",
         "name": "Directorio",
-        "icon_path": "App_Directorio/assets/directorio.png",
+        "icon_path": "components/assets/directorio.png",
         "script_path": "App_Directorio/App.py",
         "module_path": "App_Directorio.App",
-        "description": "Gestión y Diseño del Directorio de Área",
+        "description": "Gestión y Diseño del \nDirectorio de Área",
     },
 ]
