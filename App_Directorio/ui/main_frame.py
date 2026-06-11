@@ -21,7 +21,7 @@ from App_Directorio.ui.theme import (
 from components.shared.paths import resource_path
 
 MODULE_TITLE = "Directorio"
-MODULE_DESCRIPTION = "Gestión y Diseño del Directorio de Área"
+MODULE_DESCRIPTION = "Gestión y Diseño del \nDirectorio de Área"
 DIRECTORY_ICON_PATH = resource_path("App_Directorio", "assets", "directorio.png")
 
 
