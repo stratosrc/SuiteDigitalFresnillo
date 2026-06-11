@@ -220,7 +220,7 @@ class PdfOrgChartExporter:
         pdf.setFillColor(HexColor("#FFFFFF"))
         for line in layout.lines:
             font_name = PDF_FONT_BOLD if line.is_bold else PDF_FONT_REGULAR
-            pdf.setFont(font_name, line.font_size * transform.scale)
+            pdf.setFont(font_name, line.font_size * transform.scale + 2)
             baseline_world_y = layout.box.top + line.top + line.font_size 
             pdf.drawCentredString(
                 transform.world_to_pdf_x(layout.center_x),

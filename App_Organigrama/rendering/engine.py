@@ -115,14 +115,14 @@ class RenderingEngine:
 
     content_top_margin: float = 10.0
     base_cell_width: float = 250.0
-    base_cell_height: float = 240.0
+    base_cell_height: float = 260.0
     base_node_width: float = 210.0
     base_node_min_height: float = 87.0
     base_logo_radius: float = 44.0
     base_line_width: float = 2.1
-    base_text_padding_x: float = 25.0
-    base_text_padding_y: float = 22.0
-    base_text_gap: float = 2.0
+    base_text_padding_x: float = 22.0
+    base_text_padding_y: float = 14.0
+    base_text_gap: float = 5.0
     base_name_font_size: float = 14.0
     base_role_font_size: float = 12.0
 
