@@ -7,6 +7,7 @@ ASSETS_DIR = PROJECT_ROOT / "assets"
 WINDOWS_FONT_DIR = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
 
 BANNER_LOGO_PATH = ASSETS_DIR / "LogoBanner.png"
+CROSS_CURSOR_PATH = ASSETS_DIR / "cross_cursor.png"
 HORIZONTAL_ICON_PATH = ASSETS_DIR / "horizontal.png"
 NODE_LOGO_PATH = ASSETS_DIR / "logo_personal.png"
 TOOLBAR_LOGO_PATH = ASSETS_DIR / "logo_tool_bar.png"

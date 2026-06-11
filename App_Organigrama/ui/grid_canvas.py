@@ -8,7 +8,7 @@ from PIL import Image, ImageOps, ImageTk
 from App_Organigrama.models.document import OrgGridDocument, OrgNode
 from App_Organigrama.rendering.engine import Box, NodeLayout, RenderingEngine
 from App_Organigrama.routing.manhattan_router import ConnectionRoute, ManhattanRouter
-from App_Organigrama.services.assets import NODE_LOGO_PATH
+from App_Organigrama.services.assets import CROSS_CURSOR_PATH, NODE_LOGO_PATH
 from App_Organigrama.ui.dialogs import NodeEditorDialog
 from App_Organigrama.ui.theme import (
     BORDER_COLOR,
@@ -31,6 +31,7 @@ from App_Organigrama.ui.theme import (
 
 GridPoint = tuple[float, float]
 SELECTION_BLINK_INTERVAL_MS = 420
+CUSTOM_CURSOR_SIZE = 32
 
 
 class OrgGridCanvas(ctk.CTkFrame):
@@ -86,6 +87,11 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.redraw_after_id: str | None = None
         self.logo_source_image = self._load_logo_source()
         self.logo_cache: dict[int, ImageTk.PhotoImage] = {}
+        self.cross_cursor_source_image = self._load_cross_cursor_source()
+        self.cross_cursor_cache: dict[int, ImageTk.PhotoImage] = {}
+        self.custom_cursor_canvas_id: int | None = None
+        self.custom_cursor_position: tuple[int, int] | None = None
+        self.custom_cursor_visible = False
 
         self.canvas = tk.Canvas(self, bg=SURFACE_BACKGROUND, highlightthickness=0)
         self.canvas.pack(fill="both", expand=True)
@@ -120,6 +126,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.route_cache = []
         self._routes_dirty = True
         self._invalidate_layout_cache()
+        self._update_custom_cursor(visible=False)
         self.after_idle(self.fit_document_to_content_top)
         self._emit_selection_change()
 
@@ -130,6 +137,7 @@ class OrgGridCanvas(ctk.CTkFrame):
             self.pending_connection_source_id = None
             self.pending_source_port = None
             self.hover_port = None
+        self._update_custom_cursor(visible=enabled)
         self.request_redraw()
 
     def set_show_logos(self, enabled: bool) -> None:
@@ -204,6 +212,7 @@ class OrgGridCanvas(ctk.CTkFrame):
     def redraw(self) -> None:
         self.redraw_after_id = None
         self.canvas.delete("all")
+        self.custom_cursor_canvas_id = None
         if self._routes_dirty:
             self.route_cache = self.router.route_document(self.document)
             self._routes_dirty = False
@@ -214,6 +223,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self._draw_blocked_points()
         self._draw_hover_port()
         self._draw_ghost()
+        self._draw_custom_cursor()
 
     def request_redraw(self) -> None:
         if self.redraw_after_id is not None:
@@ -649,14 +659,14 @@ class OrgGridCanvas(ctk.CTkFrame):
             return
 
         if self.block_mode:
-            self.canvas.configure(cursor="crosshair")
+            self._update_custom_cursor(event.x, event.y, visible=True)
             self.preview_obstacle = self._screen_to_subgrid(event.x, event.y)
             self.request_redraw()
             return
 
         node = self._node_at_screen(event.x, event.y)
         self.hover_port = (node.id, self._nearest_port(node, event.x, event.y)) if node is not None else None
-        self.canvas.configure(cursor="crosshair" if self.hover_port else "")
+        self._update_custom_cursor(event.x, event.y, visible=self.hover_port is not None)
         if node is not None:
             self.last_hover_cell = None
             self.request_redraw()
@@ -672,7 +682,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.hover_port = None
         self.preview_obstacle = None
         self.last_hover_cell = None
-        self.canvas.configure(cursor="")
+        self._update_custom_cursor(visible=False)
         self.request_redraw()
 
     def _handle_click(self, screen_x: int, screen_y: int) -> None:
@@ -886,7 +896,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.pending_connection_source_id = None
         self.pending_source_port = None
         self.hover_port = None
-        self.canvas.configure(cursor="")
+        self._update_custom_cursor(visible=self.block_mode)
         self.request_redraw()
 
     def _emit_selection_change(self) -> None:
@@ -924,6 +934,14 @@ class OrgGridCanvas(ctk.CTkFrame):
         except OSError:
             return None
 
+    def _load_cross_cursor_source(self) -> Image.Image | None:
+        if not CROSS_CURSOR_PATH.exists():
+            return None
+        try:
+            return Image.open(CROSS_CURSOR_PATH).convert("RGBA")
+        except OSError:
+            return None
+
     def _invalidate_layout_cache(self) -> None:
         self._node_layout_cache.clear()
 
@@ -950,6 +968,62 @@ class OrgGridCanvas(ctk.CTkFrame):
         tk_image = ImageTk.PhotoImage(resized)
         self.logo_cache[size] = tk_image
         return tk_image
+
+    def _get_cross_cursor_image(self, size: int) -> ImageTk.PhotoImage | None:
+        if self.cross_cursor_source_image is None or size <= 0:
+            return None
+        if size in self.cross_cursor_cache:
+            return self.cross_cursor_cache[size]
+
+        image = self.cross_cursor_source_image.copy()
+        active_box = image.getchannel("A").getbbox()
+        if active_box:
+            image = image.crop(active_box)
+        resized = ImageOps.contain(image, (size, size), Image.Resampling.LANCZOS)
+        tk_image = ImageTk.PhotoImage(resized)
+        self.cross_cursor_cache[size] = tk_image
+        return tk_image
+
+    def _update_custom_cursor(
+        self,
+        screen_x: int | None = None,
+        screen_y: int | None = None,
+        *,
+        visible: bool | None = None,
+    ) -> None:
+        if screen_x is not None and screen_y is not None:
+            self.custom_cursor_position = (screen_x, screen_y)
+        if visible is not None:
+            self.custom_cursor_visible = visible
+        self._draw_custom_cursor()
+
+    def _draw_custom_cursor(self) -> None:
+        if not self.custom_cursor_visible or self.custom_cursor_position is None:
+            if self.custom_cursor_canvas_id is not None:
+                self.canvas.delete(self.custom_cursor_canvas_id)
+                self.custom_cursor_canvas_id = None
+            self.canvas.configure(cursor="")
+            return
+
+        cursor_image = self._get_cross_cursor_image(CUSTOM_CURSOR_SIZE)
+        if cursor_image is None:
+            self.canvas.configure(cursor="crosshair")
+            return
+
+        self.canvas.configure(cursor="none")
+        screen_x, screen_y = self.custom_cursor_position
+        if self.custom_cursor_canvas_id is None:
+            self.custom_cursor_canvas_id = self.canvas.create_image(
+                screen_x,
+                screen_y,
+                image=cursor_image,
+                anchor="center",
+                tags="custom-cursor",
+            )
+        else:
+            self.canvas.coords(self.custom_cursor_canvas_id, screen_x, screen_y)
+            self.canvas.itemconfigure(self.custom_cursor_canvas_id, image=cursor_image, state="normal")
+        self.canvas.tag_raise(self.custom_cursor_canvas_id)
 
     def _to_screen_layout(self, layout: NodeLayout) -> NodeLayout:
         scaled_box = self._scale_box(layout.box)
@@ -1042,4 +1116,5 @@ class OrgGridCanvas(ctk.CTkFrame):
         if self.redraw_after_id is not None:
             self.after_cancel(self.redraw_after_id)
             self.redraw_after_id = None
+        self.custom_cursor_canvas_id = None
         super().destroy()
