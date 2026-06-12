@@ -8,10 +8,10 @@ from App_Directorio.config import (
     APP_DESCRIPTION,
     APP_TITLE,
     DIRECTORY_ICON_PATH,
-    FILE_MENU_EMPTY_LABEL,
     HELP_MESSAGE,
     HELP_TITLE,
 )
+from App_Directorio.ui.directory_form import DirectoryFormFrame
 from App_Directorio.ui.theme import (
     APP_BACKGROUND,
     DARK_BACKGROUND,
@@ -42,7 +42,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
 
         self._build_topbar()
         self._build_header()
-        self._build_blank_body()
+        self._build_form_body()
 
     def _build_menu(self) -> None:
         self.file_menu = tk.Menu(
@@ -53,7 +53,8 @@ class DirectoryMainFrame(ctk.CTkFrame):
             activebackground=PRIMARY_BUTTON_ACTIVE,
             activeforeground=TEXT_LIGHT,
         )
-        self.file_menu.add_command(label=FILE_MENU_EMPTY_LABEL, state="disabled")
+        self.file_menu.add_command(label="Nuevo", command=lambda: None)
+        self.file_menu.add_command(label="Guardar", command=lambda: None)
 
     def _build_topbar(self) -> None:
         topbar = ctk.CTkFrame(self, fg_color=PRIMARY_BUTTON_PRESSED, corner_radius=0, height=24)
@@ -140,7 +141,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
             sticky="e",
         )
 
-    def _build_blank_body(self) -> None:
+    def _build_form_body(self) -> None:
         body = ctk.CTkFrame(self, fg_color=APP_BACKGROUND, corner_radius=0)
         body.grid(row=2, column=0, sticky="nsew")
         body.grid_columnconfigure(0, weight=1)
@@ -153,6 +154,11 @@ class DirectoryMainFrame(ctk.CTkFrame):
             corner_radius=0,
         )
         self.workspace_frame.grid(row=0, column=0, sticky="nsew", padx=24, pady=(18, 24))
+        self.workspace_frame.grid_columnconfigure(0, weight=1)
+        self.workspace_frame.grid_rowconfigure(0, weight=1)
+
+        self.directory_form = DirectoryFormFrame(self.workspace_frame)
+        self.directory_form.grid(row=0, column=0, sticky="nsew")
 
     def _show_file_menu(self) -> None:
         self.file_menu.tk_popup(
