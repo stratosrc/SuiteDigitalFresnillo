@@ -121,7 +121,7 @@ class RenderingEngine:
     base_node_min_height: float = 87.0
     base_logo_radius: float = 44.0
     base_line_width: float = 2.1
-    base_text_padding_x: float = 22.0
+    base_text_padding_x: float = 23.0
     base_text_padding_top: float = 27.0
     base_text_padding_bottom: float = 5.0
     base_text_gap: float = 5.0

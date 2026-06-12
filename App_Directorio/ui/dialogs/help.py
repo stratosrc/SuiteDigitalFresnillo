@@ -57,6 +57,9 @@ HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
         "4. ÁREAS",
         (
             "El botón de Agregar Área permite agregar una subdivisión más a la área administrativa.",
+            'El icono verde "+" permite agregar una fila adicional de colaborador dentro de un área.',
+            'El icono "-" permite eliminar una fila de registro de colaborador.',
+            'El icono "x" permite eliminar un área completa.',
         ),
     ),
 )
