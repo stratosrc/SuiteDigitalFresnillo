@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import messagebox
+from pathlib import Path
+from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 from PIL import Image, ImageOps
@@ -8,10 +9,10 @@ from App_Directorio.config import (
     APP_DESCRIPTION,
     APP_TITLE,
     DIRECTORY_ICON_PATH,
-    HELP_MESSAGE,
-    HELP_TITLE,
 )
+from App_Directorio.services.pdf_exporter import DirectoryPdfExporter
 from App_Directorio.ui.directory_form import DirectoryFormFrame
+from App_Directorio.ui.help_dialog import show_help_dialog
 from App_Directorio.ui.theme import (
     APP_BACKGROUND,
     DARK_BACKGROUND,
@@ -53,8 +54,8 @@ class DirectoryMainFrame(ctk.CTkFrame):
             activebackground=PRIMARY_BUTTON_ACTIVE,
             activeforeground=TEXT_LIGHT,
         )
-        self.file_menu.add_command(label="Nuevo", command=lambda: None)
-        self.file_menu.add_command(label="Guardar", command=lambda: None)
+        self.file_menu.add_command(label="Nuevo", command=self.nuevo_proyecto)
+        self.file_menu.add_command(label="Guardar", command=self.guardar_pdf)
 
     def _build_topbar(self) -> None:
         topbar = ctk.CTkFrame(self, fg_color=PRIMARY_BUTTON_PRESSED, corner_radius=0, height=24)
@@ -168,7 +169,48 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.file_menu.grab_release()
 
     def _show_help_dialog(self) -> None:
-        messagebox.showinfo(HELP_TITLE, HELP_MESSAGE, parent=self)
+        show_help_dialog(self)
+
+    def guardar_pdf(self) -> None:
+        if not self.directory_form.validate_dates():
+            messagebox.showerror(
+                "Fecha inválida",
+                "La Fecha de Alta debe tener un valor válido con formato dd/mm/aaaa.",
+                parent=self,
+            )
+            return
+
+        data = self.directory_form.get_report_data()
+        safe_name = "".join(character for character in (data.title or "directorio") if character not in '<>:"/\\|?*')
+        default_name = f"{safe_name.strip() or 'directorio'}.pdf"
+        target = filedialog.asksaveasfilename(
+            parent=self,
+            title="Guardar directorio como PDF",
+            defaultextension=".pdf",
+            initialfile=default_name,
+            filetypes=(("Archivo PDF", "*.pdf"), ("Todos los archivos", "*.*")),
+        )
+        if not target:
+            return
+
+        try:
+            output_path = DirectoryPdfExporter().export(data, Path(target))
+        except Exception as error:
+            messagebox.showerror(
+                "No se pudo guardar",
+                f"No fue posible generar el PDF.\n\n{error}",
+                parent=self,
+            )
+            return
+
+        messagebox.showinfo(
+            "PDF guardado",
+            f"El reporte se guardó correctamente en:\n{output_path}",
+            parent=self,
+        )
+
+    def nuevo_proyecto(self) -> None:
+        self.directory_form.reset_form()
 
     def confirm_exit(self) -> None:
         if not messagebox.askyesno(
