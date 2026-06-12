@@ -1,4 +1,4 @@
-from App_TestData.App import TestDataGeneratorApp
+from App_TestData.ui import TestDataGeneratorApp
 
 __all__ = ["TestDataGeneratorApp", "main"]
 

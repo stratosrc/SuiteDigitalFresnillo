@@ -1,4 +1,4 @@
-from App_Organigrama.application import main
+from .application import main
 
 
 if __name__ == "__main__":

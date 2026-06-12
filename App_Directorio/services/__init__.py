@@ -1,9 +1,11 @@
 """Service layer for the Directorio module."""
 
-from .pdf_exporter import AreaReportData, DirectoryPdfExporter, DirectoryReportData, PersonReportRow
+from App_Directorio.models import AreaReportData, DirectoryReportData, PersonReportRow
+
+from .pdf_exporter import DirectoryPdfExporter
 
 __all__ = [
-    "AreaReportData",
+    "ÁreaReportData",
     "DirectoryPdfExporter",
     "DirectoryReportData",
     "PersonReportRow",

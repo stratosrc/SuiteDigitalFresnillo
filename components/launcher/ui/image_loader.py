@@ -1,17 +1,21 @@
-import os
+from __future__ import annotations
+
+from pathlib import Path
 
 import customtkinter as ctk
 from PIL import Image
 
-from components.launcher.paths import build_path
+from components.shared.paths import build_path
 from components.styles.styles import DARK_BG_ACTIVE
+
+IconSize = tuple[int, int]
 
 
 class ImageLoader:
-    def __init__(self):
-        self._icon_cache = {}
+    def __init__(self) -> None:
+        self._icon_cache: dict[tuple[Path, IconSize], ctk.CTkImage] = {}
 
-    def load_icon(self, relative_path, size=(64, 64)):
+    def load_icon(self, relative_path: str, size: IconSize = (64, 64)) -> ctk.CTkImage:
         absolute_path = build_path(relative_path)
         cache_key = (absolute_path, size)
 
@@ -19,7 +23,7 @@ class ImageLoader:
             return self._icon_cache[cache_key]
 
         try:
-            image = Image.open(absolute_path).convert("RGBA") if os.path.exists(absolute_path) else None
+            image = Image.open(absolute_path).convert("RGBA") if absolute_path.exists() else None
         except OSError:
             image = None
 
@@ -36,9 +40,9 @@ class ImageLoader:
         self._icon_cache[cache_key] = photo
         return photo
 
-    def open_image(self, relative_path):
+    def open_image(self, relative_path: str) -> Image.Image | None:
         absolute_path = build_path(relative_path)
-        if not os.path.exists(absolute_path):
+        if not absolute_path.exists():
             return None
         try:
             return Image.open(absolute_path).convert("RGBA")

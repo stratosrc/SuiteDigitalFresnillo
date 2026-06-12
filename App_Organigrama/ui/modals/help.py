@@ -38,9 +38,9 @@ HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
         (
             "Nuevo: Permite limpiar el lienzo actual y comenzar un documento completamente desde cero.\n",
             "Exportar PDF: Genera y exporta el organigrama final en formato PDF vectorial.\n",
-            "Exportar Imagen: Permite guardar el organigrama en formatos de imagen estandar, soportando las extensiones PNG, JPG y JPEG.\n",
+            "Exportar Imagen: Permite guardar el organigrama en formatos de imagen estándar, soportando las extensiónes PNG, JPG y JPEG.\n",
             "Titulo del Organigrama: Campo de texto para establecer el titulo oficial que encabeza el grafico.\n",
-            "Periodo: Campo de texto para indicar el rango cronologico del organigrama (Ej. Octubre - Diciembre 2026).\n",
+            "Período: Campo de texto para indicar el rango cronológico del organigrama (Ej. Octubre - Diciembre 2026).\n",
         ),
     ),
     (

@@ -11,8 +11,8 @@ from App_Directorio.config import (
     DIRECTORY_ICON_PATH,
 )
 from App_Directorio.services.pdf_exporter import DirectoryPdfExporter
-from App_Directorio.ui.directory_form import DirectoryFormFrame
-from App_Directorio.ui.help_dialog import show_help_dialog
+from App_Directorio.ui.dialogs import show_help_dialog
+from App_Directorio.ui.forms import DirectoryFormFrame
 from App_Directorio.ui.theme import (
     APP_BACKGROUND,
     DARK_BACKGROUND,
@@ -26,6 +26,7 @@ from App_Directorio.ui.theme import (
     TEXT_LIGHT,
     make_font,
 )
+from App_Directorio.utils import crop_transparent_padding
 
 
 class DirectoryMainFrame(ctk.CTkFrame):
@@ -129,9 +130,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
         except OSError:
             return
 
-        visible_box = image.getchannel("A").getbbox()
-        if visible_box:
-            image = image.crop(visible_box)
+        image = crop_transparent_padding(image)
         resized = ImageOps.contain(image, HEADER_LOGO_SIZE, Image.Resampling.LANCZOS)
         self.header_icon_image = ctk.CTkImage(light_image=resized, dark_image=resized, size=resized.size)
         ctk.CTkLabel(parent, image=self.header_icon_image, text="").grid(

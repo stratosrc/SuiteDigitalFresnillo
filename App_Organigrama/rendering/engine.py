@@ -29,7 +29,8 @@ class NodeStyle:
     name_line_height: float
     role_line_height: float
     text_padding_x: float
-    text_padding_y: float
+    text_padding_top: float
+    text_padding_bottom: float
     text_gap: float
     logo_radius: float
     logo_center_offset_y: float
@@ -121,7 +122,8 @@ class RenderingEngine:
     base_logo_radius: float = 44.0
     base_line_width: float = 2.1
     base_text_padding_x: float = 22.0
-    base_text_padding_y: float = 14.0
+    base_text_padding_top: float = 27.0
+    base_text_padding_bottom: float = 5.0
     base_text_gap: float = 5.0
     base_name_font_size: float = 14.0
     base_role_font_size: float = 12.0
@@ -173,7 +175,8 @@ class RenderingEngine:
             name_line_height=name_font_size * 1.15,
             role_line_height=role_font_size * 1.22,
             text_padding_x=self.base_text_padding_x,
-            text_padding_y=self.base_text_padding_y,
+            text_padding_top=self.base_text_padding_top,
+            text_padding_bottom=self.base_text_padding_bottom,
             text_gap=self.base_text_gap,
             logo_radius=self.base_logo_radius,
             logo_center_offset_y=-17.0,
@@ -186,7 +189,7 @@ class RenderingEngine:
         name_lines = self.wrap_text(node.nombre or "ASIGNAR NOMBRE", style.name_font_size, style.width, style.text_padding_x)
         role_lines = self.wrap_text(node.cargo, style.role_font_size, style.width, style.text_padding_x)
 
-        cursor_y = style.text_padding_y
+        cursor_y = style.text_padding_top
         lines: list[NodeTextLine] = []
         for line in name_lines:
             lines.append(
@@ -215,8 +218,8 @@ class RenderingEngine:
             )
             cursor_y += style.role_line_height
 
-        content_height = max(0.0, cursor_y - style.text_padding_y)
-        height = max(style.min_height, style.text_padding_y + content_height + style.text_padding_y)
+        content_height = max(0.0, cursor_y - style.text_padding_top)
+        height = max(style.min_height, style.text_padding_top + content_height + style.text_padding_bottom)
         box = Box(
             left=center_x - (style.width / 2),
             top=center_y - (height / 2),
