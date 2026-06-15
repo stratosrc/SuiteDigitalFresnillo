@@ -26,6 +26,7 @@ RESIZE_HANDLE_DISTANCE = 10
 def setup_canvas_events(app):
     """Bind pointer and keyboard events to the PDF canvas."""
     app.pdf_canvas.bind("<ButtonPress-1>", lambda event: on_button_press(app, event))
+    app.pdf_canvas.bind("<Double-Button-1>", lambda event: on_double_click(app, event))
     app.pdf_canvas.bind("<B1-Motion>", lambda event: on_move_press(app, event))
     app.pdf_canvas.bind("<ButtonRelease-1>", lambda event: on_button_release(app, event))
     app.pdf_canvas.bind("<Motion>", lambda event: on_pointer_motion(app, event))
@@ -141,6 +142,36 @@ def on_pointer_motion(app, event):
         app.pdf_canvas.configure(cursor="fleur")
 
 
+def on_double_click(app, event):
+    """Open metadata editing for the rectangle under the pointer."""
+    if not app.pdf_document:
+        return
+
+    canvas_x = app.pdf_canvas.canvasx(event.x)
+    canvas_y = app.pdf_canvas.canvasy(event.y)
+    rectangle, _mode, _corner = _hit_test_rectangle(app, canvas_x, canvas_y)
+    if not rectangle:
+        return
+
+    _select_rectangle(app, rectangle)
+    _reset_drag_state(app)
+    before = deepcopy(rectangle)
+    dialog = ConceptDialog(app, app.catalogue_items, initial_data=rectangle)
+    app.wait_window(dialog)
+    if not dialog.result:
+        return
+
+    _apply_dialog_result_to_rectangle(app, rectangle, dialog.result)
+    after = deepcopy(rectangle)
+    if before == after:
+        return
+
+    app.undo_stack.append(make_history_action("update", before=before, after=after))
+    app.redo_stack.clear()
+    app.pdf_manager.render_current_page()
+    _select_rectangle(app, rectangle)
+
+
 def _build_rectangle_data(app, result, end_x, end_y):
     rectangle_id = app.next_rectangle_id
     app.next_rectangle_id += 1
@@ -195,6 +226,52 @@ def _build_rectangle_data(app, result, end_x, end_y):
     }
     rectangle.update(build_rectangle_metadata(rectangle))
     return rectangle
+
+
+def _apply_dialog_result_to_rectangle(app, rectangle, result):
+    classification = result["classification"]
+    if classification == "general":
+        concept_id = result["concept_id"]
+        concept_name = _get_concept_name(app, concept_id)
+        category = app.catalogue_categories.get(concept_id, "normal")
+        description = build_censorship_text(
+            f"#{concept_id}",
+            concept_name,
+            result["rows"],
+            result["paragraphs"],
+        )
+    elif classification == "other_law":
+        concept_id = None
+        concept_name = result.get("object", "")
+        category = classification
+        description = ""
+    else:
+        concept_id = None
+        concept_name = (
+            "InformaciÃ³n Reservada"
+            if classification == "reserved"
+            else "InformaciÃ³n Confidencial"
+        )
+        category = classification
+        description = ""
+
+    rectangle.update(
+        {
+            "classification": classification,
+            "concept_id": concept_id,
+            "category": category,
+            "concept_name": concept_name,
+            "rows": result["rows"],
+            "paragraphs": result["paragraphs"],
+            "legal_basis": result.get("legal_basis", ""),
+            "reason": result.get("reason", ""),
+            "object": result.get("object", ""),
+            "articles": result.get("articles", ""),
+            "law": result.get("law", ""),
+            "description": description,
+        }
+    )
+    rectangle.update(build_rectangle_metadata(rectangle))
 
 
 def _commit_current_rectangle(app, rectangle):

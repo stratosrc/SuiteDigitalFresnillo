@@ -21,9 +21,10 @@ from components.styles.styles import (
 class ExportDialog(ctk.CTkToplevel):
     """Intermediate dialog that lets the user choose the export flow."""
 
-    def __init__(self, app):
+    def __init__(self, app, export_callback=None):
         super().__init__(app)
         self.app = app
+        self.export_callback = export_callback or app._generate_pdf
         self.committee_vars = {}
 
         self.title(EXPORT_DIALOG["title"])
@@ -99,7 +100,7 @@ class ExportDialog(ctk.CTkToplevel):
 
     def _export_standard(self):
         self.destroy()
-        self.app._generate_pdf()
+        self.export_callback()
 
     def _export_committee(self):
         committee_data = {
@@ -107,4 +108,4 @@ class ExportDialog(ctk.CTkToplevel):
             for key, value in self.committee_vars.items()
         }
         self.destroy()
-        self.app._generate_pdf(committee_data=committee_data)
+        self.export_callback(committee_data=committee_data)

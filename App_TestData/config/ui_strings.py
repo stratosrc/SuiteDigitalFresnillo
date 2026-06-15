@@ -1,11 +1,14 @@
-"""Centralized Spanish strings used by the user-facing interface."""
+﻿"""Centralized Spanish strings used by the user-facing interface."""
 
 APP_WINDOW_TITLE = "Test Data"
 
 FILE_MENU_LABELS = {
     "button": "Archivo",
-    "new_job": "Nuevo Trabajo",
-    "save_pdf": "Guardar PDF Testado",
+    "new_job": "Nuevo",
+    "open_project": "Abrir",
+    "save_project": "Guardar",
+    "save_project_as": "Guardar como",
+    "save_pdf": "Exportar PDF",
 }
 
 TOPBAR_LABELS = {
@@ -84,7 +87,7 @@ CATALOGUE_DIALOG = {
 }
 
 EXPORT_DIALOG = {
-    "title": "Guardar versión pública",
+    "title": "Exportar PDF",
     "tabs": {
         "area": "Versión pública de área generadora",
         "committee": "Versión pública del Comité de Transparencia",
@@ -169,7 +172,7 @@ EXPORT_MESSAGES = {
     "export_running_message": "Espera a que termine la generación actual antes de iniciar otra.",
     "no_changes_title": "Sin cambios",
     "no_changes_message": "Dibuja al menos un rectángulo antes de generar el PDF.",
-    "save_dialog_title": "Guardar PDF generado",
+    "save_dialog_title": "Exportar PDF",
     "save_dialog_filetypes_label": "Archivos PDF",
     "invalid_path_title": "Ruta inválida",
     "invalid_path_message": "Guarda el PDF generado con un nombre distinto al archivo original.",

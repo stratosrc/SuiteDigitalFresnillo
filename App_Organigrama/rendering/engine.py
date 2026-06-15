@@ -127,6 +127,7 @@ class RenderingEngine:
     base_text_gap: float = 5.0
     base_name_font_size: float = 14.0
     base_role_font_size: float = 12.0
+    min_node_text_font_size: float = 6.0
 
     def normalize_orientation(self, orientation: str) -> str:
         return VERTICAL_ORIENTATION if orientation == VERTICAL_ORIENTATION else HORIZONTAL_ORIENTATION
@@ -192,31 +193,33 @@ class RenderingEngine:
         cursor_y = style.text_padding_top
         lines: list[NodeTextLine] = []
         for line in name_lines:
+            font_size = self._fit_node_text_size(line, style.name_font_size, style.width, style.text_padding_x)
             lines.append(
                 NodeTextLine(
                     text=line,
                     top=cursor_y,
-                    font_size=style.name_font_size,
-                    line_height=style.name_line_height,
+                    font_size=font_size,
+                    line_height=font_size * 1.15,
                     is_bold=True,
                 )
             )
-            cursor_y += style.name_line_height
+            cursor_y += font_size * 1.15
 
         if name_lines and role_lines:
             cursor_y += style.text_gap
 
         for line in role_lines:
+            font_size = self._fit_node_text_size(line, style.role_font_size, style.width, style.text_padding_x)
             lines.append(
                 NodeTextLine(
                     text=line,
                     top=cursor_y,
-                    font_size=style.role_font_size,
-                    line_height=style.role_line_height,
+                    font_size=font_size,
+                    line_height=font_size * 1.22,
                     is_bold=False,
                 )
             )
-            cursor_y += style.role_line_height
+            cursor_y += font_size * 1.22
 
         content_height = max(0.0, cursor_y - style.text_padding_top)
         height = max(style.min_height, style.text_padding_top + content_height + style.text_padding_bottom)
@@ -271,6 +274,22 @@ class RenderingEngine:
             bottom=center_y + radius,
         )
 
+    def _fit_node_text_size(
+        self,
+        text: str,
+        start_font_size: float,
+        node_width: float,
+        horizontal_padding: float,
+    ) -> float:
+        usable_width = max(20.0, node_width - (horizontal_padding * 2))
+        font_size = start_font_size
+        while font_size > self.min_node_text_font_size and self.estimate_text_width(text, font_size) > usable_width:
+            font_size -= 0.5
+        return max(self.min_node_text_font_size, font_size)
+
+    def estimate_text_width(self, text: str, font_size: float) -> float:
+        return len(text) * max(4.5, font_size * 0.56)
+
     def wrap_text(
         self,
         text: str,
@@ -291,7 +310,7 @@ class RenderingEngine:
             paragraph_lines = textwrap.wrap(
                 paragraph,
                 width=characters_per_line,
-                break_long_words=False,
+                break_long_words=True,
                 replace_whitespace=False,
             )
             wrapped_lines.extend(paragraph_lines or [paragraph])

@@ -59,7 +59,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
             activeforeground=TEXT_LIGHT,
         )
         self.file_menu.add_command(label="Nuevo", command=self.nuevo_proyecto)
-        self.file_menu.add_command(label="Guardar", command=self.guardar_pdf)
+        self.file_menu.add_command(label="Exportar PDF", command=self.guardar_pdf)
 
     def _build_topbar(self) -> None:
         topbar = ctk.CTkFrame(self, fg_color=PRIMARY_BUTTON_PRESSED, corner_radius=0, height=24)
@@ -182,6 +182,9 @@ class DirectoryMainFrame(ctk.CTkFrame):
             )
             return
 
+        if not self._confirm_export_preview():
+            return
+
         if not self.directory_form.validate_dates():
             messagebox.showerror(
                 "Fecha inválida",
@@ -195,7 +198,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
         default_name = f"{safe_name.strip() or 'directorio'}.pdf"
         target = filedialog.asksaveasfilename(
             parent=self,
-            title="Guardar directorio como PDF",
+            title="Exportar directorio como PDF",
             defaultextension=".pdf",
             initialfile=default_name,
             filetypes=(("Archivo PDF", "*.pdf"), ("Todos los archivos", "*.*")),
@@ -219,6 +222,30 @@ class DirectoryMainFrame(ctk.CTkFrame):
             f"El reporte se guardó correctamente en:\n{output_path}",
             parent=self,
         )
+
+    def _confirm_export_preview(self) -> bool:
+        summary = self.directory_form.get_preview_summary()
+        date_issues = summary["date_issues"]
+        lines = [
+            "Vista previa del directorio",
+            "",
+            f"Título: {summary['title'] or '(sin título)'}",
+            f"Período: {summary['period'] or '(sin período)'}",
+            f"Áreas: {summary['area_count']}",
+            f"Personas: {summary['person_count']}",
+        ]
+
+        if date_issues:
+            lines.extend(["", "Fechas vacías o inválidas:"])
+            lines.extend(f"- {issue}" for issue in date_issues[:12])
+            if len(date_issues) > 12:
+                lines.append(f"- ... y {len(date_issues) - 12} más")
+            lines.extend(["", "Corrige las fechas antes de generar el PDF."])
+            messagebox.showwarning("Vista previa", "\n".join(lines), parent=self)
+            return False
+
+        lines.extend(["", "¿Generar PDF con estos datos?"])
+        return messagebox.askyesno("Vista previa", "\n".join(lines), parent=self)
 
     def nuevo_proyecto(self) -> None:
         self.directory_form.reset_form()

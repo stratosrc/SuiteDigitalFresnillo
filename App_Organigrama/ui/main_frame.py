@@ -88,7 +88,7 @@ class MainFrame(ctk.CTkFrame):
         )
         self.file_menu.add_command(label="Nuevo", command=self.new_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Abrir proyecto", command=self.open_project)
+        self.file_menu.add_command(label="Abrir", command=self.open_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_command(label="Guardar", command=self.save_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
@@ -295,6 +295,7 @@ class MainFrame(ctk.CTkFrame):
             on_selection_change=self._update_delete_state,
             on_zoom_change=self._update_zoom_label,
             on_document_change=self._mark_dirty,
+            on_context_change=self._update_context_status,
             corner_radius=0,
         )
         self.grid_canvas.grid(row=1, column=0, sticky="nsew", pady=(8, 0))
@@ -332,6 +333,15 @@ class MainFrame(ctk.CTkFrame):
             
             font=make_font(12, "bold"),
         ).grid(row=0, column=0, padx=(5, 0), pady=5, sticky="w")
+
+        self.context_status_label = ctk.CTkLabel(
+            footer,
+            text="Clic para crear nodo",
+            text_color=TEXT_LIGHT,
+            font=make_font(12),
+            anchor="center",
+        )
+        self.context_status_label.grid(row=0, column=1, padx=(14, 12), pady=5, sticky="ew")
 
         zoom_frame = ctk.CTkFrame(footer, fg_color="transparent")
         zoom_frame.grid(row=0, column=2, padx=(12, 5), pady=5, sticky="e")
@@ -401,6 +411,10 @@ class MainFrame(ctk.CTkFrame):
         percent = self.grid_canvas.zoom_percent() if zoom_percent is None else zoom_percent
         self.zoom_label.configure(text=f"{percent}%")
 
+    def _update_context_status(self, message: str) -> None:
+        if hasattr(self, "context_status_label"):
+            self.context_status_label.configure(text=message)
+
     def new_project(self) -> None:
         if not self._confirm_discard_changes():
             return
@@ -416,7 +430,7 @@ class MainFrame(ctk.CTkFrame):
 
         source_path = filedialog.askopenfilename(
             parent=self,
-            title="Abrir proyecto",
+            title="Abrir",
             filetypes=[("Proyecto JSON", "*.json"), ("Todos los archivos", "*.*")],
         )
         if not source_path:
@@ -473,7 +487,7 @@ class MainFrame(ctk.CTkFrame):
         self.document.page_orientation = orientation
         target_path = filedialog.asksaveasfilename(
             parent=self,
-            title="Guardar organigrama como PDF",
+            title="Exportar organigrama como PDF",
             defaultextension=".pdf",
             filetypes=[("Archivo PDF", "*.pdf"), ("Todos los archivos", "*.*")],
             initialfile="organigrama.pdf",
@@ -553,7 +567,26 @@ class MainFrame(ctk.CTkFrame):
         if self._is_operation_running():
             self._show_operation_warning()
             return False
+        if not self._confirm_save_before_export():
+            return False
         return True
+
+    def _confirm_save_before_export(self) -> bool:
+        if not self.is_dirty:
+            return True
+
+        answer = messagebox.askyesnocancel(
+            "Guardar proyecto antes de exportar",
+            "Hay cambios sin guardar. ¿Deseas guardar el proyecto editable antes de exportar?",
+            parent=self,
+        )
+        if answer is None:
+            return False
+        if answer is False:
+            return True
+
+        self.save_project()
+        return not self.is_dirty
 
     def _show_operation_warning(self) -> None:
         messagebox.showwarning(

@@ -38,11 +38,15 @@ class PersonnelRow:
         master: ctk.CTkFrame,
         grid_row: int,
         on_remove: Callable[[], None],
+        on_move_up: Callable[[], None],
+        on_move_down: Callable[[], None],
         remove_icons: IconPair,
     ) -> None:
         self.master = master
         self.grid_row = grid_row
         self._on_remove = on_remove
+        self._on_move_up = on_move_up
+        self._on_move_down = on_move_down
         self.remove_icons = remove_icons
         self.entries: list[ctk.CTkEntry] = []
         self.date_entry: ctk.CTkEntry | None = None
@@ -77,6 +81,36 @@ class PersonnelRow:
             self.entries.append(entry)
             self.widgets.append(entry)
 
+        up_button = ctk.CTkButton(
+            self.master,
+            text="Subir",
+            command=self._handle_move_up,
+            width=46,
+            height=30,
+            corner_radius=0,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            text_color=TEXT_LIGHT,
+            font=make_font(11, "bold"),
+        )
+        up_button.grid(row=self.grid_row, column=4, padx=(10, 4), pady=(0, 8), sticky="e")
+        self.widgets.append(up_button)
+
+        down_button = ctk.CTkButton(
+            self.master,
+            text="Bajar",
+            command=self._handle_move_down,
+            width=46,
+            height=30,
+            corner_radius=0,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            text_color=TEXT_LIGHT,
+            font=make_font(11, "bold"),
+        )
+        down_button.grid(row=self.grid_row, column=5, padx=(0, 4), pady=(0, 8), sticky="e")
+        self.widgets.append(down_button)
+
         remove_button = HoverIconButton(
             self.master,
             icons=self.remove_icons,
@@ -84,11 +118,17 @@ class PersonnelRow:
             width=30,
             height=30,
         )
-        remove_button.grid(row=self.grid_row, column=4, padx=(10, 0), pady=(0, 8), sticky="e")
+        remove_button.grid(row=self.grid_row, column=6, padx=(0, 0), pady=(0, 8), sticky="e")
         self.widgets.append(remove_button)
 
     def _handle_remove(self) -> None:
         self._on_remove()
+
+    def _handle_move_up(self) -> None:
+        self._on_move_up()
+
+    def _handle_move_down(self) -> None:
+        self._on_move_down()
 
     def _handle_date_focus_out(self, _event: tk.Event) -> None:
         self.validate_date()
@@ -132,6 +172,8 @@ class AreaSection(ctk.CTkFrame):
         self,
         master: ctk.CTkFrame,
         on_remove: Callable[[], None],
+        on_move_up: Callable[[], None],
+        on_move_down: Callable[[], None],
         add_icons: IconPair,
         area_remove_icons: IconPair,
         person_remove_icons: IconPair,
@@ -145,6 +187,8 @@ class AreaSection(ctk.CTkFrame):
             border_color=BORDER_COLOR,
         )
         self._on_remove = on_remove
+        self._on_move_up = on_move_up
+        self._on_move_down = on_move_down
         self.add_icons = add_icons
         self.area_remove_icons = area_remove_icons
         self.person_remove_icons = person_remove_icons
@@ -175,6 +219,33 @@ class AreaSection(ctk.CTkFrame):
         )
         self.area_name_entry.grid(row=0, column=0, sticky="ew")
 
+        up_button = ctk.CTkButton(
+            header_frame,
+            text="Subir",
+            command=self._handle_move_up,
+            width=32,
+            height=32,
+            corner_radius=0,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            text_color=TEXT_LIGHT,
+            font=make_font(11, "bold"),
+        )
+        up_button.grid(row=0, column=1, padx=(10, 0), sticky="e")
+
+        ctk.CTkButton(
+            header_frame,
+            text="Bajar",
+            command=self._handle_move_down,
+            width=32,
+            height=32,
+            corner_radius=0,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            text_color=TEXT_LIGHT,
+            font=make_font(11, "bold"),
+        ).grid(row=0, column=2, padx=(6, 0), sticky="e")
+
         if self.removable:
             HoverIconButton(
                 header_frame,
@@ -182,13 +253,14 @@ class AreaSection(ctk.CTkFrame):
                 command=self._handle_remove,
                 width=32,
                 height=32,
-            ).grid(row=0, column=1, padx=(10, 0), sticky="e")
+            ).grid(row=0, column=3, padx=(10, 0), sticky="e")
 
         self.detail_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.detail_frame.grid(row=1, column=0, sticky="ew", padx=(44, 16), pady=(14, 14))
         for column, weight in enumerate(PERSONNEL_COLUMN_WEIGHTS):
             self.detail_frame.grid_columnconfigure(column, weight=weight, uniform="personnel")
-        self.detail_frame.grid_columnconfigure(4, weight=0)
+        for column in (4, 5, 6):
+            self.detail_frame.grid_columnconfigure(column, weight=0)
 
         self._build_headers(self.detail_frame)
 
@@ -221,14 +293,24 @@ class AreaSection(ctk.CTkFrame):
             self.detail_frame,
             grid_row=len(self.rows) + 1,
             on_remove=lambda: None,
+            on_move_up=lambda: None,
+            on_move_down=lambda: None,
             remove_icons=self.person_remove_icons,
         )
         row._on_remove = lambda current=row: self.remove_person_row(current)
+        row._on_move_up = lambda current=row: self.move_person_row(current, -1)
+        row._on_move_down = lambda current=row: self.move_person_row(current, 1)
         self.rows.append(row)
         self._place_add_person_button()
 
     def _handle_remove(self) -> None:
         self._on_remove()
+
+    def _handle_move_up(self) -> None:
+        self._on_move_up()
+
+    def _handle_move_down(self) -> None:
+        self._on_move_down()
 
     def remove_person_row(self, row: PersonnelRow) -> None:
         if row not in self.rows:
@@ -236,6 +318,18 @@ class AreaSection(ctk.CTkFrame):
 
         self.rows.remove(row)
         row.destroy()
+        self._refresh_rows()
+
+    def move_person_row(self, row: PersonnelRow, delta: int) -> None:
+        if row not in self.rows:
+            return
+
+        current_index = self.rows.index(row)
+        target_index = current_index + delta
+        if target_index < 0 or target_index >= len(self.rows):
+            return
+
+        self.rows[current_index], self.rows[target_index] = self.rows[target_index], self.rows[current_index]
         self._refresh_rows()
 
     def _refresh_rows(self) -> None:
@@ -247,7 +341,7 @@ class AreaSection(ctk.CTkFrame):
         if self.add_person_button is None:
             return
 
-        self.add_person_button.grid(row=len(self.rows) + 1, column=4, sticky="e", pady=(2, 0))
+        self.add_person_button.grid(row=len(self.rows) + 1, column=6, sticky="e", pady=(2, 0))
 
     def get_data(self, fallback_name: str = "") -> AreaReportData:
         area_name = self.area_name_entry.get().strip() if self.area_name_entry is not None else ""
@@ -375,12 +469,16 @@ class DirectoryFormFrame(ctk.CTkFrame):
         section = AreaSection(
             self.areas_container,
             on_remove=lambda: None,
+            on_move_up=lambda: None,
+            on_move_down=lambda: None,
             add_icons=self.plus_icons,
             area_remove_icons=self.area_remove_icons,
             person_remove_icons=self.person_remove_icons,
             removable=removable,
         )
         section._on_remove = lambda current=section: self.remove_area(current)
+        section._on_move_up = lambda current=section: self.move_area(current, -1)
+        section._on_move_down = lambda current=section: self.move_area(current, 1)
         section.grid(row=len(self.area_sections), column=0, sticky="ew", pady=(0, 16))
         self.area_sections.append(section)
 
@@ -390,6 +488,21 @@ class DirectoryFormFrame(ctk.CTkFrame):
 
         self.area_sections.remove(section)
         section.destroy()
+        self._refresh_areas()
+
+    def move_area(self, section: AreaSection, delta: int) -> None:
+        if section not in self.area_sections:
+            return
+
+        current_index = self.area_sections.index(section)
+        target_index = current_index + delta
+        if target_index < 0 or target_index >= len(self.area_sections):
+            return
+
+        self.area_sections[current_index], self.area_sections[target_index] = (
+            self.area_sections[target_index],
+            self.area_sections[current_index],
+        )
         self._refresh_areas()
 
     def _refresh_areas(self) -> None:
@@ -415,6 +528,25 @@ class DirectoryFormFrame(ctk.CTkFrame):
     def validate_dates(self) -> bool:
         results = [section.validate_dates() for section in self.area_sections]
         return all(results)
+
+    def get_preview_summary(self) -> dict[str, object]:
+        data = self.get_report_data()
+        populated_areas = [area for area in data.areas if area.name or area.personnel]
+        date_issues: list[str] = []
+        for area_index, area in enumerate(data.areas, start=1):
+            area_name = area.name or f"Área {area_index}"
+            for person_index, person in enumerate(area.personnel, start=1):
+                if not person.start_date or not is_valid_date(person.start_date):
+                    label = person.name or person.position or person.rank or f"Fila {person_index}"
+                    date_issues.append(f"{area_name}: {label}")
+
+        return {
+            "title": data.title,
+            "period": data.period,
+            "area_count": len(populated_areas),
+            "person_count": sum(len(area.personnel) for area in populated_areas),
+            "date_issues": date_issues,
+        }
 
     def validate_required_data(self) -> bool:
         data = self.get_report_data()

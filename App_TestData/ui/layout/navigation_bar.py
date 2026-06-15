@@ -106,6 +106,8 @@ def build_navigation_bar(parent, callbacks: dict):
     zoom_in_button.pack(side=tk.LEFT, pady=5)
 
     return {
+        "previous_page_button": previous_button,
+        "next_page_button": next_button,
         "page_entry": page_entry,
         "total_pages_label": total_pages_label,
         "zoom_label": zoom_label,

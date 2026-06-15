@@ -3,13 +3,28 @@ import math
 import tkinter as tk
 
 import customtkinter as ctk
-from PIL import Image, ImageOps, ImageTk
+from PIL import Image, ImageTk
 
 from App_Organigrama.models.document import OrgGridDocument, OrgNode
-from App_Organigrama.rendering.engine import Box, NodeLayout, RenderingEngine
+from App_Organigrama.rendering.engine import NodeLayout, RenderingEngine
 from App_Organigrama.routing.manhattan_router import ConnectionRoute, ManhattanRouter
 from App_Organigrama.config.assets import CROSS_CURSOR_PATH, NODE_LOGO_PATH
+from App_Organigrama.ui.canvas_hit_testing import (
+    find_blocked_point_at_screen,
+    find_connection_at_screen,
+    nearest_port,
+)
+from App_Organigrama.ui.canvas_image_cache import get_resized_photo, load_rgba_image
+from App_Organigrama.ui.canvas_selection import draw_connection_selection_overlay, draw_node_selection_overlay
 from App_Organigrama.ui.canvas_shapes import create_rounded_rectangle
+from App_Organigrama.ui.canvas_viewport import (
+    offset_screen_layout,
+    scale_box,
+    screen_to_grid,
+    screen_to_subgrid,
+    to_screen_layout,
+    world_to_screen,
+)
 from App_Organigrama.ui.modals import NodeEditorDialog
 from App_Organigrama.ui.theme import (
     BORDER_COLOR,
@@ -45,6 +60,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         on_selection_change: Callable[[bool], None] | None = None,
         on_zoom_change: Callable[[int], None] | None = None,
         on_document_change: Callable[[], None] | None = None,
+        on_context_change: Callable[[str], None] | None = None,
         **kwargs: object,
     ) -> None:
         super().__init__(
@@ -60,6 +76,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.on_selection_change = on_selection_change
         self.on_zoom_change = on_zoom_change
         self.on_document_change = on_document_change
+        self.on_context_change = on_context_change
 
         self.zoom = 1.0
         self.min_zoom = 0.25
@@ -98,6 +115,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.canvas = tk.Canvas(self, bg=SURFACE_BACKGROUND, highlightthickness=0)
         self.canvas.pack(fill="both", expand=True)
         self._bind_events()
+        self._emit_context_change()
 
     def _bind_events(self) -> None:
         self.canvas.bind("<Configure>", lambda _event: self.request_redraw())
@@ -142,6 +160,7 @@ class OrgGridCanvas(ctk.CTkFrame):
             self.hover_port = None
         self._update_custom_cursor(visible=enabled)
         self.request_redraw()
+        self._emit_context_change()
 
     def set_show_logos(self, enabled: bool) -> None:
         self.document.show_logos = enabled
@@ -222,10 +241,12 @@ class OrgGridCanvas(ctk.CTkFrame):
         self._draw_grid()
         self._draw_connections(self.route_cache)
         self._draw_preview_routes()
+        draw_connection_selection_overlay(self)
         self._draw_nodes()
         self._draw_blocked_points()
         self._draw_hover_port()
         self._draw_ghost()
+        draw_node_selection_overlay(self)
         self._draw_custom_cursor()
 
     def request_redraw(self) -> None:
@@ -546,6 +567,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.drag_screen_point = (event.x, event.y) if node is not None else None
         if node is not None:
             self._set_selection(node_id=node.id)
+            self._emit_context_change("Arrastra para mover")
 
     def _on_drag(self, event: tk.Event[tk.Canvas]) -> None:
         if self.drag_press is None:
@@ -558,6 +580,7 @@ class OrgGridCanvas(ctk.CTkFrame):
             return
 
         self.dragged = True
+        self._emit_context_change("Arrastra para mover" if self.drag_node_id is not None else "Arrastra para desplazar el lienzo")
         if self.drag_node_id is not None:
             self.drag_screen_point = (event.x, event.y)
         else:
@@ -581,6 +604,7 @@ class OrgGridCanvas(ctk.CTkFrame):
                     self._mark_document_changed()
                 self._set_selection(node_id=drag_node_id)
             self.request_redraw()
+            self._emit_context_change()
             return
 
         self._handle_click(event.x, event.y)
@@ -600,6 +624,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         if self.pending_connection_source_id is None:
             self.pending_connection_source_id = node.id
             self.pending_source_port = port
+            self._emit_context_change()
         else:
             new_connection = self.document.add_connection(
                 self.pending_connection_source_id,
@@ -613,6 +638,7 @@ class OrgGridCanvas(ctk.CTkFrame):
             if new_connection is not None:
                 self._set_selection(connection_id=new_connection.id)
                 self._mark_document_changed()
+        self._emit_context_change()
         self.request_redraw()
 
     def _on_double_click(self, event: tk.Event[tk.Canvas]) -> None:
@@ -637,6 +663,7 @@ class OrgGridCanvas(ctk.CTkFrame):
             self._update_custom_cursor(event.x, event.y, visible=True)
             self.preview_obstacle = self._screen_to_subgrid(event.x, event.y)
             self.request_redraw()
+            self._emit_context_change()
             return
 
         node = self._node_at_screen(event.x, event.y)
@@ -645,6 +672,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         if node is not None:
             self.last_hover_cell = None
             self.request_redraw()
+            self._emit_context_change()
             return
 
         grid_x, grid_y = self._screen_to_grid(event.x, event.y)
@@ -652,6 +680,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         if hover_cell != self.last_hover_cell:
             self.last_hover_cell = hover_cell
             self.request_redraw()
+            self._emit_context_change()
 
     def _on_leave(self, _event: tk.Event[tk.Canvas]) -> None:
         self.hover_port = None
@@ -659,6 +688,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.last_hover_cell = None
         self._update_custom_cursor(visible=False)
         self.request_redraw()
+        self._emit_context_change()
 
     def _handle_click(self, screen_x: int, screen_y: int) -> None:
         if self.block_mode:
@@ -779,80 +809,36 @@ class OrgGridCanvas(ctk.CTkFrame):
         return None
 
     def _blocked_point_at_screen(self, screen_x: int, screen_y: int) -> GridPoint | None:
-        hit_radius = max(10.0, 12.0 * self.zoom)
-        closest_point: GridPoint | None = None
-        closest_distance = hit_radius
-        for blocked_point in self.document.blocked_points:
-            world_x, world_y = self.rendering_engine.grid_to_world(blocked_point[0], blocked_point[1])
-            center_x, center_y = self._world_to_screen(world_x, world_y)
-            distance = math.hypot(screen_x - center_x, screen_y - center_y)
-            if distance <= closest_distance:
-                closest_distance = distance
-                closest_point = blocked_point
-        return closest_point
+        return find_blocked_point_at_screen(
+            self.document.blocked_points,
+            screen_x,
+            screen_y,
+            self.zoom,
+            self.rendering_engine,
+            self._world_to_screen,
+        )
 
     def _connection_at_screen(self, screen_x: int, screen_y: int) -> ConnectionRoute | None:
-        best_route: ConnectionRoute | None = None
-        best_distance = 10.0
-        for route in self.route_cache:
-            points = [
-                self._world_to_screen(*self.rendering_engine.grid_to_world(point[0], point[1]))
-                for point in route.points
-            ]
-            for start, end in zip(points, points[1:]):
-                distance = self._distance_to_segment(screen_x, screen_y, start, end)
-                if distance < best_distance:
-                    best_distance = distance
-                    best_route = route
-        return best_route
-
-    def _distance_to_segment(
-        self,
-        screen_x: int,
-        screen_y: int,
-        start: tuple[float, float],
-        end: tuple[float, float],
-    ) -> float:
-        ax, ay = start
-        bx, by = end
-        dx = bx - ax
-        dy = by - ay
-        if dx == 0 and dy == 0:
-            return math.hypot(screen_x - ax, screen_y - ay)
-
-        projection = max(0.0, min(1.0, ((screen_x - ax) * dx + (screen_y - ay) * dy) / ((dx * dx) + (dy * dy))))
-        point_x = ax + (projection * dx)
-        point_y = ay + (projection * dy)
-        return math.hypot(screen_x - point_x, screen_y - point_y)
+        return find_connection_at_screen(
+            self.route_cache,
+            screen_x,
+            screen_y,
+            self.rendering_engine,
+            self._world_to_screen,
+        )
 
     def _nearest_port(self, node: OrgNode, screen_x: int, screen_y: int) -> str:
         layout = self._get_node_layout(node, include_logo=False)
-        center_x, center_y = self._world_to_screen(layout.center_x, layout.center_y)
-        half_width = (layout.box.width * self.zoom) / 2
-        half_height = (layout.box.height * self.zoom) / 2
-        distances = {
-            "top": abs(screen_y - (center_y - half_height)),
-            "bottom": abs(screen_y - (center_y + half_height)),
-            "left": abs(screen_x - (center_x - half_width)),
-            "right": abs(screen_x - (center_x + half_width)),
-        }
-        return min(distances, key=distances.get)
+        return nearest_port(node, screen_x, screen_y, layout, self.zoom, self._world_to_screen)
 
     def _world_to_screen(self, world_x: float, world_y: float) -> tuple[float, float]:
-        return (self.pan_x + (world_x * self.zoom), self.pan_y + (world_y * self.zoom))
+        return world_to_screen(world_x, world_y, self.pan_x, self.pan_y, self.zoom)
 
     def _screen_to_grid(self, screen_x: int, screen_y: int) -> tuple[int, int]:
-        world_x = (screen_x - self.pan_x) / self.zoom
-        world_y = (screen_y - self.pan_y) / self.zoom
-        return self.rendering_engine.world_to_grid(world_x, world_y)
+        return screen_to_grid(screen_x, screen_y, self.pan_x, self.pan_y, self.zoom, self.rendering_engine)
 
     def _screen_to_subgrid(self, screen_x: int, screen_y: int) -> GridPoint:
-        world_x = (screen_x - self.pan_x) / self.zoom
-        world_y = (screen_y - self.pan_y) / self.zoom
-        return (
-            round((world_x / self.rendering_engine.base_cell_width) * 2) / 2,
-            round((world_y / self.rendering_engine.base_cell_height) * 2) / 2,
-        )
+        return screen_to_subgrid(screen_x, screen_y, self.pan_x, self.pan_y, self.zoom, self.rendering_engine)
 
     def _zoom_at(self, screen_x: float, screen_y: float, factor: float) -> None:
         previous_zoom = self.zoom
@@ -880,6 +866,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.selected_blocked_point = blocked_point
         self._sync_selection_blink()
         self._emit_selection_change()
+        self._emit_context_change()
 
     def _sync_selection_blink(self) -> None:
         if (
@@ -920,6 +907,7 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.hover_port = None
         self._update_custom_cursor(visible=self.block_mode)
         self.request_redraw()
+        self._emit_context_change()
 
     def _emit_selection_change(self) -> None:
         if self.on_selection_change is not None:
@@ -933,6 +921,25 @@ class OrgGridCanvas(ctk.CTkFrame):
     def _emit_document_change(self) -> None:
         if self.on_document_change is not None:
             self.on_document_change()
+
+    def _emit_context_change(self, message: str | None = None) -> None:
+        if self.on_context_change is not None:
+            self.on_context_change(message or self._context_message())
+
+    def _context_message(self) -> str:
+        if self.block_mode:
+            return "Clic para marcar o quitar obstaculo"
+        if self.pending_connection_source_id is not None:
+            return "Clic derecho en el nodo destino para conectar"
+        if self.hover_port is not None:
+            return "Clic derecho en dos nodos para conectar"
+        if self.selected_node_id is not None:
+            return "Arrastra para mover. Doble clic para editar"
+        if self.selected_connection_id is not None:
+            return "Conexion seleccionada. Supr para eliminar"
+        if self.selected_blocked_point is not None:
+            return "Obstaculo seleccionado. Supr para eliminar"
+        return "Clic para crear nodo"
 
     def _mark_document_changed(self, routes_dirty: bool = True) -> None:
         self._invalidate_layout_cache()
@@ -949,21 +956,10 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.last_node_id = node_id
 
     def _load_logo_source(self) -> Image.Image | None:
-        logo_path = NODE_LOGO_PATH
-        if not logo_path.exists():
-            return None
-        try:
-            return Image.open(logo_path).convert("RGBA")
-        except OSError:
-            return None
+        return load_rgba_image(NODE_LOGO_PATH)
 
     def _load_cross_cursor_source(self) -> Image.Image | None:
-        if not CROSS_CURSOR_PATH.exists():
-            return None
-        try:
-            return Image.open(CROSS_CURSOR_PATH).convert("RGBA")
-        except OSError:
-            return None
+        return load_rgba_image(CROSS_CURSOR_PATH)
 
     def _invalidate_layout_cache(self) -> None:
         self._node_layout_cache.clear()
@@ -978,34 +974,10 @@ class OrgGridCanvas(ctk.CTkFrame):
         return self._node_layout_cache[cache_key]
 
     def _get_logo_image(self, size: int) -> ImageTk.PhotoImage | None:
-        if self.logo_source_image is None or size <= 0:
-            return None
-        if size in self.logo_cache:
-            return self.logo_cache[size]
-
-        image = self.logo_source_image.copy()
-        active_box = image.getbbox()
-        if active_box:
-            image = image.crop(active_box)
-        resized = ImageOps.contain(image, (size, size), Image.Resampling.LANCZOS)
-        tk_image = ImageTk.PhotoImage(resized)
-        self.logo_cache[size] = tk_image
-        return tk_image
+        return get_resized_photo(self.logo_source_image, self.logo_cache, size)
 
     def _get_cross_cursor_image(self, size: int) -> ImageTk.PhotoImage | None:
-        if self.cross_cursor_source_image is None or size <= 0:
-            return None
-        if size in self.cross_cursor_cache:
-            return self.cross_cursor_cache[size]
-
-        image = self.cross_cursor_source_image.copy()
-        active_box = image.getchannel("A").getbbox()
-        if active_box:
-            image = image.crop(active_box)
-        resized = ImageOps.contain(image, (size, size), Image.Resampling.LANCZOS)
-        tk_image = ImageTk.PhotoImage(resized)
-        self.cross_cursor_cache[size] = tk_image
-        return tk_image
+        return get_resized_photo(self.cross_cursor_source_image, self.cross_cursor_cache, size, crop_alpha=True)
 
     def _update_custom_cursor(
         self,
@@ -1049,89 +1021,13 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.canvas.tag_raise(self.custom_cursor_canvas_id)
 
     def _to_screen_layout(self, layout: NodeLayout) -> NodeLayout:
-        scaled_box = self._scale_box(layout.box)
-        scaled_visual_box = self._scale_box(layout.visual_box)
-        scaled_lines = []
-        for line in layout.lines:
-            line_top_world = layout.box.top + line.top
-            _screen_x, screen_top = self._world_to_screen(layout.center_x, line_top_world)
-            scaled_lines.append(
-                type(line)(
-                    text=line.text,
-                    top=screen_top,
-                    font_size=line.font_size * self.zoom,
-                    line_height=line.line_height * self.zoom,
-                    is_bold=line.is_bold,
-                )
-            )
-        scaled_style = type(layout.style)(
-            width=layout.style.width * self.zoom,
-            min_height=layout.style.min_height * self.zoom,
-            name_font_size=layout.style.name_font_size * self.zoom,
-            role_font_size=layout.style.role_font_size * self.zoom,
-            name_line_height=layout.style.name_line_height * self.zoom,
-            role_line_height=layout.style.role_line_height * self.zoom,
-            text_padding_x=layout.style.text_padding_x * self.zoom,
-            text_padding_top=layout.style.text_padding_top * self.zoom,
-            text_padding_bottom=layout.style.text_padding_bottom * self.zoom,
-            text_gap=layout.style.text_gap * self.zoom,
-            logo_radius=layout.style.logo_radius * self.zoom,
-            logo_center_offset_y=layout.style.logo_center_offset_y * self.zoom,
-            connection_line_width=layout.style.connection_line_width * self.zoom,
-        )
-        screen_center_x, screen_center_y = self._world_to_screen(layout.center_x, layout.center_y)
-        logo_center_x, logo_center_y = self._world_to_screen(layout.logo_center_x, layout.logo_center_y)
-        return NodeLayout(
-            center_x=screen_center_x,
-            center_y=screen_center_y,
-            box=scaled_box,
-            visual_box=scaled_visual_box,
-            lines=tuple(scaled_lines),
-            style=scaled_style,
-            logo_center_x=logo_center_x,
-            logo_center_y=logo_center_y,
-            logo_image_size=layout.logo_image_size * self.zoom,
-        )
+        return to_screen_layout(layout, self.pan_x, self.pan_y, self.zoom)
 
-    def _scale_box(self, box: Box) -> Box:
-        left, top = self._world_to_screen(box.left, box.top)
-        right, bottom = self._world_to_screen(box.right, box.bottom)
-        return type(box)(left=left, top=top, right=right, bottom=bottom)
+    def _scale_box(self, box):
+        return scale_box(box, self.pan_x, self.pan_y, self.zoom)
 
     def _offset_screen_layout(self, layout: NodeLayout, delta_x: float, delta_y: float) -> NodeLayout:
-        shifted_box = type(layout.box)(
-            left=layout.box.left + delta_x,
-            top=layout.box.top + delta_y,
-            right=layout.box.right + delta_x,
-            bottom=layout.box.bottom + delta_y,
-        )
-        shifted_visual_box = type(layout.visual_box)(
-            left=layout.visual_box.left + delta_x,
-            top=layout.visual_box.top + delta_y,
-            right=layout.visual_box.right + delta_x,
-            bottom=layout.visual_box.bottom + delta_y,
-        )
-        shifted_lines = tuple(
-            type(line)(
-                text=line.text,
-                top=line.top + delta_y,
-                font_size=line.font_size,
-                line_height=line.line_height,
-                is_bold=line.is_bold,
-            )
-            for line in layout.lines
-        )
-        return NodeLayout(
-            center_x=layout.center_x + delta_x,
-            center_y=layout.center_y + delta_y,
-            box=shifted_box,
-            visual_box=shifted_visual_box,
-            lines=shifted_lines,
-            style=layout.style,
-            logo_center_x=layout.logo_center_x + delta_x,
-            logo_center_y=layout.logo_center_y + delta_y,
-            logo_image_size=layout.logo_image_size,
-        )
+        return offset_screen_layout(layout, delta_x, delta_y)
 
     def destroy(self) -> None:
         if self.selection_blink_after_id is not None:

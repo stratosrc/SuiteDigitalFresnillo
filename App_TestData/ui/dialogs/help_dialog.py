@@ -62,7 +62,7 @@ def show_help_dialog(parent):
         for bullet in bullets:
             ctk.CTkLabel(
                 scroll_frame,
-                text=f"â€¢ {bullet}",
+                text=f"* {bullet}",
                 fg_color=SURFACE_BG,
                 text_color=TEXT_DARK,
                 font=build_font(12),

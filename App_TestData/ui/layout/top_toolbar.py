@@ -29,6 +29,10 @@ def build_menu_toolbar(parent, callbacks: dict):
         activeforeground=TEXT_LIGHT,
     )
     file_menu.add_command(label=FILE_MENU_LABELS["new_job"], command=callbacks["on_new_job"])
+    file_menu.add_command(label=FILE_MENU_LABELS["open_project"], command=callbacks["on_open_project"])
+    file_menu.add_command(label=FILE_MENU_LABELS["save_project"], command=callbacks["on_save_project"])
+    file_menu.add_command(label=FILE_MENU_LABELS["save_project_as"], command=callbacks["on_save_project_as"])
+    file_menu.add_separator()
     file_menu.add_command(label=FILE_MENU_LABELS["save_pdf"], command=callbacks["on_open_export_dialog"])
 
     file_button = create_toolbar_button(
@@ -103,6 +107,7 @@ def build_action_toolbar(parent, callbacks: dict):
         DELETE_ICON_PATH,
         width=42,
         danger=True,
+        disabled_tooltip="No hay recuadro seleccionado",
     )
     delete_button.configure(state=tk.DISABLED)
     delete_button.pack(side=tk.LEFT, padx=(6, 0))

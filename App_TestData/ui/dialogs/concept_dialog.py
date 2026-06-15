@@ -44,10 +44,11 @@ def _create_number_entry(parent, textvariable=None):
 class ConceptDialog(ctk.CTkToplevel):
     """Dialog window that classifies a new censorship rectangle."""
 
-    def __init__(self, parent, catalogue_items):
+    def __init__(self, parent, catalogue_items, initial_data=None):
         super().__init__(parent)
         self.owner_app = parent
         self.catalogue_items = catalogue_items
+        self.initial_data = initial_data or {}
         self.filtered_item_ids = []
         self.result = None
         self.reserved_widgets = {}
@@ -63,6 +64,7 @@ class ConceptDialog(ctk.CTkToplevel):
 
         self._build_ui()
         self._filter_list()
+        self._apply_initial_data()
         self.bind("<Return>", lambda _event: self._on_accept())
         self.geometry(f"+{parent.winfo_rootx() + 50}+{parent.winfo_rooty() + 50}")
 
@@ -219,6 +221,7 @@ class ConceptDialog(ctk.CTkToplevel):
             ).grid(row=row_index, column=0, sticky=tk.W, pady=5)
             entry = create_entry(tab, textvariable=variable) if row_index < 2 else _create_number_entry(tab, textvariable=variable)
             entry.grid(row=row_index, column=1, sticky=tk.EW, padx=(10, 0), pady=5)
+            widgets[f"{field_name}_entry"] = entry
 
         ctk.CTkLabel(
             tab,
@@ -282,6 +285,7 @@ class ConceptDialog(ctk.CTkToplevel):
             else:
                 entry = _create_number_entry(tab, textvariable=variable)
             entry.grid(row=row_index, column=1, sticky=tk.EW, padx=(10, 0), pady=5)
+            widgets[f"{field_name}_entry"] = entry
 
         ctk.CTkLabel(
             tab,
@@ -344,6 +348,55 @@ class ConceptDialog(ctk.CTkToplevel):
             self.listbox.selection_clear(0, tk.END)
             self.listbox.selection_set(0)
             self.listbox.activate(0)
+
+    def _apply_initial_data(self):
+        if not self.initial_data:
+            return
+
+        classification = self.initial_data.get("classification", "general")
+        if classification == "reserved":
+            self.tab_view.set(CONCEPT_DIALOG["tabs"]["reserved"])
+            self._set_classification_fields(self.reserved_widgets)
+        elif classification == "confidential":
+            self.tab_view.set(CONCEPT_DIALOG["tabs"]["confidential"])
+            self._set_classification_fields(self.confidential_widgets)
+        elif classification == "other_law":
+            self.tab_view.set(CONCEPT_DIALOG["tabs"]["other_law"])
+            self._set_other_law_fields()
+        else:
+            self.tab_view.set(CONCEPT_DIALOG["tabs"]["general"])
+            self._set_general_fields()
+
+    def _set_general_fields(self):
+        concept_id = self.initial_data.get("concept_id")
+        self._set_entry_text(self.rows_entry, self.initial_data.get("rows", SPINBOX_DEFAULT_VALUE))
+        self._set_entry_text(self.paragraphs_entry, self.initial_data.get("paragraphs", SPINBOX_DEFAULT_VALUE))
+        if concept_id not in self.filtered_item_ids:
+            return
+
+        index = self.filtered_item_ids.index(concept_id)
+        self.listbox.selection_clear(0, tk.END)
+        self.listbox.selection_set(index)
+        self.listbox.activate(index)
+        self.listbox.see(index)
+
+    def _set_classification_fields(self, widgets):
+        widgets["legal_basis"].set(self.initial_data.get("legal_basis", ""))
+        widgets["reason"].set(self.initial_data.get("reason", ""))
+        widgets["paragraphs"].set(str(self.initial_data.get("paragraphs", SPINBOX_DEFAULT_VALUE)))
+        widgets["rows"].set(str(self.initial_data.get("rows", SPINBOX_DEFAULT_VALUE)))
+
+    def _set_other_law_fields(self):
+        for field_name in ("object", "articles", "law", "paragraphs", "rows"):
+            value = self.initial_data.get(field_name, SPINBOX_DEFAULT_VALUE if field_name in {"paragraphs", "rows"} else "")
+            self.other_law_widgets[field_name].set(str(value))
+            entry = self.other_law_widgets.get(f"{field_name}_entry")
+            if entry is not None and str(value).strip():
+                entry.configure(text_color=TEXT_DARK)
+
+    def _set_entry_text(self, entry, value):
+        entry.delete(0, tk.END)
+        entry.insert(0, str(value))
 
     def _on_accept(self):
         selected_tab = self.tab_view.get()

@@ -1,8 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
-import logging
 import sys
+from pathlib import Path
 from typing import Any, Deque
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -18,10 +17,6 @@ if __package__ in {None, ""}:
 from App_TestData.config.ui_strings import (
     APP_WINDOW_TITLE,
     EXIT_MESSAGES,
-    EXPORT_MESSAGES,
-    FILE_MENU_LABELS,
-    NAVIGATION_LABELS,
-    NAVIGATION_MESSAGES,
     PDF_MANAGER_MESSAGES,
 )
 from App_TestData.config.settings import (
@@ -46,29 +41,20 @@ from App_TestData.data.catalogue_data import (
 )
 from App_TestData.ui.interactions.canvas_redactions import setup_canvas_events
 from App_TestData.domain.document_state import DocumentState, RectangleData, RedactionHistoryAction
-from App_TestData.domain.redaction_editing import (
-    delete_selected_rectangle,
-    redo_last_rectangle,
-    refresh_rectangle_metadata,
-    undo_last_rectangle,
-)
-from App_TestData.utils.navigation import (
-    get_adjacent_page_index,
-    is_valid_page_index,
-    parse_page_number,
-    to_page_index,
-)
 from App_TestData.services.pdf_service import PDFManager
+from App_TestData.services.project_persistence import (
+    calculate_file_hash,
+    deserialize_rectangles,
+    load_project,
+    save_project,
+)
 from App_TestData.ui.interactions.scroll import setup_mousewheel_scroll
-from App_TestData.utils.zoom import format_zoom_percentage, get_next_zoom
+from App_TestData.ui.controllers import ExportController, NavigationController, RectangleActionController
 from App_TestData.ui.dialogs.catalogue_dialog import show_catalogue_dialog
-from App_TestData.ui.dialogs.export_dialog import ExportDialog
 from App_TestData.ui.dialogs.help_dialog import show_help_dialog
 from App_TestData.ui.layout.main_layout import build_main_layout
 from components.shared.windowing import center_window
 from components.styles.styles import apply_ctk_style, styles
-
-LOGGER = logging.getLogger(__name__)
 
 
 class TestDataGeneratorApp(ctk.CTk):
@@ -83,9 +69,9 @@ class TestDataGeneratorApp(ctk.CTk):
         center_window(self, WINDOW_WIDTH, WINDOW_HEIGHT)
 
         self.document_state = DocumentState()
+        self.current_project_path: Path | None = None
         self._init_state()
         self._render_resize_after_id = None
-        self._pending_export_future = None
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="testdata-worker")
         styles(self)
         self.pdf_manager = PDFManager(
@@ -93,6 +79,9 @@ class TestDataGeneratorApp(ctk.CTk):
             self,
             self.catalogue_categories,
         )
+        self.navigation_controller = NavigationController(self)
+        self.rectangle_action_controller = RectangleActionController(self)
+        self.export_controller = ExportController(self, self._executor)
 
         widget_map = build_main_layout(self, self._build_callbacks())
         self._register_widgets(widget_map)
@@ -101,8 +90,8 @@ class TestDataGeneratorApp(ctk.CTk):
         setup_mousewheel_scroll(
             self.pdf_canvas,
             has_document=lambda: bool(self.pdf_document),
-            on_zoom_in=lambda: self._change_zoom("in"),
-            on_zoom_out=lambda: self._change_zoom("out"),
+            on_zoom_in=lambda: self.navigation_controller.change_zoom("in"),
+            on_zoom_out=lambda: self.navigation_controller.change_zoom("out"),
         )
         self.protocol("WM_DELETE_WINDOW", self.confirm_exit)
 
@@ -110,7 +99,10 @@ class TestDataGeneratorApp(ctk.CTk):
         """Build the callback map consumed by UI components."""
         return {
             "on_new_job": self._start_new_job,
-            "on_open_export_dialog": self._open_export_dialog,
+            "on_open_project": self.open_project,
+            "on_save_project": self.save_project,
+            "on_save_project_as": self.save_project_as,
+            "on_open_export_dialog": self.export_controller.open_export_dialog,
             "on_show_catalogue": lambda: show_catalogue_dialog(
                 self,
                 self.catalogue_sections,
@@ -118,12 +110,12 @@ class TestDataGeneratorApp(ctk.CTk):
             ),
             "on_show_help": lambda: show_help_dialog(self),
             "on_exit": self.confirm_exit,
-            "on_rectangle_action": self._handle_rectangle_action,
-            "on_previous_page": lambda: self._navigate_page("prev"),
-            "on_next_page": lambda: self._navigate_page("next"),
-            "on_go_to_page": self._go_to_page_from_entry,
-            "on_zoom_in": lambda: self._change_zoom("in"),
-            "on_zoom_out": lambda: self._change_zoom("out"),
+            "on_rectangle_action": self.rectangle_action_controller.handle_action,
+            "on_previous_page": lambda: self.navigation_controller.navigate_page("prev"),
+            "on_next_page": lambda: self.navigation_controller.navigate_page("next"),
+            "on_go_to_page": self.navigation_controller.go_to_page_from_entry,
+            "on_zoom_in": lambda: self.navigation_controller.change_zoom("in"),
+            "on_zoom_out": lambda: self.navigation_controller.change_zoom("out"),
             "on_canvas_resize": self._on_canvas_resize,
         }
 
@@ -131,8 +123,9 @@ class TestDataGeneratorApp(ctk.CTk):
         """Expose built widgets as attributes for the rest of the app."""
         for name, widget in widget_map.items():
             setattr(self, name, widget)
-        self._update_zoom_label()
-        self._sync_delete_button_state()
+        self.navigation_controller.update_zoom_label()
+        self.navigation_controller.update_page_state(current_page=0, total_pages=0)
+        self.rectangle_action_controller.sync_delete_button_state()
 
     def _init_state(self) -> None:
         self.catalogue_sections = CATALOGUE_SECTIONS
@@ -238,6 +231,7 @@ class TestDataGeneratorApp(ctk.CTk):
     def _start_new_job(self) -> None:
         """Reset the current job and then open the PDF selector."""
         self.pdf_manager.reset_current_job()
+        self.current_project_path = None
         self.after_idle(self.pdf_manager.load_new_job_pdf)
 
     def request_pdf_file_path(self) -> str | None:
@@ -262,10 +256,11 @@ class TestDataGeneratorApp(ctk.CTk):
 
         total_pages_label = getattr(self, "total_pages_label", None)
         if total_pages_label is not None:
-            total_pages_label.configure(text=NAVIGATION_LABELS["total_pages"].format(total_pages=0))
+            total_pages_label.configure(text="Página 0 de 0")
 
         self._reset_canvas_interaction_state()
         self._update_zoom_label()
+        self.navigation_controller.update_page_state(current_page=0, total_pages=0)
         self._sync_delete_button_state()
 
     def set_status(self, message: str) -> None:
@@ -293,8 +288,9 @@ class TestDataGeneratorApp(ctk.CTk):
         self.page_entry.delete(0, tk.END)
         self.page_entry.insert(0, str(current_page + 1))
         self.total_pages_label.configure(
-            text=NAVIGATION_LABELS["total_pages"].format(total_pages=total_pages)
+            text=f"Página {current_page + 1} de {total_pages}"
         )
+        self.navigation_controller.update_page_state(current_page=current_page, total_pages=total_pages)
 
     def update_zoom_label(self) -> None:
         """Synchronize the zoom label through the PDF manager callback."""
@@ -368,223 +364,125 @@ class TestDataGeneratorApp(ctk.CTk):
             self.pdf_manager.render_current_page()
 
     def _navigate_page(self, action):
-        if not self.pdf_document:
-            return
-
-        next_page = get_adjacent_page_index(self.current_page, len(self.pdf_document), action)
-        if next_page == self.current_page:
-            return
-
-        self.current_page = next_page
-        self.pdf_manager.render_current_page()
+        self.navigation_controller.navigate_page(action)
 
     def _go_to_page_from_entry(self):
-        if not self.pdf_document:
-            messagebox.showwarning(
-                NAVIGATION_MESSAGES["pdf_required_title"],
-                NAVIGATION_MESSAGES["pdf_required_message"],
-                parent=self,
-            )
-            return
-
-        try:
-            page_number = parse_page_number(self.page_entry.get())
-        except ValueError:
-            messagebox.showwarning(
-                NAVIGATION_MESSAGES["invalid_page_title"],
-                NAVIGATION_MESSAGES["invalid_page_message"],
-                parent=self,
-            )
-            return
-
-        page_index = to_page_index(page_number)
-        total_pages = len(self.pdf_document)
-        if not is_valid_page_index(page_index, total_pages):
-            messagebox.showwarning(
-                NAVIGATION_MESSAGES["page_out_of_range_title"],
-                NAVIGATION_MESSAGES["page_out_of_range_message"].format(total_pages=total_pages),
-                parent=self,
-            )
-            return
-
-        self.current_page = page_index
-        self.pdf_manager.render_current_page()
+        self.navigation_controller.go_to_page_from_entry()
 
     def _change_zoom(self, action):
-        if not self.pdf_document:
-            return
-
-        next_zoom = get_next_zoom(self.current_zoom, action)
-        if next_zoom is None or next_zoom == self.current_zoom:
-            return
-
-        self.current_zoom = next_zoom
-        self._update_zoom_label()
-        self.pdf_manager.render_current_page()
+        self.navigation_controller.change_zoom(action)
 
     def _update_zoom_label(self):
-        zoom_label = getattr(self, "zoom_label", None)
-        if zoom_label is not None:
-            zoom_label.configure(text=format_zoom_percentage(self.current_zoom))
+        self.navigation_controller.update_zoom_label()
 
     def _sync_delete_button_state(self):
-        delete_button = getattr(self, "delete_rect_btn", None)
-        if delete_button is not None:
-            delete_button.configure(state=tk.NORMAL if self.selected_rect_id else tk.DISABLED)
+        self.rectangle_action_controller.sync_delete_button_state()
 
     def _handle_rectangle_action(self, action_type):
-        if action_type == "delete":
-            rectangles, selected_rect_id, affected_rectangle, action = delete_selected_rectangle(
-                self.censored_rectangles,
-                self.selected_rect_id,
-            )
-            if action is not None:
-                self.undo_stack.append(action)
-                self.redo_stack.clear()
-            self.censored_rectangles = rectangles
-            self.selected_rect_id = selected_rect_id
-        elif action_type == "undo":
-            rectangles, undo_stack, redo_stack, affected_rectangle = undo_last_rectangle(
-                self.censored_rectangles,
-                list(self.undo_stack),
-                list(self.redo_stack),
-            )
-            self.censored_rectangles = rectangles
-            self._replace_stack(self.undo_stack, undo_stack)
-            self._replace_stack(self.redo_stack, redo_stack)
-            self.selected_rect_id = None
-        elif action_type == "redo":
-            rectangles, undo_stack, redo_stack, affected_rectangle = redo_last_rectangle(
-                self.censored_rectangles,
-                list(self.undo_stack),
-                list(self.redo_stack),
-            )
-            self.censored_rectangles = rectangles
-            self._replace_stack(self.undo_stack, undo_stack)
-            self._replace_stack(self.redo_stack, redo_stack)
-            self.selected_rect_id = None
-        else:
-            return
-
-        if affected_rectangle:
-            self._hide_canvas_item(affected_rectangle.get("canvas_rect_id"))
-            self._hide_canvas_item(affected_rectangle.get("canvas_text_id"))
-
-        refresh_rectangle_metadata(self.censored_rectangles)
-        self._sync_delete_button_state()
-        if self.pdf_document:
-            self.pdf_manager.render_current_page()
-
-    def _replace_stack(self, target_stack, new_items):
-        target_stack.clear()
-        for item in new_items:
-            target_stack.append(item)
-
-    def _hide_canvas_item(self, item_id):
-        if item_id:
-            self.pdf_canvas.itemconfigure(item_id, state="hidden")
+        self.rectangle_action_controller.handle_action(action_type)
 
     def _open_export_dialog(self):
-        if not self.pdf_document or not self.current_pdf_path:
-            messagebox.showwarning(
-                EXPORT_MESSAGES["pdf_required_title"],
-                EXPORT_MESSAGES["pdf_required_message"],
-                parent=self,
-            )
-            return
-        ExportDialog(self)
+        self.export_controller.open_export_dialog()
 
-    def _generate_pdf(self, committee_data=None):
-        if self._is_export_running():
-            messagebox.showwarning(
-                EXPORT_MESSAGES["export_running_title"],
-                EXPORT_MESSAGES["export_running_message"],
-                parent=self,
-            )
-            return
-
-        if not self.censored_rectangles:
-            messagebox.showwarning(
-                EXPORT_MESSAGES["no_changes_title"],
-                EXPORT_MESSAGES["no_changes_message"],
-                parent=self,
-            )
-            return
-
-        output_path = filedialog.asksaveasfilename(
+    def open_project(self) -> None:
+        source_path = filedialog.askopenfilename(
             parent=self,
-            title=EXPORT_MESSAGES["save_dialog_title"],
-            defaultextension=".pdf",
-            filetypes=[(EXPORT_MESSAGES["save_dialog_filetypes_label"], "*.pdf")],
+            title="Abrir",
+            filetypes=[("Proyecto JSON", "*.json"), ("Todos los archivos", "*.*")],
         )
-        if not output_path:
-            return
-
-        if os.path.abspath(output_path) == os.path.abspath(self.current_pdf_path):
-            messagebox.showwarning(
-                EXPORT_MESSAGES["invalid_path_title"],
-                EXPORT_MESSAGES["invalid_path_message"],
-                parent=self,
-            )
-            return
-
-        self.message_label.configure(text=EXPORT_MESSAGES["generating_status"])
-        self._set_export_controls_state("disabled")
-        pdf_bytes = self.pdf_document.tobytes()
-        rectangles_snapshot = deepcopy(self.censored_rectangles)
-        committee_snapshot = deepcopy(committee_data)
-        future = self._executor.submit(
-            self.pdf_manager.generate_pdf,
-            output_path,
-            committee_snapshot,
-            pdf_bytes=pdf_bytes,
-            rectangles=rectangles_snapshot,
-        )
-        self._pending_export_future = future
-        self.after(100, lambda: self._poll_generate_pdf(future, output_path))
-
-    def _is_export_running(self):
-        return self._pending_export_future is not None and not self._pending_export_future.done()
-
-    def _set_export_controls_state(self, state):
-        for widget_name in ("file_button", "catalogue_button"):
-            widget = getattr(self, widget_name, None)
-            if widget is not None:
-                widget.configure(state=state)
-
-        if hasattr(self, "file_menu"):
-            try:
-                self.file_menu.entryconfig(FILE_MENU_LABELS["save_pdf"], state=state)
-            except tk.TclError:
-                pass
-
-    def _poll_generate_pdf(self, future, output_path):
-        if not future.done():
-            self.after(100, lambda: self._poll_generate_pdf(future, output_path))
+        if not source_path:
             return
 
         try:
-            future.result()
-            self.message_label.configure(
-                text=EXPORT_MESSAGES["generated_status"].format(output_path=output_path)
+            payload = load_project(source_path)
+            pdf_path = payload.get("pdf_path")
+            if not pdf_path or not os.path.isfile(pdf_path):
+                raise FileNotFoundError(f"No se encontró el PDF original: {pdf_path}")
+
+            expected_hash = payload.get("pdf_sha256", "")
+            if expected_hash and calculate_file_hash(pdf_path) != expected_hash:
+                messagebox.showwarning(
+                    "PDF modificado",
+                    "El PDF original cambió desde que se guardó el proyecto. Se abrirá, pero revisa los recuadros antes de exportar.",
+                    parent=self,
+                )
+
+            self.pdf_manager.reset_current_job()
+            self.current_pdf_path = pdf_path
+            self.pdf_document = fitz.open(pdf_path)
+            self.current_zoom = payload.get("current_zoom")
+            self.censored_rectangles = deserialize_rectangles(payload.get("rectangles", []))
+            self.current_page = min(
+                max(int(payload.get("current_page", 0)), 0),
+                max(len(self.pdf_document) - 1, 0),
             )
-            messagebox.showinfo(
-                EXPORT_MESSAGES["generated_title"],
-                EXPORT_MESSAGES["generated_message"],
+            self.reserved_history[:] = list(payload.get("reserved_history", []))
+            self.confidential_history[:] = list(payload.get("confidential_history", []))
+            self.other_law_history[:] = list(payload.get("other_law_history", []))
+            self.document_state.committee_data.clear()
+            self.document_state.committee_data.update(payload.get("committee_data", {}))
+            self.undo_stack.clear()
+            self.redo_stack.clear()
+            self.selected_rect_id = None
+            self.next_rectangle_id = self._next_rectangle_id_from_project()
+            self.current_project_path = Path(source_path)
+            self.pdf_manager.render_current_page()
+            self.set_status(f"Proyecto cargado: {self.current_project_path}")
+        except Exception as error:  # noqa: BLE001
+            self.show_error("No se pudo abrir", f"No fue posible cargar el proyecto.\n\n{error}")
+
+    def save_project(self) -> None:
+        if self.current_project_path is None:
+            self.save_project_as()
+            return
+        self._save_project_to_path(self.current_project_path)
+
+    def save_project_as(self) -> None:
+        if not self.pdf_document or not self.current_pdf_path:
+            messagebox.showwarning(
+                "PDF requerido",
+                "Carga un PDF antes de guardar el proyecto.",
                 parent=self,
             )
-        except Exception as error:
-            LOGGER.exception("Unable to generate redacted PDF")
-            self.message_label.configure(text=EXPORT_MESSAGES["error_status"])
-            messagebox.showerror(
-                EXPORT_MESSAGES["error_title"],
-                EXPORT_MESSAGES["error_message"].format(error=error),
-                parent=self,
-            )
-        finally:
-            if self._pending_export_future is future:
-                self._pending_export_future = None
-            self._set_export_controls_state("normal")
+            return
+
+        target_path = filedialog.asksaveasfilename(
+            parent=self,
+            title="Guardar como",
+            defaultextension=".json",
+            initialfile="testado.json",
+            filetypes=[("Proyecto JSON", "*.json"), ("Todos los archivos", "*.*")],
+        )
+        if not target_path:
+            return
+        self.current_project_path = Path(target_path)
+        self._save_project_to_path(self.current_project_path)
+
+    def _save_project_to_path(self, target_path: Path) -> None:
+        try:
+            saved_path = save_project(self.document_state, target_path)
+        except Exception as error:  # noqa: BLE001
+            self.show_error("No se pudo guardar", f"No fue posible guardar el proyecto.\n\n{error}")
+            return
+        self.set_status(f"Proyecto guardado: {saved_path}")
+        messagebox.showinfo("Proyecto guardado", f"Proyecto guardado en:\n{saved_path}", parent=self)
+
+    def _next_rectangle_id_from_project(self) -> int:
+        if not self.censored_rectangles:
+            return 1
+        return max(rectangle.get("id", 0) for rectangle in self.censored_rectangles) + 1
+
+    def _generate_pdf(self, committee_data=None):
+        self.export_controller.generate_pdf(committee_data=committee_data)
+
+    def _is_export_running(self):
+        return self.export_controller.is_running()
+
+    def _set_export_controls_state(self, state):
+        self.export_controller.set_controls_state(state)
+
+    def _poll_generate_pdf(self, future, output_path):
+        self.export_controller._poll_generate_pdf(future, output_path)
 
     def confirm_exit(self):
         if self._is_export_running():
