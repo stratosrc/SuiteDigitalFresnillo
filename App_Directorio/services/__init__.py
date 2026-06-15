@@ -5,7 +5,7 @@ from App_Directorio.models import AreaReportData, DirectoryReportData, PersonRep
 from .pdf_exporter import DirectoryPdfExporter
 
 __all__ = [
-    "ÁreaReportData",
+    "AreaReportData",
     "DirectoryPdfExporter",
     "DirectoryReportData",
     "PersonReportRow",

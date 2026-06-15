@@ -415,3 +415,9 @@ class DirectoryFormFrame(ctk.CTkFrame):
     def validate_dates(self) -> bool:
         results = [section.validate_dates() for section in self.area_sections]
         return all(results)
+
+    def validate_required_data(self) -> bool:
+        data = self.get_report_data()
+        if not data.title:
+            return False
+        return any(area.name and area.personnel for area in data.areas)

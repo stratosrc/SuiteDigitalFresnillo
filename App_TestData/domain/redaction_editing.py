@@ -1,52 +1,34 @@
 """Pure rectangle editing helpers."""
 
 from App_TestData.domain.legal_text import build_censorship_text
+from App_TestData.domain.redaction_history import make_history_action, redo_last_action, undo_last_action
 
 
 def delete_selected_rectangle(rectangles, selected_rect_id):
     """Remove the selected rectangle from the collection."""
     if not selected_rect_id:
-        return list(rectangles), None, None
+        return list(rectangles), None, None, None
 
     removed_rectangle = next(
         (item for item in rectangles if item["id"] == selected_rect_id),
         None,
     )
     if removed_rectangle is None:
-        return list(rectangles), None, None
+        return list(rectangles), None, None, None
 
     remaining_rectangles = [item for item in rectangles if item["id"] != selected_rect_id]
-    return remaining_rectangles, None, removed_rectangle
+    action = make_history_action("delete", rectangle=removed_rectangle)
+    return remaining_rectangles, None, removed_rectangle, action
 
 
 def undo_last_rectangle(rectangles, undo_stack, redo_stack):
-    """Remove the last rectangle recorded in the undo stack."""
-    if not undo_stack:
-        return list(rectangles), list(undo_stack), list(redo_stack), None
-
-    restored_redo_stack = list(redo_stack)
-    updated_undo_stack = list(undo_stack[:-1])
-    removed_rectangle = undo_stack[-1]
-    remaining_rectangles = [item for item in rectangles if item["id"] != removed_rectangle["id"]]
-    restored_redo_stack.append(removed_rectangle)
-    return remaining_rectangles, updated_undo_stack, restored_redo_stack, removed_rectangle
+    """Undo the last recorded redaction action."""
+    return undo_last_action(rectangles, undo_stack, redo_stack)
 
 
 def redo_last_rectangle(rectangles, undo_stack, redo_stack):
-    """Restore the last rectangle removed through undo."""
-    if not redo_stack:
-        return list(rectangles), list(undo_stack), list(redo_stack), None
-
-    restored_rectangle = redo_stack[-1]
-    updated_redo_stack = list(redo_stack[:-1])
-    updated_rectangles = list(rectangles)
-    if all(item["id"] != restored_rectangle["id"] for item in updated_rectangles):
-        updated_rectangles.append(restored_rectangle)
-        updated_rectangles.sort(key=lambda item: item["order"])
-
-    updated_undo_stack = list(undo_stack)
-    updated_undo_stack.append(restored_rectangle)
-    return updated_rectangles, updated_undo_stack, updated_redo_stack, restored_rectangle
+    """Redo the last redaction action removed through undo."""
+    return redo_last_action(rectangles, undo_stack, redo_stack)
 
 
 def refresh_rectangle_metadata(rectangles):

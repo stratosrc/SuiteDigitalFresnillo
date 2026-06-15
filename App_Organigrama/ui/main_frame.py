@@ -1,5 +1,7 @@
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
+from copy import deepcopy
+import logging
 from pathlib import Path
 import tempfile
 import tkinter as tk
@@ -32,6 +34,9 @@ from App_Organigrama.ui.theme import (
     TEXT_LIGHT,
     make_font,
 )
+
+LOGGER = logging.getLogger(__name__)
+
 
 class MainFrame(ctk.CTkFrame):
     def __init__(self, master: ctk.CTk) -> None:
@@ -84,6 +89,10 @@ class MainFrame(ctk.CTkFrame):
         self.file_menu.add_command(label="Nuevo", command=self.new_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_command(label="Abrir proyecto", command=self.open_project)
+        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
+        self.file_menu.add_command(label="Guardar", command=self.save_project)
+        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
+        self.file_menu.add_command(label="Guardar como", command=self.save_project_as)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
@@ -237,7 +246,7 @@ class MainFrame(ctk.CTkFrame):
 
         self.block_checkbox = ctk.CTkCheckBox(
             tools,
-            text="Modo: Bloquear camino",
+            text="Obstáculos de ruta",
             variable=self.block_mode_var,
             command=self._toggle_block_mode,
             fg_color=PRIMARY_BUTTON,
@@ -413,7 +422,17 @@ class MainFrame(ctk.CTkFrame):
         if not source_path:
             return
 
-        self.document = self.persistence_manager.load(source_path)
+        try:
+            self.document = self.persistence_manager.load(source_path)
+        except Exception as error:  # noqa: BLE001
+            LOGGER.exception("Unable to load org chart project from %s", source_path)
+            messagebox.showerror(
+                "No se pudo abrir",
+                f"No fue posible cargar el proyecto:\n{error}",
+                parent=self,
+            )
+            return
+
         self.current_project_path = Path(source_path)
         self._load_document_into_ui(self.document)
         self._set_dirty(False)
@@ -462,7 +481,8 @@ class MainFrame(ctk.CTkFrame):
         if not target_path:
             return
 
-        self._run_background_task(lambda: self.pdf_exporter.export(self.document, target_path), success_title="PDF exportado")
+        export_document = deepcopy(self.document)
+        self._run_background_task(lambda: self.pdf_exporter.export(export_document, target_path), success_title="PDF exportado")
 
     def export_image(self) -> None:
         if not self._can_start_export():
@@ -486,12 +506,14 @@ class MainFrame(ctk.CTkFrame):
             messagebox.showerror("Extensión no válida", "La imagen debe guardarse como .png, .jpg o .jpeg.", parent=self)
             return
 
+        export_document = deepcopy(self.document)
+
         def task() -> Path:
             temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
             temp_pdf_path = Path(temp_pdf.name)
             temp_pdf.close()
             try:
-                self.pdf_exporter.export(self.document, temp_pdf_path)
+                self.pdf_exporter.export(export_document, temp_pdf_path)
                 return export_pdf_as_image(temp_pdf_path, target_path, dpi=300)
             finally:
                 if temp_pdf_path.exists():
@@ -514,6 +536,7 @@ class MainFrame(ctk.CTkFrame):
             result_path = future.result()
             messagebox.showinfo(success_title, f"Archivo generado correctamente en:\n{result_path}", parent=self)
         except Exception as error:  # noqa: BLE001
+            LOGGER.exception("Unable to complete org chart background task")
             messagebox.showerror("Error", f"No se pudo completar la operación:\n{error}", parent=self)
         finally:
             if self._pending_task is future:

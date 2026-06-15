@@ -65,3 +65,6 @@ CATALOGUE_WRAPLENGTH = 220
 ASSETS_DIR = resource_path("App_TestData", "assets")
 LOGO1_PATH = str(ASSETS_DIR / "logo2.png")
 PDF_WATERMARK_LOGO_PATH = str(ASSETS_DIR / "logo_marca_agua.png")
+UNDO_ICON_PATH = str(ASSETS_DIR / "undo.png")
+REDO_ICON_PATH = str(ASSETS_DIR / "redo.png")
+DELETE_ICON_PATH = str(ASSETS_DIR / "eliminar.png")

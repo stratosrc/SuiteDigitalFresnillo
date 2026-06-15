@@ -1,5 +1,7 @@
 """Canvas interaction handlers for rectangle drawing and manipulation."""
 
+from copy import deepcopy
+
 from App_TestData.config.settings import (
     DRAFT_RECT_OUTLINE_COLOR,
     DRAFT_RECT_OUTLINE_WIDTH,
@@ -15,6 +17,7 @@ from App_TestData.config.settings import (
 )
 from App_TestData.domain.legal_text import build_censorship_text
 from App_TestData.domain.redaction_editing import build_rectangle_metadata
+from App_TestData.domain.redaction_history import make_history_action
 from App_TestData.ui.dialogs.concept_dialog import ConceptDialog
 
 RESIZE_HANDLE_DISTANCE = 10
@@ -48,6 +51,7 @@ def on_button_press(app, event):
         app.drag_start_x = canvas_x
         app.drag_start_y = canvas_y
         app.drag_original_coords = app.pdf_manager.pdf_rect_to_canvas(rectangle)
+        app.drag_original_rectangle = deepcopy(rectangle)
         return
 
     _select_rectangle(app, None)
@@ -86,6 +90,7 @@ def on_button_release(app, event):
         return
 
     if app.drag_mode in {"move", "resize"}:
+        _record_update_if_changed(app)
         _normalize_active_rectangle(app)
         _reset_drag_state(app)
         return
@@ -113,7 +118,7 @@ def on_button_release(app, event):
     rectangle = _build_rectangle_data(app, dialog.result, end_x, end_y)
     _commit_current_rectangle(app, rectangle)
     app.censored_rectangles.append(rectangle)
-    app.undo_stack.append(rectangle)
+    app.undo_stack.append(make_history_action("create", rectangle=rectangle))
     app.redo_stack.clear()
     _select_rectangle(app, rectangle)
     app.current_rect = None
@@ -277,6 +282,18 @@ def _normalize_active_rectangle(app):
     _update_rect_from_canvas_coords(app, app.active_rect_data, x1, y1, x2, y2)
 
 
+def _record_update_if_changed(app):
+    before = getattr(app, "drag_original_rectangle", None)
+    after = app.active_rect_data
+    if not before or not after:
+        return
+    tracked_fields = ("x1", "y1", "x2", "y2")
+    if all(before.get(field) == after.get(field) for field in tracked_fields):
+        return
+    app.undo_stack.append(make_history_action("update", before=before, after=after))
+    app.redo_stack.clear()
+
+
 def _select_rectangle(app, rectangle):
     app.selected_rect_id = rectangle["id"] if rectangle else None
     _refresh_selection_visual(app)
@@ -308,10 +325,15 @@ def _reset_drag_state(app):
     app.drag_start_x = None
     app.drag_start_y = None
     app.drag_original_coords = None
+    app.drag_original_rectangle = None
     app.pdf_canvas.configure(cursor="")
 
 
-def _cursor_for_corner(_corner):
+def _cursor_for_corner(corner):
+    if corner in {"nw", "se"}:
+        return "size_nw_se"
+    if corner in {"ne", "sw"}:
+        return "size_ne_sw"
     return "sizing"
 
 

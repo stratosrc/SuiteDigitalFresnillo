@@ -19,7 +19,7 @@ from App_Organigrama.ui.theme import (
 class OrientationDialog(ctk.CTkToplevel):
     def __init__(self, master: tk.Misc, on_select: Callable[[str], None]) -> None:
         super().__init__(master)
-        self.title("Orientacion")
+        self.title("Orientación")
         self.resizable(False, False)
         self.configure(fg_color=SURFACE_BACKGROUND)
         self.transient(master.winfo_toplevel())
@@ -36,7 +36,7 @@ class OrientationDialog(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             frame,
-            text="Seleccione la orientacion",
+            text="Seleccione la orientación",
             text_color=TEXT_DARK,
             font=make_font(15, "bold"),
         ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 14))

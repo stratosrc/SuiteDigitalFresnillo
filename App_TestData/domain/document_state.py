@@ -45,6 +45,7 @@ class RectangleData(TypedDict, total=False):
 
 CommitteeData = dict[str, str]
 HistoryItem = str | dict[str, Any]
+RedactionHistoryAction = dict[str, Any]
 
 
 @dataclass(slots=True)
@@ -57,10 +58,10 @@ class DocumentState:
     current_page: int = 0
     current_zoom: Optional[float] = None
     censored_rectangles: list[RectangleData] = field(default_factory=list)
-    undo_stack: Deque[RectangleData] = field(
+    undo_stack: Deque[RedactionHistoryAction] = field(
         default_factory=lambda: deque(maxlen=UNDO_REDO_STACK_LIMIT)
     )
-    redo_stack: Deque[RectangleData] = field(
+    redo_stack: Deque[RedactionHistoryAction] = field(
         default_factory=lambda: deque(maxlen=UNDO_REDO_STACK_LIMIT)
     )
     next_rectangle_id: int = 1

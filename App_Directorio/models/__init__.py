@@ -1,7 +1,7 @@
 from .directory import AreaReportData, DirectoryReportData, PersonReportRow
 
 __all__ = [
-    "ÁreaReportData",
+    "AreaReportData",
     "DirectoryReportData",
     "PersonReportRow",
 ]

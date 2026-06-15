@@ -23,7 +23,7 @@ class DirectoryReportData:
 
 
 __all__ = [
-    "ÁreaReportData",
+    "AreaReportData",
     "DirectoryReportData",
     "PersonReportRow",
 ]

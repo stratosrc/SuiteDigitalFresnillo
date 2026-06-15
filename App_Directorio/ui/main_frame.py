@@ -1,4 +1,5 @@
 import tkinter as tk
+import logging
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
@@ -27,6 +28,8 @@ from App_Directorio.ui.theme import (
     make_font,
 )
 from App_Directorio.utils import crop_transparent_padding
+
+LOGGER = logging.getLogger(__name__)
 
 
 class DirectoryMainFrame(ctk.CTkFrame):
@@ -171,6 +174,14 @@ class DirectoryMainFrame(ctk.CTkFrame):
         show_help_dialog(self)
 
     def guardar_pdf(self) -> None:
+        if not self.directory_form.validate_required_data():
+            messagebox.showerror(
+                "Datos incompletos",
+                "Captura un título, al menos un área y al menos una persona antes de generar el PDF.",
+                parent=self,
+            )
+            return
+
         if not self.directory_form.validate_dates():
             messagebox.showerror(
                 "Fecha inválida",
@@ -195,6 +206,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
         try:
             output_path = DirectoryPdfExporter().export(data, Path(target))
         except Exception as error:
+            LOGGER.exception("Unable to export directory PDF")
             messagebox.showerror(
                 "No se pudo guardar",
                 f"No fue posible generar el PDF.\n\n{error}",

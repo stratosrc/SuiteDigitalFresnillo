@@ -9,7 +9,8 @@ from App_TestData.config.ui_strings import (
     FILE_MENU_LABELS,
     TOPBAR_LABELS,
 )
-from App_TestData.ui.widgets.factory import create_toolbar_button
+from App_TestData.config.settings import DELETE_ICON_PATH, REDO_ICON_PATH, UNDO_ICON_PATH
+from App_TestData.ui.widgets.factory import create_toolbar_button, create_toolbar_icon_button
 from components.styles.styles import BUTTON_BG_ACTIVE, BUTTON_BG_PRESSED, TEXT_LIGHT
 
 
@@ -75,29 +76,32 @@ def build_menu_toolbar(parent, callbacks: dict):
 def build_action_toolbar(parent, callbacks: dict):
     """Build the toolbar with rectangle editing actions."""
     toolbar_frame = ctk.CTkFrame(parent, fg_color=parent.cget("fg_color"), corner_radius=0)
-    toolbar_frame.pack(side=tk.TOP, fill=tk.X, padx=12, pady=8)
+    toolbar_frame.pack(side=tk.TOP, fill=tk.X, padx=4, pady=8)
 
-    undo_button = create_toolbar_button(
+    undo_button = create_toolbar_icon_button(
         toolbar_frame,
         ACTION_LABELS["undo"],
         lambda: callbacks["on_rectangle_action"]("undo"),
-        width=132,
+        UNDO_ICON_PATH,
+        width=42,
     )
     undo_button.pack(side=tk.LEFT, padx=(0, 8))
 
-    redo_button = create_toolbar_button(
+    redo_button = create_toolbar_icon_button(
         toolbar_frame,
         ACTION_LABELS["redo"],
         lambda: callbacks["on_rectangle_action"]("redo"),
-        width=132,
+        REDO_ICON_PATH,
+        width=42,
     )
     redo_button.pack(side=tk.LEFT, padx=(0, 8))
 
-    delete_button = create_toolbar_button(
+    delete_button = create_toolbar_icon_button(
         toolbar_frame,
         ACTION_LABELS["delete"],
         lambda: callbacks["on_rectangle_action"]("delete"),
-        width=132,
+        DELETE_ICON_PATH,
+        width=42,
         danger=True,
     )
     delete_button.configure(state=tk.DISABLED)

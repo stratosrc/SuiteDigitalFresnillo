@@ -1,5 +1,8 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
+import logging
+import sys
 from typing import Any, Deque
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -42,7 +45,7 @@ from App_TestData.data.catalogue_data import (
     build_catalogue_items,
 )
 from App_TestData.ui.interactions.canvas_redactions import setup_canvas_events
-from App_TestData.domain.document_state import DocumentState, RectangleData
+from App_TestData.domain.document_state import DocumentState, RectangleData, RedactionHistoryAction
 from App_TestData.domain.redaction_editing import (
     delete_selected_rectangle,
     redo_last_rectangle,
@@ -64,6 +67,8 @@ from App_TestData.ui.dialogs.help_dialog import show_help_dialog
 from App_TestData.ui.layout.main_layout import build_main_layout
 from components.shared.windowing import center_window
 from components.styles.styles import apply_ctk_style, styles
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TestDataGeneratorApp(ctk.CTk):
@@ -144,6 +149,7 @@ class TestDataGeneratorApp(ctk.CTk):
         self.drag_start_x = None
         self.drag_start_y = None
         self.drag_original_coords = None
+        self.drag_original_rectangle = None
 
     @property
     def current_pdf_path(self) -> str | None:
@@ -194,11 +200,11 @@ class TestDataGeneratorApp(ctk.CTk):
         self.document_state.censored_rectangles = value
 
     @property
-    def undo_stack(self) -> Deque[RectangleData]:
+    def undo_stack(self) -> Deque[RedactionHistoryAction]:
         return self.document_state.undo_stack
 
     @property
-    def redo_stack(self) -> Deque[RectangleData]:
+    def redo_stack(self) -> Deque[RedactionHistoryAction]:
         return self.document_state.redo_stack
 
     @property
@@ -428,10 +434,13 @@ class TestDataGeneratorApp(ctk.CTk):
 
     def _handle_rectangle_action(self, action_type):
         if action_type == "delete":
-            rectangles, selected_rect_id, affected_rectangle = delete_selected_rectangle(
+            rectangles, selected_rect_id, affected_rectangle, action = delete_selected_rectangle(
                 self.censored_rectangles,
                 self.selected_rect_id,
             )
+            if action is not None:
+                self.undo_stack.append(action)
+                self.redo_stack.clear()
             self.censored_rectangles = rectangles
             self.selected_rect_id = selected_rect_id
         elif action_type == "undo":
@@ -521,7 +530,16 @@ class TestDataGeneratorApp(ctk.CTk):
 
         self.message_label.configure(text=EXPORT_MESSAGES["generating_status"])
         self._set_export_controls_state("disabled")
-        future = self._executor.submit(self.pdf_manager.generate_pdf, output_path, committee_data)
+        pdf_bytes = self.pdf_document.tobytes()
+        rectangles_snapshot = deepcopy(self.censored_rectangles)
+        committee_snapshot = deepcopy(committee_data)
+        future = self._executor.submit(
+            self.pdf_manager.generate_pdf,
+            output_path,
+            committee_snapshot,
+            pdf_bytes=pdf_bytes,
+            rectangles=rectangles_snapshot,
+        )
         self._pending_export_future = future
         self.after(100, lambda: self._poll_generate_pdf(future, output_path))
 
@@ -556,6 +574,7 @@ class TestDataGeneratorApp(ctk.CTk):
                 parent=self,
             )
         except Exception as error:
+            LOGGER.exception("Unable to generate redacted PDF")
             self.message_label.configure(text=EXPORT_MESSAGES["error_status"])
             messagebox.showerror(
                 EXPORT_MESSAGES["error_title"],

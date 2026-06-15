@@ -17,9 +17,9 @@ TOPBAR_LABELS = {
 HEADER_TITLE = "Módulo de Test Data y Versiones Públicas"
 
 ACTION_LABELS = {
-    "undo": "Deshacer Acción",
-    "redo": "Rehacer Acción",
-    "delete": "Eliminar recuadro",
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "delete": "Eliminar",
 }
 
 CONTENT_LABELS = {

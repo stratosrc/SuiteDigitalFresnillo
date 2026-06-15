@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+from copy import deepcopy
+import logging
 from typing import Mapping, Optional, Protocol, TypedDict
 
 import fitz
@@ -30,6 +32,7 @@ from components.styles.styles import SEGOE_UI_FONT_FILE
 
 _SEGOE_FITZ_FONT = None
 PDF_FONT_REGULAR = "SegoeUI"
+LOGGER = logging.getLogger(__name__)
 
 
 class DrawnRectangle(TypedDict, total=False):
@@ -150,6 +153,7 @@ class PDFManager:
             )
             return False
         except Exception as error:
+            LOGGER.exception("Unable to load PDF")
             self._state.reset_for_new_job()
             self._callbacks.clear_document_view()
             self._callbacks.set_status(PDF_MANAGER_MESSAGES["load_error_status"])
@@ -210,6 +214,7 @@ class PDFManager:
                 rect_data.update(drawn_items)
             return True
         except Exception as error:
+            LOGGER.exception("Unable to render PDF page")
             self._callbacks.set_status(PDF_MANAGER_MESSAGES["render_error_status"])
             self._callbacks.show_error(
                 PDF_MANAGER_MESSAGES["render_error_title"],
@@ -222,6 +227,12 @@ class PDFManager:
         zoom = self._state.current_zoom or 1
         left, right = sorted((x1 / zoom, x2 / zoom))
         top, bottom = sorted((y1 / zoom, y2 / zoom))
+        if self._state.pdf_document:
+            page_rect = self._state.pdf_document[self._state.current_page].rect
+            left = min(max(left, page_rect.x0), page_rect.x1)
+            right = min(max(right, page_rect.x0), page_rect.x1)
+            top = min(max(top, page_rect.y0), page_rect.y1)
+            bottom = min(max(bottom, page_rect.y0), page_rect.y1)
         return left, top, right, bottom
 
     def pdf_rect_to_canvas(self, rect_data: RectangleData) -> tuple[float, float, float, float]:
@@ -234,13 +245,21 @@ class PDFManager:
             rect_data["y2"] * zoom,
         )
 
-    def generate_pdf(self, output_path: str, committee_data: Optional[CommitteeData] = None) -> None:
+    def generate_pdf(
+        self,
+        output_path: str,
+        committee_data: Optional[CommitteeData] = None,
+        *,
+        pdf_bytes: bytes | None = None,
+        rectangles: list[RectangleData] | None = None,
+    ) -> None:
         """Generate the exported PDF including redactions and summary pages."""
-        if not self._state.current_pdf_path or not self._state.pdf_document:
+        if pdf_bytes is None and (not self._state.current_pdf_path or not self._state.pdf_document):
             raise ValueError("No PDF loaded.")
 
-        output_document = fitz.open(stream=self._state.pdf_document.tobytes(), filetype="pdf")
-        ordered_rectangles = iter_rectangles_in_order(self._state.censored_rectangles)
+        source_bytes = pdf_bytes if pdf_bytes is not None else self._state.pdf_document.tobytes()
+        output_document = fitz.open(stream=source_bytes, filetype="pdf")
+        ordered_rectangles = deepcopy(iter_rectangles_in_order(rectangles or self._state.censored_rectangles))
 
         try:
             self._assign_final_numbers(ordered_rectangles)
@@ -257,7 +276,9 @@ class PDFManager:
         """Apply irreversible redactions to the exported document."""
         for rect_data in ordered_rectangles:
             page = document[rect_data["page"]]
-            rect = fitz.Rect(rect_data["x1"], rect_data["y1"], rect_data["x2"], rect_data["y2"])
+            rect = fitz.Rect(rect_data["x1"], rect_data["y1"], rect_data["x2"], rect_data["y2"]) & page.rect
+            if rect.is_empty or rect.is_infinite:
+                continue
             rect_data["rect"] = rect
             page.add_redact_annot(
                 rect,
@@ -272,12 +293,16 @@ class PDFManager:
             page.apply_redactions()
 
         for rect_data in ordered_rectangles:
+            if "rect" not in rect_data:
+                continue
             page = document[rect_data["page"]]
             page.draw_rect(rect_data["rect"], color=(0, 0, 0), width=1)
 
     def _draw_rectangle_labels(self, document, ordered_rectangles):
         """Write the final labels centered on top of each redaction."""
         for rect_data in ordered_rectangles:
+            if "rect" not in rect_data:
+                continue
             page = document[rect_data["page"]]
             label_text = rect_data.get("final_number", rect_data.get("label", ""))
             font_size = 10
@@ -314,13 +339,14 @@ class PDFManager:
         y_position += title_height
 
         for rect_data in ordered_rectangles:
-            if y_position > max_y:
+            summary_label = rect_data.get("final_number", rect_data.get("label", ""))
+            line = self._build_summary_line(summary_label, rect_data)
+            required_height = self._measure_summary_line_height(page, line, margin_x, line_height)
+            if y_position + required_height > max_y:
                 page = self._create_summary_page(document, margin_x, 50, continuation=True)
                 y_position = 50 + title_height
 
-            summary_label = rect_data.get("final_number", rect_data.get("label", ""))
-            line = self._build_summary_line(summary_label, rect_data)
-            y_position = self._write_summary_line(page, line, margin_x, y_position, line_height)
+            y_position = self._write_summary_line(page, line, margin_x, y_position, required_height)
 
     def _create_summary_page(self, document, margin_x, y_position, continuation=False):
         """Create a summary page and write its title."""
@@ -342,13 +368,28 @@ class PDFManager:
         )
         return page
 
-    def _write_summary_line(self, page, line, margin_x, y_position, line_height):
+    def _measure_summary_line_height(self, page, line, margin_x, line_height):
+        page_width = page.rect.width
+        available_width = page_width - (margin_x * 2)
+        words = line.split()
+        lines = 1
+        current_line = ""
+        for word in words:
+            candidate = f"{current_line} {word}".strip()
+            if current_line and _fitz_text_width(candidate, 10) > available_width:
+                lines += 1
+                current_line = word
+            else:
+                current_line = candidate
+        return max(line_height, lines * 13) + 10
+
+    def _write_summary_line(self, page, line, margin_x, y_position, paragraph_height):
         """Write a wrapped summary paragraph and return the next y offset."""
         page_width = page.rect.width
         available_width = page_width - (margin_x * 2)
-        text_rect = fitz.Rect(margin_x, y_position, margin_x + available_width, y_position + 60)
+        text_rect = fitz.Rect(margin_x, y_position, margin_x + available_width, y_position + paragraph_height)
 
-        used_height = page.insert_textbox(
+        page.insert_textbox(
             text_rect,
             line,
             fontsize=10,
@@ -356,7 +397,7 @@ class PDFManager:
             align=0,
             **_fitz_font_kwargs(),
         )
-        return y_position + max(line_height, 60 - used_height) + 10
+        return y_position + paragraph_height
 
     def _build_summary_line(self, summary_label, rect_data):
         """Build the summary text for a single rectangle."""
