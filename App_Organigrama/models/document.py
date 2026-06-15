@@ -196,6 +196,15 @@ class OrgGridDocument:
         self.blocked_points.sort(key=lambda item: (item[1], item[0]))
         return True
 
+    def remove_blocked_point(self, point: GridPoint) -> bool:
+        normalized = self._normalize_blocked_point(point)
+        if normalized not in self._blocked_points_index:
+            return False
+
+        self._blocked_points_index.remove(normalized)
+        self.blocked_points = [existing for existing in self.blocked_points if existing != normalized]
+        return True
+
     def clear(self) -> None:
         self.nodes.clear()
         self.connections.clear()

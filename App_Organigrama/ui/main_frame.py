@@ -1,5 +1,7 @@
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
+from copy import deepcopy
+import logging
 from pathlib import Path
 import tempfile
 import tkinter as tk
@@ -8,15 +10,15 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 from PIL import Image, ImageOps
 
-from App_Organigrama.export.pdf_exporter import PdfOrgChartExporter
+from App_Organigrama.config.assets import TOOLBAR_LOGO_PATH
+from App_Organigrama.exporters import PdfOrgChartExporter
 from App_Organigrama.models.document import OrgGridDocument
 from App_Organigrama.rendering.engine import RenderingEngine
 from App_Organigrama.routing.manhattan_router import ManhattanRouter
-from App_Organigrama.services.assets import TOOLBAR_LOGO_PATH
 from App_Organigrama.services.image_exporter import export_pdf_as_image
-from App_Organigrama.services.persistence_manager import PersistenceManager
-from App_Organigrama.ui.dialogs import OrientationDialog
-from App_Organigrama.ui.grid_canvas import OrgGridCanvas
+from App_Organigrama.services.persistence import PersistenceManager
+from App_Organigrama.ui.canvas import OrgGridCanvas
+from App_Organigrama.ui.modals import OrientationDialog, show_help_dialog
 from App_Organigrama.ui.theme import (
     APP_BACKGROUND,
     BORDER_COLOR,
@@ -30,11 +32,11 @@ from App_Organigrama.ui.theme import (
     SURFACE_BACKGROUND,
     TEXT_DARK,
     TEXT_LIGHT,
-    BUTTON_BG,
-    BUTTON_BG_ACTIVE,
     make_font,
 )
-from components.styles.styles import BUTTON_BG_PRESSED
+
+LOGGER = logging.getLogger(__name__)
+
 
 class MainFrame(ctk.CTkFrame):
     def __init__(self, master: ctk.CTk) -> None:
@@ -86,11 +88,11 @@ class MainFrame(ctk.CTkFrame):
         )
         self.file_menu.add_command(label="Nuevo", command=self.new_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Abrir proyecto", command=self.open_project)
+        self.file_menu.add_command(label="Abrir", command=self.open_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
+        self.file_menu.add_command(label="Guardar", command=self.save_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Guardar proyecto como", command=self.save_project_as)
+        self.file_menu.add_command(label="Guardar como", command=self.save_project_as)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
@@ -117,6 +119,20 @@ class MainFrame(ctk.CTkFrame):
             font=make_font(12),
         )
         self.file_button.grid(row=0, column=0, padx=(0, 4), sticky="w")
+
+        self.help_button = ctk.CTkButton(
+            topbar,
+            text="Ayuda",
+            command=self._show_help_dialog,
+            height=24,
+            width=78,
+            corner_radius=0,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            text_color=TEXT_LIGHT,
+            font=make_font(12),
+        )
+        self.help_button.grid(row=0, column=1, padx=(0, 4), sticky="w")
 
         exit_button = ctk.CTkButton(
             topbar,
@@ -230,7 +246,7 @@ class MainFrame(ctk.CTkFrame):
 
         self.block_checkbox = ctk.CTkCheckBox(
             tools,
-            text="Modo: Bloquear camino",
+            text="Obstáculos de ruta",
             variable=self.block_mode_var,
             command=self._toggle_block_mode,
             fg_color=PRIMARY_BUTTON,
@@ -279,6 +295,7 @@ class MainFrame(ctk.CTkFrame):
             on_selection_change=self._update_delete_state,
             on_zoom_change=self._update_zoom_label,
             on_document_change=self._mark_dirty,
+            on_context_change=self._update_context_status,
             corner_radius=0,
         )
         self.grid_canvas.grid(row=1, column=0, sticky="nsew", pady=(8, 0))
@@ -316,6 +333,15 @@ class MainFrame(ctk.CTkFrame):
             
             font=make_font(12, "bold"),
         ).grid(row=0, column=0, padx=(5, 0), pady=5, sticky="w")
+
+        self.context_status_label = ctk.CTkLabel(
+            footer,
+            text="Clic para crear nodo",
+            text_color=TEXT_LIGHT,
+            font=make_font(12),
+            anchor="center",
+        )
+        self.context_status_label.grid(row=0, column=1, padx=(14, 12), pady=5, sticky="ew")
 
         zoom_frame = ctk.CTkFrame(footer, fg_color="transparent")
         zoom_frame.grid(row=0, column=2, padx=(12, 5), pady=5, sticky="e")
@@ -372,6 +398,9 @@ class MainFrame(ctk.CTkFrame):
         )
         self.file_menu.grab_release()
 
+    def _show_help_dialog(self) -> None:
+        show_help_dialog(self)
+
     def _update_delete_state(self, has_selection: bool) -> None:
         self.delete_button.configure(state="normal" if has_selection else "disabled")
 
@@ -381,6 +410,10 @@ class MainFrame(ctk.CTkFrame):
     def _update_zoom_label(self, zoom_percent: int | None = None) -> None:
         percent = self.grid_canvas.zoom_percent() if zoom_percent is None else zoom_percent
         self.zoom_label.configure(text=f"{percent}%")
+
+    def _update_context_status(self, message: str) -> None:
+        if hasattr(self, "context_status_label"):
+            self.context_status_label.configure(text=message)
 
     def new_project(self) -> None:
         if not self._confirm_discard_changes():
@@ -397,13 +430,23 @@ class MainFrame(ctk.CTkFrame):
 
         source_path = filedialog.askopenfilename(
             parent=self,
-            title="Abrir proyecto",
+            title="Abrir",
             filetypes=[("Proyecto JSON", "*.json"), ("Todos los archivos", "*.*")],
         )
         if not source_path:
             return
 
-        self.document = self.persistence_manager.load(source_path)
+        try:
+            self.document = self.persistence_manager.load(source_path)
+        except Exception as error:  # noqa: BLE001
+            LOGGER.exception("Unable to load org chart project from %s", source_path)
+            messagebox.showerror(
+                "No se pudo abrir",
+                f"No fue posible cargar el proyecto:\n{error}",
+                parent=self,
+            )
+            return
+
         self.current_project_path = Path(source_path)
         self._load_document_into_ui(self.document)
         self._set_dirty(False)
@@ -444,7 +487,7 @@ class MainFrame(ctk.CTkFrame):
         self.document.page_orientation = orientation
         target_path = filedialog.asksaveasfilename(
             parent=self,
-            title="Guardar organigrama como PDF",
+            title="Exportar organigrama como PDF",
             defaultextension=".pdf",
             filetypes=[("Archivo PDF", "*.pdf"), ("Todos los archivos", "*.*")],
             initialfile="organigrama.pdf",
@@ -452,7 +495,8 @@ class MainFrame(ctk.CTkFrame):
         if not target_path:
             return
 
-        self._run_background_task(lambda: self.pdf_exporter.export(self.document, target_path), success_title="PDF exportado")
+        export_document = deepcopy(self.document)
+        self._run_background_task(lambda: self.pdf_exporter.export(export_document, target_path), success_title="PDF exportado")
 
     def export_image(self) -> None:
         if not self._can_start_export():
@@ -476,12 +520,14 @@ class MainFrame(ctk.CTkFrame):
             messagebox.showerror("Extensión no válida", "La imagen debe guardarse como .png, .jpg o .jpeg.", parent=self)
             return
 
+        export_document = deepcopy(self.document)
+
         def task() -> Path:
             temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
             temp_pdf_path = Path(temp_pdf.name)
             temp_pdf.close()
             try:
-                self.pdf_exporter.export(self.document, temp_pdf_path)
+                self.pdf_exporter.export(export_document, temp_pdf_path)
                 return export_pdf_as_image(temp_pdf_path, target_path, dpi=300)
             finally:
                 if temp_pdf_path.exists():
@@ -504,6 +550,7 @@ class MainFrame(ctk.CTkFrame):
             result_path = future.result()
             messagebox.showinfo(success_title, f"Archivo generado correctamente en:\n{result_path}", parent=self)
         except Exception as error:  # noqa: BLE001
+            LOGGER.exception("Unable to complete org chart background task")
             messagebox.showerror("Error", f"No se pudo completar la operación:\n{error}", parent=self)
         finally:
             if self._pending_task is future:
@@ -520,7 +567,26 @@ class MainFrame(ctk.CTkFrame):
         if self._is_operation_running():
             self._show_operation_warning()
             return False
+        if not self._confirm_save_before_export():
+            return False
         return True
+
+    def _confirm_save_before_export(self) -> bool:
+        if not self.is_dirty:
+            return True
+
+        answer = messagebox.askyesnocancel(
+            "Guardar proyecto antes de exportar",
+            "Hay cambios sin guardar. ¿Deseas guardar el proyecto editable antes de exportar?",
+            parent=self,
+        )
+        if answer is None:
+            return False
+        if answer is False:
+            return True
+
+        self.save_project()
+        return not self.is_dirty
 
     def _show_operation_warning(self) -> None:
         messagebox.showwarning(
@@ -551,9 +617,7 @@ class MainFrame(ctk.CTkFrame):
         self._update_window_title()
 
     def _update_window_title(self) -> None:
-        suffix = " *" if self.is_dirty else ""
-        project_name = self.current_project_path.name if self.current_project_path is not None else "sin_guardar.json"
-        self.master.title(f"Organigramas | {project_name}{suffix}")
+        self.master.title(f"Organigramas")
 
     def _load_document_into_ui(self, document: OrgGridDocument) -> None:
         self._metadata_sync_paused = True
@@ -564,10 +628,8 @@ class MainFrame(ctk.CTkFrame):
         self._metadata_sync_paused = False
         self.grid_canvas.set_document(document)
         self.grid_canvas.zoom = 1.0
-        self.grid_canvas.pan_x = 560.0
-        self.grid_canvas.pan_y = 320.0
         self.grid_canvas.set_block_mode(False)
-        self.grid_canvas.request_redraw()
+        self.grid_canvas.fit_document_to_content_top()
         self._update_zoom_label(100)
         self._update_delete_state(False)
         self._update_window_title()
@@ -576,7 +638,12 @@ class MainFrame(ctk.CTkFrame):
         if self._is_operation_running():
             self._show_operation_warning()
             return
-        if not self._confirm_discard_changes():
+
+        if not messagebox.askyesno(
+            "Confirmar salida",
+            "¿Estás seguro de que quieres salir?",
+            parent=self,
+        ):
             return
         self.master.destroy()
 

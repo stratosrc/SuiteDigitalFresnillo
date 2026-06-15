@@ -29,7 +29,8 @@ class NodeStyle:
     name_line_height: float
     role_line_height: float
     text_padding_x: float
-    text_padding_y: float
+    text_padding_top: float
+    text_padding_bottom: float
     text_gap: float
     logo_radius: float
     logo_center_offset_y: float
@@ -113,17 +114,20 @@ class DocumentBounds:
 class RenderingEngine:
     """Single source of truth for node sizing, text wrapping and coordinate mapping."""
 
-    base_cell_width: float = 360.0
-    base_cell_height: float = 240.0
+    content_top_margin: float = 10.0
+    base_cell_width: float = 250.0
+    base_cell_height: float = 260.0
     base_node_width: float = 210.0
     base_node_min_height: float = 87.0
     base_logo_radius: float = 44.0
     base_line_width: float = 2.1
-    base_text_padding_x: float = 18.0
-    base_text_padding_y: float = 24.0
+    base_text_padding_x: float = 23.0
+    base_text_padding_top: float = 27.0
+    base_text_padding_bottom: float = 5.0
     base_text_gap: float = 5.0
     base_name_font_size: float = 14.0
-    base_role_font_size: float = 11.0
+    base_role_font_size: float = 12.0
+    min_node_text_font_size: float = 6.0
 
     def normalize_orientation(self, orientation: str) -> str:
         return VERTICAL_ORIENTATION if orientation == VERTICAL_ORIENTATION else HORIZONTAL_ORIENTATION
@@ -134,20 +138,20 @@ class RenderingEngine:
             return PageLayout(
                 width=612.0,
                 height=792.0,
-                margin_left=42.0,
-                margin_top=36.0,
-                margin_right=42.0,
-                margin_bottom=42.0,
+                margin_left=12.0,
+                margin_top=16.0,
+                margin_right=12.0,
+                margin_bottom=12.0,
                 header_height=132.0,
             )
 
         return PageLayout(
             width=792.0,
             height=612.0,
-            margin_left=42.0,
-            margin_top=32.0,
-            margin_right=42.0,
-            margin_bottom=36.0,
+            margin_left=12.0,
+            margin_top=16.0,
+            margin_right=12.0,
+            margin_bottom=12.0,
             header_height=112.0,
         )
 
@@ -172,10 +176,11 @@ class RenderingEngine:
             name_line_height=name_font_size * 1.15,
             role_line_height=role_font_size * 1.22,
             text_padding_x=self.base_text_padding_x,
-            text_padding_y=self.base_text_padding_y,
+            text_padding_top=self.base_text_padding_top,
+            text_padding_bottom=self.base_text_padding_bottom,
             text_gap=self.base_text_gap,
             logo_radius=self.base_logo_radius,
-            logo_center_offset_y=-2.0,
+            logo_center_offset_y=-17.0,
             connection_line_width=self.base_line_width,
         )
 
@@ -185,37 +190,39 @@ class RenderingEngine:
         name_lines = self.wrap_text(node.nombre or "ASIGNAR NOMBRE", style.name_font_size, style.width, style.text_padding_x)
         role_lines = self.wrap_text(node.cargo, style.role_font_size, style.width, style.text_padding_x)
 
-        cursor_y = style.text_padding_y
+        cursor_y = style.text_padding_top
         lines: list[NodeTextLine] = []
         for line in name_lines:
+            font_size = self._fit_node_text_size(line, style.name_font_size, style.width, style.text_padding_x)
             lines.append(
                 NodeTextLine(
                     text=line,
                     top=cursor_y,
-                    font_size=style.name_font_size,
-                    line_height=style.name_line_height,
+                    font_size=font_size,
+                    line_height=font_size * 1.15,
                     is_bold=True,
                 )
             )
-            cursor_y += style.name_line_height
+            cursor_y += font_size * 1.15
 
         if name_lines and role_lines:
             cursor_y += style.text_gap
 
         for line in role_lines:
+            font_size = self._fit_node_text_size(line, style.role_font_size, style.width, style.text_padding_x)
             lines.append(
                 NodeTextLine(
                     text=line,
                     top=cursor_y,
-                    font_size=style.role_font_size,
-                    line_height=style.role_line_height,
+                    font_size=font_size,
+                    line_height=font_size * 1.22,
                     is_bold=False,
                 )
             )
-            cursor_y += style.role_line_height
+            cursor_y += font_size * 1.22
 
-        content_height = max(0.0, cursor_y - style.text_padding_y)
-        height = max(style.min_height, style.text_padding_y + content_height + style.text_padding_y)
+        content_height = max(0.0, cursor_y - style.text_padding_top)
+        height = max(style.min_height, style.text_padding_top + content_height + style.text_padding_bottom)
         box = Box(
             left=center_x - (style.width / 2),
             top=center_y - (height / 2),
@@ -267,6 +274,22 @@ class RenderingEngine:
             bottom=center_y + radius,
         )
 
+    def _fit_node_text_size(
+        self,
+        text: str,
+        start_font_size: float,
+        node_width: float,
+        horizontal_padding: float,
+    ) -> float:
+        usable_width = max(20.0, node_width - (horizontal_padding * 2))
+        font_size = start_font_size
+        while font_size > self.min_node_text_font_size and self.estimate_text_width(text, font_size) > usable_width:
+            font_size -= 0.5
+        return max(self.min_node_text_font_size, font_size)
+
+    def estimate_text_width(self, text: str, font_size: float) -> float:
+        return len(text) * max(4.5, font_size * 0.56)
+
     def wrap_text(
         self,
         text: str,
@@ -287,7 +310,7 @@ class RenderingEngine:
             paragraph_lines = textwrap.wrap(
                 paragraph,
                 width=characters_per_line,
-                break_long_words=False,
+                break_long_words=True,
                 replace_whitespace=False,
             )
             wrapped_lines.extend(paragraph_lines or [paragraph])
@@ -297,6 +320,7 @@ class RenderingEngine:
         self,
         document: OrgGridDocument,
         routes: list[list[tuple[float, float]]] | None = None,
+        include_blocked_points: bool = True,
     ) -> DocumentBounds:
         bounds: DocumentBounds | None = None
 
@@ -304,9 +328,10 @@ class RenderingEngine:
             node_box = self.get_node_box(node, include_logo=document.show_logos)
             bounds = DocumentBounds.from_box(node_box) if bounds is None else bounds.include_box(node_box)
 
-        for point_x, point_y in document.blocked_points:
-            obstacle_box = self.get_obstacle_box(point_x, point_y)
-            bounds = DocumentBounds.from_box(obstacle_box) if bounds is None else bounds.include_box(obstacle_box)
+        if include_blocked_points:
+            for point_x, point_y in document.blocked_points:
+                obstacle_box = self.get_obstacle_box(point_x, point_y)
+                bounds = DocumentBounds.from_box(obstacle_box) if bounds is None else bounds.include_box(obstacle_box)
 
         if routes:
             for route in routes:
