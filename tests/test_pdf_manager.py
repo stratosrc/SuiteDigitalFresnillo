@@ -83,6 +83,43 @@ class PdfManagerTests(unittest.TestCase):
         finally:
             os.unlink(target_path)
 
+    def test_generate_pdf_can_open_source_path_without_pdf_bytes(self):
+        source = fitz.open()
+        source.new_page(width=100, height=100)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as source_file:
+            source_path = source_file.name
+        source.save(source_path)
+        source.close()
+
+        state = DocumentState()
+        manager = PDFManager(state, DummyCallbacks(), {})
+        rectangles = [
+            {
+                "id": 1,
+                "order": 1,
+                "page": 0,
+                "x1": 10,
+                "y1": 10,
+                "x2": 40,
+                "y2": 30,
+                "classification": "general",
+                "concept_id": 1,
+                "concept_name": "Nombre",
+                "rows": 1,
+                "paragraphs": 1,
+                "label": "#1",
+            }
+        ]
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as target:
+            target_path = target.name
+        try:
+            manager.generate_pdf(target_path, source_path=source_path, rectangles=rectangles)
+            self.assertTrue(os.path.getsize(target_path) > 0)
+        finally:
+            os.unlink(source_path)
+            os.unlink(target_path)
+
 
 if __name__ == "__main__":
     unittest.main()

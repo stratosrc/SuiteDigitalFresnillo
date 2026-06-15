@@ -45,6 +45,7 @@ class PersonnelRow:
         move_up_icons: IconPair,
         move_down_icons: IconPair,
         remove_icons: IconPair,
+        locked: bool = False,
     ) -> None:
         self.master = master
         self.grid_row = grid_row
@@ -54,6 +55,7 @@ class PersonnelRow:
         self.move_up_icons = move_up_icons
         self.move_down_icons = move_down_icons
         self.remove_icons = remove_icons
+        self.locked = locked
         self.entries: list[ctk.CTkEntry] = []
         self.date_entry: ctk.CTkEntry | None = None
         self.widgets: list[tk.Widget] = []
@@ -87,35 +89,36 @@ class PersonnelRow:
             self.entries.append(entry)
             self.widgets.append(entry)
 
-        up_button = HoverIconButton(
-            self.master,
-            icons=self.move_up_icons,
-            command=self._handle_move_up,
-            width=30,
-            height=30,
-        )
-        up_button.grid(row=self.grid_row, column=4, padx=(10, 4), pady=(0, 8), sticky="e")
-        self.widgets.append(up_button)
+        if not self.locked:
+            up_button = HoverIconButton(
+                self.master,
+                icons=self.move_up_icons,
+                command=self._handle_move_up,
+                width=30,
+                height=30,
+            )
+            up_button.grid(row=self.grid_row, column=4, padx=(10, 4), pady=(0, 8), sticky="e")
+            self.widgets.append(up_button)
 
-        down_button = HoverIconButton(
-            self.master,
-            icons=self.move_down_icons,
-            command=self._handle_move_down,
-            width=30,
-            height=30,
-        )
-        down_button.grid(row=self.grid_row, column=5, padx=(0, 4), pady=(0, 8), sticky="e")
-        self.widgets.append(down_button)
+            down_button = HoverIconButton(
+                self.master,
+                icons=self.move_down_icons,
+                command=self._handle_move_down,
+                width=30,
+                height=30,
+            )
+            down_button.grid(row=self.grid_row, column=5, padx=(0, 4), pady=(0, 8), sticky="e")
+            self.widgets.append(down_button)
 
-        remove_button = HoverIconButton(
-            self.master,
-            icons=self.remove_icons,
-            command=self._handle_remove,
-            width=30,
-            height=30,
-        )
-        remove_button.grid(row=self.grid_row, column=6, padx=(0, 0), pady=(0, 8), sticky="e")
-        self.widgets.append(remove_button)
+            remove_button = HoverIconButton(
+                self.master,
+                icons=self.remove_icons,
+                command=self._handle_remove,
+                width=30,
+                height=30,
+            )
+            remove_button.grid(row=self.grid_row, column=6, padx=(0, 0), pady=(0, 8), sticky="e")
+            self.widgets.append(remove_button)
 
     def _handle_remove(self) -> None:
         self._on_remove()
@@ -219,24 +222,23 @@ class AreaSection(ctk.CTkFrame):
         )
         self.area_name_entry.grid(row=0, column=0, sticky="ew")
 
-        up_button = HoverIconButton(
-            header_frame,
-            icons=self.move_up_icons,
-            command=self._handle_move_up,
-            width=32,
-            height=32,
-        )
-        up_button.grid(row=0, column=1, padx=(10, 0), sticky="e")
-
-        HoverIconButton(
-            header_frame,
-            icons=self.move_down_icons,
-            command=self._handle_move_down,
-            width=32,
-            height=32,
-        ).grid(row=0, column=2, padx=(6, 0), sticky="e")
-
         if self.removable:
+            HoverIconButton(
+                header_frame,
+                icons=self.move_up_icons,
+                command=self._handle_move_up,
+                width=32,
+                height=32,
+            ).grid(row=0, column=1, padx=(10, 0), sticky="e")
+
+            HoverIconButton(
+                header_frame,
+                icons=self.move_down_icons,
+                command=self._handle_move_down,
+                width=32,
+                height=32,
+            ).grid(row=0, column=2, padx=(6, 0), sticky="e")
+
             HoverIconButton(
                 header_frame,
                 icons=self.area_remove_icons,
@@ -279,6 +281,7 @@ class AreaSection(ctk.CTkFrame):
         if self.detail_frame is None:
             return
 
+        locked = not self.rows
         row = PersonnelRow(
             self.detail_frame,
             grid_row=len(self.rows) + 1,
@@ -288,6 +291,7 @@ class AreaSection(ctk.CTkFrame):
             move_up_icons=self.move_up_icons,
             move_down_icons=self.move_down_icons,
             remove_icons=self.person_remove_icons,
+            locked=locked,
         )
         row._on_remove = lambda current=row: self.remove_person_row(current)
         row._on_move_up = lambda current=row: self.move_person_row(current, -1)
@@ -305,7 +309,7 @@ class AreaSection(ctk.CTkFrame):
         self._on_move_down()
 
     def remove_person_row(self, row: PersonnelRow) -> None:
-        if row not in self.rows:
+        if row not in self.rows or row.locked or len(self.rows) <= 1:
             return
 
         self.rows.remove(row)
@@ -318,7 +322,7 @@ class AreaSection(ctk.CTkFrame):
 
         current_index = self.rows.index(row)
         target_index = current_index + delta
-        if target_index < 0 or target_index >= len(self.rows):
+        if current_index == 0 or target_index <= 0 or target_index >= len(self.rows):
             return
 
         self.rows[current_index], self.rows[target_index] = self.rows[target_index], self.rows[current_index]
@@ -487,12 +491,12 @@ class DirectoryFormFrame(ctk.CTkFrame):
         self._refresh_areas()
 
     def move_area(self, section: AreaSection, delta: int) -> None:
-        if section not in self.area_sections:
+        if section not in self.area_sections or not section.removable:
             return
 
         current_index = self.area_sections.index(section)
         target_index = current_index + delta
-        if target_index < 0 or target_index >= len(self.area_sections):
+        if current_index == 0 or target_index <= 0 or target_index >= len(self.area_sections):
             return
 
         self.area_sections[current_index], self.area_sections[target_index] = (

@@ -1,4 +1,4 @@
-"""Canonical application registry shared by the launcher and CLI entry points."""
+﻿"""Canonical application registry shared by the launcher and CLI entry points."""
 
 from dataclasses import dataclass
 from importlib import import_module
@@ -53,6 +53,13 @@ APPLICATIONS: tuple[ApplicationDefinition, ...] = (
         package_name="App_Directorio",
         icon_path="components/assets/directorio.png",
         description="Gestión y Diseño del\nDirectorio de Área",
+    ),
+    ApplicationDefinition(
+        app_id="conversor_pdf",
+        name="Conversor a PDF",
+        package_name="App_ConversorPDF",
+        icon_path="components/assets/censor_icon.png",
+        description="Conversión de archivos e imágenes a PDF",
     ),
 )
 

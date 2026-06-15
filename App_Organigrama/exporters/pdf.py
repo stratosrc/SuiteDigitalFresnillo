@@ -2,7 +2,6 @@ from dataclasses import dataclass
 import logging
 from pathlib import Path
 
-from PIL import Image
 from reportlab.lib.colors import Color, HexColor
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
@@ -19,6 +18,7 @@ from App_Organigrama.config.assets import (
     SEGOE_UI_FONT_PATH,
     WATERMARK_LOGO_PATH,
 )
+from components.shared.images import crop_transparent, load_pil_rgba
 
 
 LOGGER = logging.getLogger(__name__)
@@ -249,17 +249,12 @@ class PdfOrgChartExporter:
         )
 
     def _load_node_logo_reader(self) -> ImageReader | None:
-        if not NODE_LOGO_PATH.exists():
+        image = load_pil_rgba(NODE_LOGO_PATH)
+        if image is None:
             return None
 
         try:
-            image = Image.open(NODE_LOGO_PATH)
-            if image.mode != "RGBA":
-                image = image.convert("RGBA")
-            active_box = image.getbbox()
-            if active_box:
-                image = image.crop(active_box)
-            return ImageReader(image)
+            return ImageReader(crop_transparent(image))
         except OSError as error:
             LOGGER.warning("Unable to load node logo: %s", error)
             return None

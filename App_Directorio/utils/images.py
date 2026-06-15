@@ -1,12 +1,10 @@
 from PIL import Image
 
+from components.shared.images import crop_transparent
+
 
 def crop_transparent_padding(image: Image.Image) -> Image.Image:
-    rgba_image = image.convert("RGBA")
-    visible_box = rgba_image.getchannel("A").getbbox()
-    if visible_box:
-        return rgba_image.crop(visible_box)
-    return rgba_image
+    return crop_transparent(image)
 
 
 __all__ = ["crop_transparent_padding"]

@@ -8,7 +8,6 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
-from PIL import Image, ImageOps
 
 from App_Organigrama.config.assets import TOOLBAR_LOGO_PATH
 from App_Organigrama.exporters import PdfOrgChartExporter
@@ -34,6 +33,7 @@ from App_Organigrama.ui.theme import (
     TEXT_LIGHT,
     make_font,
 )
+from components.shared.images import load_ctk_image
 
 LOGGER = logging.getLogger(__name__)
 
@@ -164,16 +164,10 @@ class MainFrame(ctk.CTkFrame):
         self._load_toolbar_logo(toolbar)
 
     def _load_toolbar_logo(self, parent: ctk.CTkFrame) -> None:
-        if not TOOLBAR_LOGO_PATH.exists():
+        image = load_ctk_image(TOOLBAR_LOGO_PATH, (280, 110), crop_alpha=True)
+        if image is None:
             return
-        image = Image.open(TOOLBAR_LOGO_PATH)
-        if image.mode != "RGBA":
-            image = image.convert("RGBA")
-        active_box = image.getbbox()
-        if active_box:
-            image = image.crop(active_box)
-        resized = ImageOps.contain(image, (280, 110), Image.Resampling.LANCZOS)
-        self.toolbar_logo_image = ctk.CTkImage(light_image=resized, dark_image=resized, size=resized.size)
+        self.toolbar_logo_image = image
         ctk.CTkLabel(parent, image=self.toolbar_logo_image, text="").grid(
             row=0,
             column=1,

@@ -5,6 +5,7 @@ from pathlib import Path
 import customtkinter as ctk
 from PIL import Image
 
+from components.shared.images import load_pil_rgba
 from components.shared.paths import build_path
 from components.styles.styles import DARK_BG_ACTIVE
 
@@ -22,10 +23,7 @@ class ImageLoader:
         if cache_key in self._icon_cache:
             return self._icon_cache[cache_key]
 
-        try:
-            image = Image.open(absolute_path).convert("RGBA") if absolute_path.exists() else None
-        except OSError:
-            image = None
+        image = load_pil_rgba(absolute_path)
 
         if image is None:
             image = Image.new("RGBA", size, DARK_BG_ACTIVE)
@@ -44,7 +42,4 @@ class ImageLoader:
         absolute_path = build_path(relative_path)
         if not absolute_path.exists():
             return None
-        try:
-            return Image.open(absolute_path).convert("RGBA")
-        except OSError:
-            return None
+        return load_pil_rgba(absolute_path)

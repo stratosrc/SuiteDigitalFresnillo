@@ -2,7 +2,6 @@ from io import BytesIO
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from PIL import Image
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.styles import ParagraphStyle
@@ -12,7 +11,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from App_Directorio.config import DIRECTORY_ICON_PATH
 from App_Directorio.models import DirectoryReportData
-from App_Directorio.utils import crop_transparent_padding
+from components.shared.images import crop_transparent, load_pil_rgba
 
 
 HEADER_BACKGROUND = colors.HexColor("#131C46")
@@ -190,7 +189,10 @@ class DirectoryPdfExporter:
         if not DIRECTORY_ICON_PATH.exists():
             return ""
         try:
-            image = crop_transparent_padding(Image.open(DIRECTORY_ICON_PATH))
+            source_image = load_pil_rgba(DIRECTORY_ICON_PATH)
+            if source_image is None:
+                return
+            image = crop_transparent(source_image)
             image_buffer = BytesIO()
             image.save(image_buffer, format="PNG")
             image_buffer.seek(0)

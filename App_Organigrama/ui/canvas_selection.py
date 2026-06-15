@@ -54,7 +54,7 @@ def draw_selected_connection_overlay(view) -> None:
         width=max(4, int(view.rendering_engine.base_line_width * view.zoom * 2.0)),
         capstyle="butt",
         joinstyle="miter",
-        tags="selection-overlay",
+        tags=("selection-overlay", "connection-selection-overlay"),
     )
 
 
@@ -80,7 +80,7 @@ def draw_selected_node_overlay(view) -> None:
         fill="",
         outline=SELECTION_COLOR,
         width=max(3, int(3 * view.zoom)),
-        tags="selection-overlay",
+        tags=("selection-overlay", "node-selection-overlay"),
     )
 
 
@@ -96,5 +96,5 @@ def draw_selected_blocked_point_overlay(view) -> None:
         center_y + size,
         outline=SELECTION_COLOR,
         width=max(3, int(3 * view.zoom)),
-        tags="selection-overlay",
+        tags=("selection-overlay", "node-selection-overlay"),
     )

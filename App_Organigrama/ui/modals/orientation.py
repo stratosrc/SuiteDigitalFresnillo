@@ -3,7 +3,6 @@ from pathlib import Path
 import tkinter as tk
 
 import customtkinter as ctk
-from PIL import Image, ImageOps
 
 from App_Organigrama.config.assets import HORIZONTAL_ICON_PATH, VERTICAL_ICON_PATH
 from App_Organigrama.ui.theme import (
@@ -14,6 +13,7 @@ from App_Organigrama.ui.theme import (
     TEXT_LIGHT,
     make_font,
 )
+from components.shared.images import load_ctk_image
 
 
 class OrientationDialog(ctk.CTkToplevel):
@@ -81,11 +81,9 @@ class OrientationDialog(ctk.CTkToplevel):
         ).grid(row=1, column=column, padx=(0, 12) if column == 0 else (12, 0), sticky="nsew")
 
     def _load_icon(self, icon_path: Path) -> ctk.CTkImage | None:
-        if not icon_path.exists():
+        icon = load_ctk_image(icon_path, (58, 58))
+        if icon is None:
             return None
-
-        image = ImageOps.contain(Image.open(icon_path), (58, 58), Image.Resampling.LANCZOS)
-        icon = ctk.CTkImage(light_image=image, dark_image=image, size=image.size)
         self.icons[str(icon_path)] = icon
         return icon
 

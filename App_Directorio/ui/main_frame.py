@@ -4,7 +4,6 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
-from PIL import Image, ImageOps
 
 from App_Directorio.config import (
     APP_DESCRIPTION,
@@ -27,7 +26,7 @@ from App_Directorio.ui.theme import (
     TEXT_LIGHT,
     make_font,
 )
-from App_Directorio.utils import crop_transparent_padding
+from components.shared.images import load_ctk_image
 
 LOGGER = logging.getLogger(__name__)
 
@@ -125,17 +124,11 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self._load_header_icon(header)
 
     def _load_header_icon(self, parent: ctk.CTkFrame) -> None:
-        if not DIRECTORY_ICON_PATH.exists():
+        image = load_ctk_image(DIRECTORY_ICON_PATH, HEADER_LOGO_SIZE, crop_alpha=True)
+        if image is None:
             return
 
-        try:
-            image = Image.open(DIRECTORY_ICON_PATH).convert("RGBA")
-        except OSError:
-            return
-
-        image = crop_transparent_padding(image)
-        resized = ImageOps.contain(image, HEADER_LOGO_SIZE, Image.Resampling.LANCZOS)
-        self.header_icon_image = ctk.CTkImage(light_image=resized, dark_image=resized, size=resized.size)
+        self.header_icon_image = image
         ctk.CTkLabel(parent, image=self.header_icon_image, text="").grid(
             row=0,
             column=1,

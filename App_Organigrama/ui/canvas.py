@@ -254,6 +254,14 @@ class OrgGridCanvas(ctk.CTkFrame):
             return
         self.redraw_after_id = self.after(16, self.redraw)
 
+    def _redraw_selection_overlay(self) -> None:
+        self.canvas.delete("selection-overlay")
+        draw_connection_selection_overlay(self)
+        if self.canvas.find_withtag("node"):
+            self.canvas.tag_lower("connection-selection-overlay", "node")
+        draw_node_selection_overlay(self)
+        self.canvas.tag_raise("node-selection-overlay")
+
     def _draw_grid(self) -> None:
         width = max(self.canvas.winfo_width(), 1)
         height = max(self.canvas.winfo_height(), 1)
@@ -281,12 +289,10 @@ class OrgGridCanvas(ctk.CTkFrame):
                 world_x, world_y = self.rendering_engine.grid_to_world(grid_x, grid_y)
                 screen_x, screen_y = self._world_to_screen(world_x, world_y)
                 points.extend((screen_x, screen_y))
-            selected = route.connection.id == self.selected_connection_id
-            selected_fill = SELECTION_COLOR if self.selection_blink_visible else PRIMARY_BUTTON
             self.canvas.create_line(
                 *points,
-                fill=selected_fill if selected else PRIMARY_BUTTON,
-                width=max(2, int(self.rendering_engine.base_line_width * self.zoom * (1.7 if selected else 1.0))),
+                fill=PRIMARY_BUTTON,
+                width=max(2, int(self.rendering_engine.base_line_width * self.zoom)),
                 capstyle="butt",
                 joinstyle="miter",
                 tags=("connection", f"connection:{route.connection.id}"),
@@ -303,11 +309,9 @@ class OrgGridCanvas(ctk.CTkFrame):
             selected = node.id == self.selected_node_id
             pending_connection_source = node.id == self.pending_connection_source_id
             outline = node.color
-            if selected:
-                outline = SELECTION_COLOR if self.selection_blink_visible else ""
-            elif pending_connection_source:
+            if pending_connection_source:
                 outline = SELECTION_COLOR
-            outline_width = 3 if selected or pending_connection_source else 1
+            outline_width = 3 if pending_connection_source else 1
             tag = ("node", f"node:{node.id}")
             create_rounded_rectangle(
                 self.canvas,
@@ -363,18 +367,6 @@ class OrgGridCanvas(ctk.CTkFrame):
         for grid_x, grid_y in self.document.blocked_points:
             world_x, world_y = self.rendering_engine.grid_to_world(grid_x, grid_y)
             center_x, center_y = self._world_to_screen(world_x, world_y)
-            selected = (grid_x, grid_y) == self.selected_blocked_point
-            selected_size = size + max(4, int(4 * self.zoom))
-            if selected and self.selection_blink_visible:
-                self.canvas.create_oval(
-                    center_x - selected_size,
-                    center_y - selected_size,
-                    center_x + selected_size,
-                    center_y + selected_size,
-                    outline=SELECTION_COLOR,
-                    width=max(2, width),
-                    tags="blocked-point",
-                )
             self.canvas.create_line(
                 center_x - size,
                 center_y - size,
@@ -729,10 +721,11 @@ class OrgGridCanvas(ctk.CTkFrame):
 
     def _open_node_dialog(self, node: OrgNode) -> None:
         def save(nombre: str, cargo: str, color: str) -> None:
+            layout_dirty = node.nombre != nombre or node.cargo != cargo
             self.document.update_node(node.id, nombre, cargo, color)
             self._mark_recent_node(node.id)
             self._set_selection(node_id=node.id)
-            self._mark_document_changed()
+            self._mark_document_changed(routes_dirty=False, layout_dirty=layout_dirty)
 
         NodeEditorDialog(
             self,
@@ -898,7 +891,7 @@ class OrgGridCanvas(ctk.CTkFrame):
             return
 
         self.selection_blink_visible = not self.selection_blink_visible
-        self.request_redraw()
+        self._redraw_selection_overlay()
         self._schedule_selection_blink()
 
     def _cancel_connection(self, _event: tk.Event[tk.Canvas] | None = None) -> None:
@@ -941,8 +934,9 @@ class OrgGridCanvas(ctk.CTkFrame):
             return "Obstaculo seleccionado. Supr para eliminar"
         return "Clic para crear nodo"
 
-    def _mark_document_changed(self, routes_dirty: bool = True) -> None:
-        self._invalidate_layout_cache()
+    def _mark_document_changed(self, routes_dirty: bool = True, layout_dirty: bool = True) -> None:
+        if layout_dirty:
+            self._invalidate_layout_cache()
         if routes_dirty:
             self._routes_dirty = True
         self._emit_document_change()

@@ -3,8 +3,8 @@
 import tkinter as tk
 
 import customtkinter as ctk
-from PIL import Image
 
+from components.shared.images import load_ctk_image as load_shared_ctk_image
 from components.styles.styles import (
     BORDER_BG,
     BUTTON_BG,
@@ -17,9 +17,6 @@ from components.styles.styles import (
     TEXT_LIGHT,
     BUTTON_BG2,
 )
-
-_IMAGE_CACHE = {}
-
 
 class Tooltip:
     """Small hover tooltip for Tk/CustomTkinter widgets."""
@@ -103,6 +100,34 @@ def build_font(size: int, weight: str | None = None) -> ctk.CTkFont:
     return ctk.CTkFont(family=CTK_FONT_FAMILY, size=size, weight=weight)
 
 
+def _create_button(
+    parent,
+    text: str,
+    command,
+    *,
+    width: int,
+    height: int,
+    fg_color: str,
+    hover_color: str,
+    danger: bool = False,
+    image=None,
+):
+    return ctk.CTkButton(
+        parent,
+        text=text,
+        image=image,
+        command=command,
+        width=width,
+        height=height,
+        corner_radius=0,
+        fg_color=fg_color,
+        hover_color=hover_color,
+        text_color=TEXT_LIGHT,
+        text_color_disabled=TEXT_LIGHT,
+        font=build_font(12, "bold" if danger else None),
+    )
+
+
 def create_toolbar_button(
     parent,
     text: str,
@@ -111,33 +136,21 @@ def create_toolbar_button(
     danger: bool = False,
 ):
     """Create a standard toolbar button."""
-    return ctk.CTkButton(
+    return _create_button(
         parent,
         text=text,
         command=command,
         width=width,
         height=28,
-        corner_radius=0,
         fg_color=DANGER_BG if danger else BUTTON_BG,
         hover_color=DANGER_BG_ACTIVE if danger else BUTTON_BG_ACTIVE,
-        text_color=TEXT_LIGHT,
-        font=build_font(12, "bold" if danger else None),
+        danger=danger,
     )
 
 
 def load_ctk_image(path: str, size: tuple[int, int]) -> ctk.CTkImage | None:
     """Load and cache a CTk-compatible image."""
-    cache_key = (path, size)
-    if cache_key in _IMAGE_CACHE:
-        return _IMAGE_CACHE[cache_key]
-    try:
-        image = Image.open(path).convert("RGBA")
-    except OSError:
-        return None
-    image.thumbnail(size, Image.Resampling.LANCZOS)
-    ctk_image = ctk.CTkImage(light_image=image, dark_image=image, size=image.size)
-    _IMAGE_CACHE[cache_key] = ctk_image
-    return ctk_image
+    return load_shared_ctk_image(path, size)
 
 
 def create_toolbar_icon_button(
@@ -151,19 +164,16 @@ def create_toolbar_icon_button(
 ):
     """Create a compact toolbar button with an icon and tooltip-friendly text."""
     image = load_ctk_image(icon_path, (18, 18))
-    button = ctk.CTkButton(
+    button = _create_button(
         parent,
         text="" if image is not None else text,
         image=image,
         command=command,
         width=width,
         height=28,
-        corner_radius=0,
         fg_color=DANGER_BG if danger else BUTTON_BG,
         hover_color=DANGER_BG_ACTIVE if danger else BUTTON_BG_ACTIVE,
-        text_color=TEXT_LIGHT,
-        text_color_disabled=TEXT_LIGHT,
-        font=build_font(12, "bold" if danger else None),
+        danger=danger,
     )
     button._normal_fg_color = DANGER_BG if danger else BUTTON_BG
     button._disabled_fg_color = BORDER_BG
@@ -181,17 +191,15 @@ def create_bottom_toolbar_button(
     danger: bool = False,
 ):
     """Create a standard toolbar button."""
-    return ctk.CTkButton(
+    return _create_button(
         parent,
         text=text,
         command=command,
         width=width,
         height=25,
-        corner_radius=0,
         fg_color=BUTTON_BG2 if not danger else DANGER_BG,
         hover_color=BUTTON_BG_ACTIVE if not danger else DANGER_BG_ACTIVE,
-        text_color=TEXT_LIGHT,
-        font=build_font(12, "bold" if danger else None),
+        danger=danger,
     )
 
 def create_entry(parent, textvariable=None, width: int | None = None):

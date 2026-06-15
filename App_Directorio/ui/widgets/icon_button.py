@@ -3,22 +3,15 @@ from pathlib import Path
 import tkinter as tk
 
 import customtkinter as ctk
-from PIL import Image
+
+from components.shared.images import load_ctk_image
 
 
 IconPair = tuple[ctk.CTkImage | None, ctk.CTkImage | None]
 
 
 def load_action_icon(path: Path, size: tuple[int, int]) -> ctk.CTkImage | None:
-    if not path.exists():
-        return None
-
-    try:
-        image = Image.open(path).convert("RGBA")
-    except OSError:
-        return None
-
-    return ctk.CTkImage(light_image=image, dark_image=image, size=size)
+    return load_ctk_image(path, size)
 
 
 def load_icon_pair(path: Path, hover_path: Path, size: tuple[int, int]) -> IconPair:

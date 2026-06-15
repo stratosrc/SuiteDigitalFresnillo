@@ -68,14 +68,13 @@ class ExportController:
 
         self.app.message_label.configure(text=EXPORT_MESSAGES["generating_status"])
         self.set_controls_state("disabled")
-        pdf_bytes = self.app.pdf_document.tobytes()
         rectangles_snapshot = deepcopy(self.app.censored_rectangles)
         committee_snapshot = deepcopy(committee_data)
         future = self.executor.submit(
             self.app.pdf_manager.generate_pdf,
             output_path,
             committee_snapshot,
-            pdf_bytes=pdf_bytes,
+            source_path=self.app.current_pdf_path,
             rectangles=rectangles_snapshot,
         )
         self.pending_future = future
