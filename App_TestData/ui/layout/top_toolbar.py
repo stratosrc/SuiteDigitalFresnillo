@@ -86,7 +86,7 @@ def build_action_toolbar(parent, callbacks: dict):
         toolbar_frame,
         ACTION_LABELS["undo"],
         lambda: callbacks["on_rectangle_action"]("undo"),
-        UNDO_ICON_PATH,
+        UNDO_ICON_PATH, 
         width=42,
     )
     undo_button.pack(side=tk.LEFT, padx=(0, 8))
