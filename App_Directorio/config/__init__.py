@@ -6,6 +6,8 @@ from .assets import (
     PACKAGE_ROOT,
     PLUS_ICON_HOVER_PATH,
     PLUS_ICON_PATH,
+    UP_ICON_PATH,
+    DOWN_ICON_PATH,
     REMOVE_ICON_HOVER_PATH,
     REMOVE_ICON_PATH,
 )
@@ -22,6 +24,8 @@ __all__ = [
     "PACKAGE_ROOT",
     "PLUS_ICON_HOVER_PATH",
     "PLUS_ICON_PATH",
+    "UP_ICON_PATH",
+    "DOWN_ICON_PATH",
     "REMOVE_ICON_HOVER_PATH",
     "REMOVE_ICON_PATH",
 ]

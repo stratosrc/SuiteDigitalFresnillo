@@ -8,8 +8,10 @@ from App_Directorio.config import (
     MINUS_ICON_PATH,
     PLUS_ICON_HOVER_PATH,
     PLUS_ICON_PATH,
+    DOWN_ICON_PATH,
     REMOVE_ICON_HOVER_PATH,
     REMOVE_ICON_PATH,
+    UP_ICON_PATH,
 )
 from App_Directorio.models import AreaReportData, DirectoryReportData, PersonReportRow
 from App_Directorio.ui.theme import (
@@ -40,6 +42,8 @@ class PersonnelRow:
         on_remove: Callable[[], None],
         on_move_up: Callable[[], None],
         on_move_down: Callable[[], None],
+        move_up_icons: IconPair,
+        move_down_icons: IconPair,
         remove_icons: IconPair,
     ) -> None:
         self.master = master
@@ -47,6 +51,8 @@ class PersonnelRow:
         self._on_remove = on_remove
         self._on_move_up = on_move_up
         self._on_move_down = on_move_down
+        self.move_up_icons = move_up_icons
+        self.move_down_icons = move_down_icons
         self.remove_icons = remove_icons
         self.entries: list[ctk.CTkEntry] = []
         self.date_entry: ctk.CTkEntry | None = None
@@ -81,32 +87,22 @@ class PersonnelRow:
             self.entries.append(entry)
             self.widgets.append(entry)
 
-        up_button = ctk.CTkButton(
+        up_button = HoverIconButton(
             self.master,
-            text="Subir",
+            icons=self.move_up_icons,
             command=self._handle_move_up,
-            width=46,
+            width=30,
             height=30,
-            corner_radius=0,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=PRIMARY_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
-            font=make_font(11, "bold"),
         )
         up_button.grid(row=self.grid_row, column=4, padx=(10, 4), pady=(0, 8), sticky="e")
         self.widgets.append(up_button)
 
-        down_button = ctk.CTkButton(
+        down_button = HoverIconButton(
             self.master,
-            text="Bajar",
+            icons=self.move_down_icons,
             command=self._handle_move_down,
-            width=46,
+            width=30,
             height=30,
-            corner_radius=0,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=PRIMARY_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
-            font=make_font(11, "bold"),
         )
         down_button.grid(row=self.grid_row, column=5, padx=(0, 4), pady=(0, 8), sticky="e")
         self.widgets.append(down_button)
@@ -174,6 +170,8 @@ class AreaSection(ctk.CTkFrame):
         on_remove: Callable[[], None],
         on_move_up: Callable[[], None],
         on_move_down: Callable[[], None],
+        move_up_icons: IconPair,
+        move_down_icons: IconPair,
         add_icons: IconPair,
         area_remove_icons: IconPair,
         person_remove_icons: IconPair,
@@ -189,6 +187,8 @@ class AreaSection(ctk.CTkFrame):
         self._on_remove = on_remove
         self._on_move_up = on_move_up
         self._on_move_down = on_move_down
+        self.move_up_icons = move_up_icons
+        self.move_down_icons = move_down_icons
         self.add_icons = add_icons
         self.area_remove_icons = area_remove_icons
         self.person_remove_icons = person_remove_icons
@@ -219,31 +219,21 @@ class AreaSection(ctk.CTkFrame):
         )
         self.area_name_entry.grid(row=0, column=0, sticky="ew")
 
-        up_button = ctk.CTkButton(
+        up_button = HoverIconButton(
             header_frame,
-            text="Subir",
+            icons=self.move_up_icons,
             command=self._handle_move_up,
             width=32,
             height=32,
-            corner_radius=0,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=PRIMARY_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
-            font=make_font(11, "bold"),
         )
         up_button.grid(row=0, column=1, padx=(10, 0), sticky="e")
 
-        ctk.CTkButton(
+        HoverIconButton(
             header_frame,
-            text="Bajar",
+            icons=self.move_down_icons,
             command=self._handle_move_down,
             width=32,
             height=32,
-            corner_radius=0,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=PRIMARY_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
-            font=make_font(11, "bold"),
         ).grid(row=0, column=2, padx=(6, 0), sticky="e")
 
         if self.removable:
@@ -295,6 +285,8 @@ class AreaSection(ctk.CTkFrame):
             on_remove=lambda: None,
             on_move_up=lambda: None,
             on_move_down=lambda: None,
+            move_up_icons=self.move_up_icons,
+            move_down_icons=self.move_down_icons,
             remove_icons=self.person_remove_icons,
         )
         row._on_remove = lambda current=row: self.remove_person_row(current)
@@ -362,6 +354,8 @@ class DirectoryFormFrame(ctk.CTkFrame):
         self.title_var = tk.StringVar()
         self.period_var = tk.StringVar()
         self.plus_icons = load_icon_pair(PLUS_ICON_PATH, PLUS_ICON_HOVER_PATH, (22, 22))
+        self.move_up_icons = load_icon_pair(UP_ICON_PATH, UP_ICON_PATH, (20, 20))
+        self.move_down_icons = load_icon_pair(DOWN_ICON_PATH, DOWN_ICON_PATH, (20, 20))
         self.area_remove_icons = load_icon_pair(REMOVE_ICON_PATH, REMOVE_ICON_HOVER_PATH, (20, 20))
         self.person_remove_icons = load_icon_pair(MINUS_ICON_PATH, MINUS_ICON_HOVER_PATH, (20, 20))
         self.area_sections: list[AreaSection] = []
@@ -471,6 +465,8 @@ class DirectoryFormFrame(ctk.CTkFrame):
             on_remove=lambda: None,
             on_move_up=lambda: None,
             on_move_down=lambda: None,
+            move_up_icons=self.move_up_icons,
+            move_down_icons=self.move_down_icons,
             add_icons=self.plus_icons,
             area_remove_icons=self.area_remove_icons,
             person_remove_icons=self.person_remove_icons,

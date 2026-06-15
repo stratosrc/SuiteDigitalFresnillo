@@ -8,6 +8,8 @@ MINUS_ICON_PATH = ASSETS_DIR / "minus.png"
 MINUS_ICON_HOVER_PATH = ASSETS_DIR / "minus_hover.png"
 PLUS_ICON_PATH = ASSETS_DIR / "plus.png"
 PLUS_ICON_HOVER_PATH = ASSETS_DIR / "plus_hover.png"
+UP_ICON_PATH = ASSETS_DIR / "up.png"
+DOWN_ICON_PATH = ASSETS_DIR / "down.png"
 REMOVE_ICON_PATH = ASSETS_DIR / "x.png"
 REMOVE_ICON_HOVER_PATH = ASSETS_DIR / "x_hover.png"
 
@@ -19,6 +21,8 @@ __all__ = [
     "PACKAGE_ROOT",
     "PLUS_ICON_HOVER_PATH",
     "PLUS_ICON_PATH",
+    "UP_ICON_PATH",
+    "DOWN_ICON_PATH",
     "REMOVE_ICON_HOVER_PATH",
     "REMOVE_ICON_PATH",
 ]
