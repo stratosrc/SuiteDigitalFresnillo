@@ -43,7 +43,7 @@ HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
     (
         "2. CONTROLES DE EDICION Y SEGURIDAD",
         (
-            'Modo Bloquear Camino: Permite colocar puntos de obstruccion para forzar rutas alternativas en las conexiones.\n',
+            'Obstaculos de Ruta: Permite colocar puntos de obstruccion para forzar rutas alternativas en las conexiones.\n',
             "Boton de Escudos: Activa o desactiva la visualizacion global de los escudos institucionales.\n",
             "Eliminar Seleccion: Remueve del lienzo cualquier nodo, conector o elemento seleccionado.\n",
             "Atajos de Teclado: Tambien puedes eliminar la seleccion con [Supr] (Delete) o [Backspace].\n",

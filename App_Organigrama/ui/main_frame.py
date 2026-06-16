@@ -178,7 +178,7 @@ class MainFrame(ctk.CTkFrame):
 
     def _build_metadata_panel(self) -> None:
         panel = ctk.CTkFrame(self, fg_color=APP_BACKGROUND, corner_radius=0)
-        panel.grid(row=2, column=0, sticky="ew", padx=24, pady=(18, 10))
+        panel.grid(row=2, column=0, sticky="ew", padx=24, pady=(4, 4))
         panel.grid_columnconfigure(0, weight=1)
         panel.grid_columnconfigure(1, weight=1)
 

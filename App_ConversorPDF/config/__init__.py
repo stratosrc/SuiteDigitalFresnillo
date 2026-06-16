@@ -15,8 +15,9 @@ APP_DESCRIPTION = "Conversor de archivos a PDF"
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tif", ".tiff"}
 DOCUMENT_EXTENSIONS = {".doc", ".docx", ".rtf", ".odt", ".xls", ".xlsx", ".ods", ".csv", ".ppt", ".pptx", ".odp"}
+PDF_EXTENSIONS = {".pdf"}
 SHEET_EXTENSIONS = {".xls", ".xlsx", ".ods", ".csv"}
-SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | DOCUMENT_EXTENSIONS
+SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | DOCUMENT_EXTENSIONS | PDF_EXTENSIONS
 
 __all__ = [
     "APP_DESCRIPTION",
@@ -28,6 +29,7 @@ __all__ = [
     "DOWNLOAD_ITEM_ICON_PATH",
     "DOCUMENT_EXTENSIONS",
     "IMAGE_EXTENSIONS",
+    "PDF_EXTENSIONS",
     "SHEET_EXTENSIONS",
     "SUPPORTED_EXTENSIONS",
     "UPLOAD_ICON_HOVER_PATH",

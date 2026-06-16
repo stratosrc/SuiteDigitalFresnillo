@@ -8,9 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 import shutil
 
+import fitz
 from PIL import Image, ImageSequence
 
-from App_ConversorPDF.config import IMAGE_EXTENSIONS
+from App_ConversorPDF.config import IMAGE_EXTENSIONS, PDF_EXTENSIONS
 from App_ConversorPDF.services.libreoffice import require_soffice_path
 
 
@@ -31,6 +32,8 @@ class PdfConverter:
         target_path = self._prepare_target_path(request.target_path)
         if suffix in IMAGE_EXTENSIONS:
             return self._convert_image(request.source_path, target_path)
+        if suffix in PDF_EXTENSIONS:
+            return self._convert_pdf(request.source_path, target_path, request.sheet_name)
         return self._convert_office_document(request.source_path, target_path, request.sheet_name)
 
     def _convert_image(self, source_path: Path, target_path: Path) -> Path:
@@ -52,6 +55,27 @@ class PdfConverter:
             first.save(target_path, "PDF", save_all=bool(rest), append_images=rest)
         except PermissionError as error:
             raise PermissionError(f"No se pudo guardar el PDF por permisos: {target_path}") from error
+        return target_path
+
+    def _convert_pdf(self, source_path: Path, target_path: Path, page_range: str | None) -> Path:
+        self._ensure_output_dir(target_path.parent)
+        try:
+            with fitz.open(source_path) as source_document:
+                if len(source_document) == 0:
+                    raise ValueError("El PDF no contiene paginas.")
+
+                selected_pages = self._parse_pdf_page_range(page_range, len(source_document))
+                output_document = fitz.open()
+                try:
+                    for page_index in selected_pages:
+                        output_document.insert_pdf(source_document, from_page=page_index, to_page=page_index)
+                    output_document.save(target_path)
+                finally:
+                    output_document.close()
+        except fitz.FileDataError as error:
+            raise ValueError(f"No se pudo leer el PDF: {source_path}") from error
+        except PermissionError as error:
+            raise PermissionError(f"No se pudo leer o guardar el PDF por permisos: {source_path}") from error
         return target_path
 
     def _convert_office_document(self, source_path: Path, target_path: Path, page_range: str | None) -> Path:
@@ -116,6 +140,40 @@ class PdfConverter:
         if suffix in {".ppt", ".pptx", ".odp"}:
             return "impress_pdf_Export"
         return "writer_pdf_Export"
+
+    def _parse_pdf_page_range(self, raw_range: str | None, total_pages: int) -> list[int]:
+        if raw_range is None or not raw_range.strip():
+            return list(range(total_pages))
+
+        selected_pages: list[int] = []
+        parts = [part.strip() for part in raw_range.replace(";", ",").split(",")]
+        for part in parts:
+            if not part:
+                continue
+            if "-" not in part:
+                selected_pages.append(self._parse_pdf_page_number(part, total_pages))
+                continue
+
+            start, end, *extra = [value.strip() for value in part.split("-")]
+            if extra:
+                raise ValueError(f"Rango de paginas invalido: {part}")
+            start_number = self._parse_pdf_page_number(start, total_pages)
+            end_number = self._parse_pdf_page_number(end, total_pages)
+            if start_number > end_number:
+                raise ValueError(f"Rango de paginas invalido: {part}")
+            selected_pages.extend(range(start_number, end_number + 1))
+
+        if not selected_pages:
+            return list(range(total_pages))
+        return selected_pages
+
+    def _parse_pdf_page_number(self, raw_value: str, total_pages: int) -> int:
+        if not raw_value.isdigit():
+            raise ValueError(f"Pagina invalida: {raw_value}")
+        page_number = int(raw_value)
+        if page_number < 1 or page_number > total_pages:
+            raise ValueError(f"La pagina {page_number} esta fuera del rango 1-{total_pages}.")
+        return page_number - 1
 
     def _run_libreoffice(self, command: list[str]) -> subprocess.CompletedProcess[str]:
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0

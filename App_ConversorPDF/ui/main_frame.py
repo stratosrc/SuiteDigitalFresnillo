@@ -20,6 +20,7 @@ from App_ConversorPDF.config import (
     DOWNLOAD_ICON_HOVER_PATH,
     DOWNLOAD_ITEM_ICON_PATH,
     DOWNLOAD_ICON_PATH,
+    PDF_EXTENSIONS,
     SUPPORTED_EXTENSIONS,
     UPLOAD_ICON_HOVER_PATH,
     UPLOAD_ICON_PATH,
@@ -338,9 +339,9 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             if path in existing or path.suffix.lower() not in SUPPORTED_EXTENSIONS:
                 continue
             sheet_var = tk.StringVar(value="")
-            if path.suffix.lower() in DOCUMENT_EXTENSIONS:
+            if path.suffix.lower() in DOCUMENT_EXTENSIONS | PDF_EXTENSIONS:
                 sheet_var.trace_add("write", lambda *_args: self._refresh_outputs())
-            self.files.append(SourceFileItem(path=path, sheet_var=sheet_var if path.suffix.lower() in DOCUMENT_EXTENSIONS else None))
+            self.files.append(SourceFileItem(path=path, sheet_var=sheet_var if path.suffix.lower() in DOCUMENT_EXTENSIONS | PDF_EXTENSIONS else None))
             existing.add(path)
             changed = True
 
@@ -374,21 +375,21 @@ class PdfConverterMainFrame(ctk.CTkFrame):
 
         for row_index, item in enumerate(self.files):
             row = ctk.CTkFrame(self.files_frame, fg_color="#1E2858", corner_radius=0)
-            row.grid(row=row_index * 2, column=0, sticky="ew", pady=(0, 8))
+            row.grid(row=row_index * 2, column=0, sticky="ew", pady=(0, 1))
             row.grid_columnconfigure(1, weight=1)
 
             ctk.CTkButton(
                 row,
                 text="X",
                 command=lambda index=row_index: self._remove_file(index),
-                width=32,
-                height=32,
-                corner_radius=0,
-                fg_color="#263163",
+                width=16,
+                height=16,
+                corner_radius=8,
+                fg_color="#344077",
                 hover_color=DANGER_BUTTON,
                 text_color=TEXT_LIGHT,
-                font=make_font(12, "bold"),
-            ).grid(row=0, column=0, rowspan=2, sticky="nsw", padx=(8, 0), pady=8)
+                font=make_font(14, "bold"),
+            ).grid(row=0, column=0, rowspan=2, sticky="nsw", padx=(8, 0), pady=19)
 
             ctk.CTkLabel(
                 row,
@@ -396,25 +397,25 @@ class PdfConverterMainFrame(ctk.CTkFrame):
                 text_color=TEXT_LIGHT,
                 font=make_font(12, "bold"),
                 anchor="w",
-            ).grid(row=0, column=1, sticky="ew", padx=12, pady=(8, 2))
+            ).grid(row=0, column=1, sticky="ew", padx=12, pady=(6, 1))
             ctk.CTkLabel(
                 row,
                 text=str(item.path.parent),
                 text_color="#B8C2D6",
                 font=make_font(10),
                 anchor="w",
-            ).grid(row=1, column=1, sticky="ew", padx=12, pady=(0, 8))
+            ).grid(row=1, column=1, sticky="ew", padx=12, pady=(0, 6))
 
             if item.sheet_var is not None:
                 entry = ctk.CTkEntry(
                     self.files_frame,
                     placeholder_text="Hojas a exportar, ej. 2-4. Dejar vacio para convertir todas.",
-                    height=30,
+                    height=15,
                     corner_radius=0,
                     fg_color=SURFACE_BACKGROUND,
                     border_color=BORDER_COLOR,
                     text_color=TEXT_DARK,
-                    placeholder_text_color=TEXT_DARK,
+                    placeholder_text_color="#797979",
                     font=make_font(12),
                 )
                 current_value = item.sheet_var.get()
@@ -445,11 +446,12 @@ class PdfConverterMainFrame(ctk.CTkFrame):
                 text=output_name,
                 height=38,
                 corner_radius=0,
-                fg_color=SURFACE_BACKGROUND,
+                fg_color="#E7E9F1",
                 text_color=TEXT_DARK,
-                font=make_font(12, "bold"),
+                font=make_font(14, "bold"),
                 anchor="w",
-            ).grid(row=0, column=0, sticky="ew")
+                padx=12,
+            ).grid(row=0, column=0, sticky="ew", padx=4)
             button = ctk.CTkButton(
                 row,
                 text="" if self.download_item_icon_image is not None else "DL",
