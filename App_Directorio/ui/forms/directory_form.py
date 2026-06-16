@@ -8,9 +8,11 @@ from App_Directorio.config import (
     MINUS_ICON_PATH,
     PLUS_ICON_HOVER_PATH,
     PLUS_ICON_PATH,
+    DOWN_ICON_HOVER_PATH,
     DOWN_ICON_PATH,
     REMOVE_ICON_HOVER_PATH,
     REMOVE_ICON_PATH,
+    UP_ICON_HOVER_PATH,
     UP_ICON_PATH,
 )
 from App_Directorio.models import AreaReportData, DirectoryReportData, PersonReportRow
@@ -358,8 +360,8 @@ class DirectoryFormFrame(ctk.CTkFrame):
         self.title_var = tk.StringVar()
         self.period_var = tk.StringVar()
         self.plus_icons = load_icon_pair(PLUS_ICON_PATH, PLUS_ICON_HOVER_PATH, (22, 22))
-        self.move_up_icons = load_icon_pair(UP_ICON_PATH, UP_ICON_PATH, (20, 20))
-        self.move_down_icons = load_icon_pair(DOWN_ICON_PATH, DOWN_ICON_PATH, (20, 20))
+        self.move_up_icons = load_icon_pair(UP_ICON_PATH, UP_ICON_HOVER_PATH, (20, 20))
+        self.move_down_icons = load_icon_pair(DOWN_ICON_PATH, DOWN_ICON_HOVER_PATH, (20, 20))
         self.area_remove_icons = load_icon_pair(REMOVE_ICON_PATH, REMOVE_ICON_HOVER_PATH, (20, 20))
         self.person_remove_icons = load_icon_pair(MINUS_ICON_PATH, MINUS_ICON_HOVER_PATH, (20, 20))
         self.area_sections: list[AreaSection] = []

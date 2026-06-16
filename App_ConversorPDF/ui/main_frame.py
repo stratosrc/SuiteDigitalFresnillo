@@ -2,19 +2,37 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
-from App_ConversorPDF.config import APP_DESCRIPTION, APP_TITLE, SHEET_EXTENSIONS, SUPPORTED_EXTENSIONS
+try:
+    from tkinterdnd2 import DND_FILES
+except ImportError:
+    DND_FILES = None
+
+from App_ConversorPDF.config import (
+    APP_DESCRIPTION,
+    CONVERTER_LOGO_PATH,
+    DOCUMENT_EXTENSIONS,
+    DOWNLOAD_ICON_HOVER_PATH,
+    DOWNLOAD_ITEM_ICON_PATH,
+    DOWNLOAD_ICON_PATH,
+    SUPPORTED_EXTENSIONS,
+    UPLOAD_ICON_HOVER_PATH,
+    UPLOAD_ICON_PATH,
+)
 from App_ConversorPDF.services.converter import ConversionRequest, PdfConverter
+from App_ConversorPDF.ui.dialogs import show_help_dialog
 from App_ConversorPDF.ui.theme import (
     APP_BACKGROUND,
     BORDER_COLOR,
     DANGER_BUTTON,
     DANGER_BUTTON_ACTIVE,
     DARK_BACKGROUND,
+    HEADER_LOGO_SIZE,
     LEFT_PANEL_BACKGROUND,
     PRIMARY_BUTTON,
     PRIMARY_BUTTON_ACTIVE,
@@ -26,6 +44,7 @@ from App_ConversorPDF.ui.theme import (
     TEXT_MUTED,
     make_font,
 )
+from components.shared.images import load_ctk_image
 
 
 @dataclass(slots=True)
@@ -42,6 +61,13 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.converter = PdfConverter()
         self.files: list[SourceFileItem] = []
         self.output_buttons: list[ctk.CTkButton] = []
+        self.header_logo_image: ctk.CTkImage | None = None
+        self.upload_icon_image: ctk.CTkImage | None = None
+        self.upload_icon_hover_image: ctk.CTkImage | None = None
+        self.download_icon_image: ctk.CTkImage | None = None
+        self.download_icon_hover_image: ctk.CTkImage | None = None
+        self.download_item_icon_image: ctk.CTkImage | None = None
+        self.is_busy = False
         self._build_layout()
         self._refresh_outputs()
 
@@ -53,12 +79,39 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self._build_topbar()
         self._build_header()
         self._build_body()
+        self._build_loading_overlay()
 
     def _build_topbar(self) -> None:
         topbar = ctk.CTkFrame(self, fg_color=PRIMARY_BUTTON_PRESSED, corner_radius=0, height=24)
         topbar.grid(row=0, column=0, sticky="ew")
-        topbar.grid_columnconfigure(0, weight=1)
+        topbar.grid_columnconfigure(2, weight=1)
         topbar.grid_propagate(False)
+
+        ctk.CTkButton(
+            topbar,
+            text="Nuevo",
+            command=self.reset_work,
+            height=24,
+            width=72,
+            corner_radius=0,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            text_color=TEXT_LIGHT,
+            font=make_font(12),
+        ).grid(row=0, column=0, padx=(0, 4), sticky="w")
+
+        ctk.CTkButton(
+            topbar,
+            text="Ayuda",
+            command=self._show_help_dialog,
+            height=24,
+            width=72,
+            corner_radius=0,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            text_color=TEXT_LIGHT,
+            font=make_font(12),
+        ).grid(row=0, column=1, padx=(0, 4), sticky="w")
 
         ctk.CTkButton(
             topbar,
@@ -71,7 +124,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             hover_color=DANGER_BUTTON_ACTIVE,
             text_color=TEXT_LIGHT,
             font=make_font(12),
-        ).grid(row=0, column=1, padx=(4, 0), sticky="e")
+        ).grid(row=0, column=3, padx=(4, 0), sticky="e")
 
     def _build_header(self) -> None:
         header = ctk.CTkFrame(self, fg_color=DARK_BACKGROUND, corner_radius=0, height=118)
@@ -85,6 +138,21 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             text_color=TEXT_LIGHT,
             font=make_font(18, "bold"),
         ).grid(row=0, column=0, padx=(16, 24), pady=12, sticky="w")
+        self._load_header_logo(header)
+
+    def _load_header_logo(self, parent: ctk.CTkFrame) -> None:
+        image = load_ctk_image(CONVERTER_LOGO_PATH, HEADER_LOGO_SIZE, crop_alpha=True)
+        if image is None:
+            return
+
+        self.header_logo_image = image
+        ctk.CTkLabel(parent, image=self.header_logo_image, text="").grid(
+            row=0,
+            column=1,
+            padx=(16, 18),
+            pady=14,
+            sticky="e",
+        )
 
     def _build_body(self) -> None:
         body = ctk.CTkFrame(self, fg_color=APP_BACKGROUND, corner_radius=0)
@@ -96,29 +164,75 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.left_panel = ctk.CTkFrame(body, fg_color=LEFT_PANEL_BACKGROUND, corner_radius=0)
         self.left_panel.grid(row=0, column=0, sticky="nsew")
         self.left_panel.grid_columnconfigure(0, weight=1)
+        self.left_panel.grid_rowconfigure(0, weight=1)
         self.left_panel.grid_rowconfigure(1, weight=1)
 
         self.right_panel = ctk.CTkFrame(body, fg_color=RIGHT_PANEL_BACKGROUND, corner_radius=0)
         self.right_panel.grid(row=0, column=1, sticky="nsew")
         self.right_panel.grid_columnconfigure(0, weight=1)
+        self.right_panel.grid_rowconfigure(0, weight=1)
         self.right_panel.grid_rowconfigure(1, weight=1)
 
         self._build_upload_panel()
         self._build_download_panel()
 
-    def _build_upload_panel(self) -> None:
-        ctk.CTkButton(
-            self.left_panel,
-            text="Upload",
-            command=self._select_files,
-            width=150,
-            height=42,
-            corner_radius=0,
-            fg_color=SURFACE_BACKGROUND,
-            hover_color="#D7DEE6",
+    def _build_loading_overlay(self) -> None:
+        self.loading_overlay = ctk.CTkFrame(self, fg_color="#0F172A", corner_radius=0)
+        self.loading_overlay.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        self.loading_overlay.grid_columnconfigure(0, weight=1)
+        self.loading_overlay.grid_rowconfigure(0, weight=1)
+
+        content = ctk.CTkFrame(self.loading_overlay, fg_color="#FFFFFF", corner_radius=0)
+        content.grid(row=0, column=0, padx=40, pady=40)
+        content.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            content,
+            text="Convirtiendo archivos",
             text_color=TEXT_DARK,
+            font=make_font(18, "bold"),
+        ).grid(row=0, column=0, padx=42, pady=(30, 8), sticky="ew")
+
+        self.loading_status_label = ctk.CTkLabel(
+            content,
+            text="Preparando conversion...",
+            text_color=TEXT_MUTED,
+            font=make_font(13),
+        )
+        self.loading_status_label.grid(row=1, column=0, padx=42, pady=(0, 18), sticky="ew")
+
+        self.loading_progress = ctk.CTkProgressBar(
+            content,
+            width=280,
+            height=8,
+            corner_radius=0,
+            mode="indeterminate",
+            progress_color=PRIMARY_BUTTON,
+        )
+        self.loading_progress.grid(row=2, column=0, padx=42, pady=(0, 30), sticky="ew")
+        self.loading_overlay.grid_remove()
+
+    def _build_upload_panel(self) -> None:
+        self._enable_file_drop(self.left_panel)
+        self.upload_icon_image = load_ctk_image(UPLOAD_ICON_PATH, (180, 180), crop_alpha=True)
+        self.upload_icon_hover_image = load_ctk_image(UPLOAD_ICON_HOVER_PATH, (180, 180), crop_alpha=True)
+        self.upload_icon_button = ctk.CTkButton(
+            self.left_panel,
+            text="" if self.upload_icon_image is not None else "Upload",
+            image=self.upload_icon_image,
+            command=self._select_files,
+            width=1,
+            height=1,
+            corner_radius=0,
+            fg_color=LEFT_PANEL_BACKGROUND,
+            hover_color=LEFT_PANEL_BACKGROUND,
+            text_color=TEXT_LIGHT,
             font=make_font(14, "bold"),
-        ).grid(row=0, column=0, pady=(28, 18))
+        )
+        self.upload_icon_button.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        self.upload_icon_button.bind("<Enter>", lambda _event: self._set_icon_hover(self.upload_icon_button, self.upload_icon_hover_image), add=True)
+        self.upload_icon_button.bind("<Leave>", lambda _event: self._set_icon_hover(self.upload_icon_button, self.upload_icon_image), add=True)
+        self._enable_file_drop(self.upload_icon_button)
 
         self.files_frame = ctk.CTkScrollableFrame(
             self.left_panel,
@@ -127,22 +241,46 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             scrollbar_button_color=PRIMARY_BUTTON,
             scrollbar_button_hover_color=PRIMARY_BUTTON_ACTIVE,
         )
-        self.files_frame.grid(row=1, column=0, sticky="nsew", padx=22, pady=(0, 24))
+        self.files_frame.grid(row=1, column=0, sticky="nsew", padx=22, pady=(24, 24))
         self.files_frame.grid_columnconfigure(0, weight=1)
+        self.files_frame.grid_remove()
+        self._enable_file_drop(self.files_frame)
+
+        self.upload_action_button = ctk.CTkButton(
+            self.left_panel,
+            text="Cargar",
+            command=self._select_files,
+            width=150,
+            height=38,
+            corner_radius=0,
+            fg_color=SURFACE_BACKGROUND,
+            hover_color="#D7DEE6",
+            text_color=TEXT_DARK,
+            font=make_font(13, "bold"),
+        )
+        self.upload_action_button.grid(row=2, column=0, pady=(0, 24))
+        self.upload_action_button.grid_remove()
 
     def _build_download_panel(self) -> None:
-        ctk.CTkButton(
+        self.download_icon_image = load_ctk_image(DOWNLOAD_ICON_PATH, (180, 180), crop_alpha=True)
+        self.download_icon_hover_image = load_ctk_image(DOWNLOAD_ICON_HOVER_PATH, (180, 180), crop_alpha=True)
+        self.download_item_icon_image = load_ctk_image(DOWNLOAD_ITEM_ICON_PATH, (18, 18), crop_alpha=True)
+        self.download_icon_button = ctk.CTkButton(
             self.right_panel,
-            text="Download",
+            text="" if self.download_icon_image is not None else "Download",
+            image=self.download_icon_image,
             command=self._convert_first_output,
-            width=150,
-            height=42,
+            width=1,
+            height=1,
             corner_radius=0,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=PRIMARY_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
+            fg_color=RIGHT_PANEL_BACKGROUND,
+            hover_color=RIGHT_PANEL_BACKGROUND,
+            text_color=TEXT_DARK,
             font=make_font(14, "bold"),
-        ).grid(row=0, column=0, pady=(28, 18))
+        )
+        self.download_icon_button.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        self.download_icon_button.bind("<Enter>", lambda _event: self._set_icon_hover(self.download_icon_button, self.download_icon_hover_image), add=True)
+        self.download_icon_button.bind("<Leave>", lambda _event: self._set_icon_hover(self.download_icon_button, self.download_icon_image), add=True)
 
         self.outputs_frame = ctk.CTkScrollableFrame(
             self.right_panel,
@@ -151,10 +289,28 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             scrollbar_button_color=PRIMARY_BUTTON,
             scrollbar_button_hover_color=PRIMARY_BUTTON_ACTIVE,
         )
-        self.outputs_frame.grid(row=1, column=0, sticky="nsew", padx=22, pady=(0, 24))
+        self.outputs_frame.grid(row=1, column=0, sticky="nsew", padx=22, pady=(24, 24))
         self.outputs_frame.grid_columnconfigure(0, weight=1)
+        self.outputs_frame.grid_remove()
+
+        self.download_action_button = ctk.CTkButton(
+            self.right_panel,
+            text="Descargar todos",
+            command=self._save_all_outputs,
+            width=150,
+            height=38,
+            corner_radius=0,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            text_color=TEXT_LIGHT,
+            font=make_font(13, "bold"),
+        )
+        self.download_action_button.grid(row=2, column=0, pady=(0, 24))
+        self.download_action_button.grid_remove()
 
     def _select_files(self) -> None:
+        if self.is_busy:
+            return
         patterns = " ".join(f"*{extension}" for extension in sorted(SUPPORTED_EXTENSIONS))
         selected_paths = filedialog.askopenfilenames(
             parent=self,
@@ -167,31 +323,72 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         if not selected_paths:
             return
 
+        self._add_files(selected_paths)
+
+    def _show_help_dialog(self) -> None:
+        if self.is_busy:
+            return
+        show_help_dialog(self)
+
+    def _add_files(self, raw_paths) -> None:
         existing = {item.path for item in self.files}
-        for raw_path in selected_paths:
+        changed = False
+        for raw_path in raw_paths:
             path = Path(raw_path)
             if path in existing or path.suffix.lower() not in SUPPORTED_EXTENSIONS:
                 continue
             sheet_var = tk.StringVar(value="")
-            if path.suffix.lower() in SHEET_EXTENSIONS:
+            if path.suffix.lower() in DOCUMENT_EXTENSIONS:
                 sheet_var.trace_add("write", lambda *_args: self._refresh_outputs())
-            self.files.append(SourceFileItem(path=path, sheet_var=sheet_var if path.suffix.lower() in SHEET_EXTENSIONS else None))
+            self.files.append(SourceFileItem(path=path, sheet_var=sheet_var if path.suffix.lower() in DOCUMENT_EXTENSIONS else None))
+            existing.add(path)
+            changed = True
 
+        if not changed:
+            return
         self._render_files()
         self._refresh_outputs()
+
+    def reset_work(self) -> None:
+        if self.is_busy:
+            return
+        self.files.clear()
+        self._render_files()
+        self._refresh_outputs()
+
+    def _remove_file(self, index: int) -> None:
+        if self.is_busy:
+            return
+        if 0 <= index < len(self.files):
+            del self.files[index]
+            self._render_files()
+            self._refresh_outputs()
 
     def _render_files(self) -> None:
         for child in self.files_frame.winfo_children():
             child.destroy()
 
         if not self.files:
-            self._empty_label(self.files_frame, "Sin archivos cargados", TEXT_LIGHT).grid(row=0, column=0, sticky="ew", pady=16)
+            self._sync_action_buttons()
             return
 
         for row_index, item in enumerate(self.files):
             row = ctk.CTkFrame(self.files_frame, fg_color="#1E2858", corner_radius=0)
             row.grid(row=row_index * 2, column=0, sticky="ew", pady=(0, 8))
-            row.grid_columnconfigure(0, weight=1)
+            row.grid_columnconfigure(1, weight=1)
+
+            ctk.CTkButton(
+                row,
+                text="X",
+                command=lambda index=row_index: self._remove_file(index),
+                width=32,
+                height=32,
+                corner_radius=0,
+                fg_color="#263163",
+                hover_color=DANGER_BUTTON,
+                text_color=TEXT_LIGHT,
+                font=make_font(12, "bold"),
+            ).grid(row=0, column=0, rowspan=2, sticky="nsw", padx=(8, 0), pady=8)
 
             ctk.CTkLabel(
                 row,
@@ -199,29 +396,34 @@ class PdfConverterMainFrame(ctk.CTkFrame):
                 text_color=TEXT_LIGHT,
                 font=make_font(12, "bold"),
                 anchor="w",
-            ).grid(row=0, column=0, sticky="ew", padx=12, pady=(8, 2))
+            ).grid(row=0, column=1, sticky="ew", padx=12, pady=(8, 2))
             ctk.CTkLabel(
                 row,
                 text=str(item.path.parent),
                 text_color="#B8C2D6",
                 font=make_font(10),
                 anchor="w",
-            ).grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
+            ).grid(row=1, column=1, sticky="ew", padx=12, pady=(0, 8))
 
             if item.sheet_var is not None:
                 entry = ctk.CTkEntry(
                     self.files_frame,
-                    textvariable=item.sheet_var,
-                    placeholder_text="Hojas a convertir: 1, 2, Hoja1-Hoja3",
+                    placeholder_text="Hojas a exportar, ej. 2-4. Dejar vacio para convertir todas.",
                     height=30,
                     corner_radius=0,
                     fg_color=SURFACE_BACKGROUND,
                     border_color=BORDER_COLOR,
                     text_color=TEXT_DARK,
-                    placeholder_text_color=TEXT_MUTED,
+                    placeholder_text_color=TEXT_DARK,
                     font=make_font(12),
                 )
+                current_value = item.sheet_var.get()
+                if current_value:
+                    entry.insert(0, current_value)
+                entry.bind("<KeyRelease>", lambda _event, source=item, input_entry=entry: self._update_sheet_value(source, input_entry.get()), add=True)
+                entry.bind("<FocusOut>", lambda _event, source=item, input_entry=entry: self._update_sheet_value(source, input_entry.get()), add=True)
                 entry.grid(row=row_index * 2 + 1, column=0, sticky="ew", pady=(0, 10))
+        self._sync_action_buttons()
 
     def _refresh_outputs(self) -> None:
         for child in getattr(self, "outputs_frame", []).winfo_children() if hasattr(self, "outputs_frame") else []:
@@ -230,45 +432,81 @@ class PdfConverterMainFrame(ctk.CTkFrame):
 
         outputs = self._build_output_items()
         if not outputs:
-            if hasattr(self, "outputs_frame"):
-                self._empty_label(self.outputs_frame, "Sin PDFs generados", TEXT_DARK).grid(row=0, column=0, sticky="ew", pady=16)
+            self._sync_action_buttons()
             return
 
         for index, (item, sheet_name, output_name) in enumerate(outputs):
-            button = ctk.CTkButton(
-                self.outputs_frame,
+            row = ctk.CTkFrame(self.outputs_frame, fg_color=RIGHT_PANEL_BACKGROUND, corner_radius=0)
+            row.grid(row=index, column=0, sticky="ew", pady=(0, 8))
+            row.grid_columnconfigure(0, weight=1)
+
+            ctk.CTkLabel(
+                row,
                 text=output_name,
-                command=lambda source=item, sheet=sheet_name, name=output_name: self._save_output(source, sheet, name),
                 height=38,
                 corner_radius=0,
                 fg_color=SURFACE_BACKGROUND,
-                hover_color="#F2F5F8",
                 text_color=TEXT_DARK,
-                border_width=1,
-                border_color=BORDER_COLOR,
                 font=make_font(12, "bold"),
                 anchor="w",
+            ).grid(row=0, column=0, sticky="ew")
+            button = ctk.CTkButton(
+                row,
+                text="" if self.download_item_icon_image is not None else "DL",
+                image=self.download_item_icon_image,
+                command=lambda source=item, sheet=sheet_name, name=output_name: self._save_output(source, sheet, name),
+                width=38,
+                height=38,
+                corner_radius=0,
+                fg_color=PRIMARY_BUTTON,
+                hover_color=PRIMARY_BUTTON_ACTIVE,
+                text_color=TEXT_LIGHT,
+                font=make_font(11, "bold"),
             )
-            button.grid(row=index, column=0, sticky="ew", pady=(0, 8))
+            button.grid(row=0, column=1, sticky="e")
             self.output_buttons.append(button)
+        self._sync_action_buttons()
+
+    def _update_sheet_value(self, item: SourceFileItem, value: str) -> None:
+        if item.sheet_var is None or item.sheet_var.get() == value:
+            return
+        item.sheet_var.set(value)
 
     def _build_output_items(self) -> list[tuple[SourceFileItem, str | None, str]]:
         outputs: list[tuple[SourceFileItem, str | None, str]] = []
         for item in self.files:
-            sheet_names = self._parse_sheet_input(item.sheet_var.get()) if item.sheet_var is not None else []
-            if not sheet_names:
+            sheet_range = self._parse_sheet_input(item.sheet_var.get()) if item.sheet_var is not None else None
+            if sheet_range is None:
                 outputs.append((item, None, f"{item.path.stem}.pdf"))
                 continue
-            for sheet_name in sheet_names:
-                safe_sheet = self._safe_filename(sheet_name)
-                outputs.append((item, sheet_name, f"{item.path.stem}_{safe_sheet}.pdf"))
+            safe_range = self._safe_filename(sheet_range)
+            outputs.append((item, sheet_range, f"{item.path.stem}_{safe_range}.pdf"))
         return outputs
 
-    def _parse_sheet_input(self, raw_value: str) -> list[str]:
+    def _parse_sheet_input(self, raw_value: str) -> str | None:
         parts = [part.strip() for part in raw_value.replace(";", ",").split(",")]
-        return [part for part in parts if part]
+        normalized_parts: list[str] = []
+        for part in parts:
+            if not part:
+                continue
+            if "-" not in part:
+                normalized_parts.append(part)
+                continue
+            start, end, *extra = [value.strip() for value in part.split("-")]
+            if extra or not start.isdigit() or not end.isdigit():
+                normalized_parts.append(part)
+                continue
+            start_number = int(start)
+            end_number = int(end)
+            if start_number > end_number:
+                normalized_parts.append(part)
+                continue
+            normalized_parts.append(f"{start_number}-{end_number}")
+        return ",".join(normalized_parts) or None
 
     def _convert_first_output(self) -> None:
+        if self.is_busy:
+            return
         outputs = self._build_output_items()
         if not outputs:
             messagebox.showinfo("Sin archivos", "Carga al menos un archivo para convertir.", parent=self)
@@ -276,7 +514,114 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         item, sheet_name, output_name = outputs[0]
         self._save_output(item, sheet_name, output_name)
 
+    def _save_all_outputs(self) -> None:
+        if self.is_busy:
+            return
+        outputs = self._build_output_items()
+        if not outputs:
+            messagebox.showinfo("Sin archivos", "Carga al menos un archivo para convertir.", parent=self)
+            return
+
+        target_dir = filedialog.askdirectory(parent=self, title="Seleccionar carpeta de descarga")
+        if not target_dir:
+            return
+
+        output_dir = Path(target_dir)
+        self._run_conversion_task(
+            status_text=f"Convirtiendo 1 de {len(outputs)}...",
+            task=lambda: self._convert_all_outputs(outputs, output_dir),
+            on_success=lambda saved_paths: messagebox.showinfo(
+                "PDFs guardados",
+                f"Se guardaron {len(saved_paths)} archivo(s) en:\n{output_dir}",
+                parent=self,
+            ),
+        )
+
+    def _convert_all_outputs(self, outputs: list[tuple[SourceFileItem, str | None, str]], output_dir: Path) -> list[Path]:
+        saved_paths: list[Path] = []
+        errors: list[str] = []
+        for index, (item, sheet_name, output_name) in enumerate(outputs, start=1):
+            self._set_loading_status_from_worker(f"Convirtiendo {index} de {len(outputs)}...")
+            try:
+                saved_paths.append(
+                    self.converter.convert(
+                        ConversionRequest(
+                            source_path=item.path,
+                            target_path=output_dir / output_name,
+                            sheet_name=sheet_name,
+                        )
+                    )
+                )
+            except Exception as error:  # noqa: BLE001
+                errors.append(f"{output_name}: {error}")
+
+        if errors:
+            message = "\n".join(errors[:5])
+            if len(errors) > 5:
+                message += f"\n... y {len(errors) - 5} error(es) mas."
+            raise RuntimeError(message)
+        return saved_paths
+
+    def _set_icon_hover(self, button: ctk.CTkButton, image: ctk.CTkImage | None) -> None:
+        if image is not None:
+            button.configure(image=image)
+
+    def _enable_file_drop(self, widget) -> None:
+        if DND_FILES is None:
+            return
+        register = getattr(widget, "drop_target_register", None)
+        bind = getattr(widget, "dnd_bind", None)
+        if register is None or bind is None:
+            return
+        register(DND_FILES)
+        bind("<<Drop>>", self._handle_file_drop)
+
+    def _handle_file_drop(self, event) -> None:
+        self._add_files(self.tk.splitlist(event.data))
+
+    def _sync_action_buttons(self) -> None:
+        has_files = bool(self.files)
+        has_outputs = bool(self._build_output_items())
+
+        if hasattr(self, "upload_icon_button"):
+            if has_files:
+                self.upload_icon_button.grid_remove()
+            else:
+                self.upload_icon_button.grid()
+
+        if hasattr(self, "files_frame"):
+            if has_files:
+                self.files_frame.grid()
+            else:
+                self.files_frame.grid_remove()
+
+        if hasattr(self, "upload_action_button"):
+            if has_files:
+                self.upload_action_button.grid()
+            else:
+                self.upload_action_button.grid_remove()
+
+        if hasattr(self, "download_icon_button"):
+            if has_outputs:
+                self.download_icon_button.grid_remove()
+            else:
+                self.download_icon_button.grid()
+
+        if hasattr(self, "outputs_frame"):
+            if has_outputs:
+                self.outputs_frame.grid()
+            else:
+                self.outputs_frame.grid_remove()
+
+        if hasattr(self, "download_action_button"):
+            if has_outputs:
+                self.download_action_button.grid()
+            else:
+                self.download_action_button.grid_remove()
+
     def _save_output(self, item: SourceFileItem, sheet_name: str | None, output_name: str) -> None:
+        if self.is_busy:
+            return
         target = filedialog.asksaveasfilename(
             parent=self,
             title="Guardar PDF",
@@ -287,19 +632,59 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         if not target:
             return
 
-        try:
-            self.converter.convert(
+        self._run_conversion_task(
+            status_text="Convirtiendo archivo...",
+            task=lambda: self.converter.convert(
                 ConversionRequest(
                     source_path=item.path,
                     target_path=Path(target),
                     sheet_name=sheet_name,
                 )
-            )
-        except Exception as error:  # noqa: BLE001
-            messagebox.showerror("No se pudo convertir", str(error), parent=self)
-            return
+            ),
+            on_success=lambda saved_path: messagebox.showinfo(
+                "PDF guardado",
+                f"Archivo guardado en:\n{saved_path}",
+                parent=self,
+            ),
+        )
 
-        messagebox.showinfo("PDF guardado", f"Archivo guardado en:\n{target}", parent=self)
+    def _run_conversion_task(self, status_text: str, task, on_success) -> None:
+        if self.is_busy:
+            return
+        self._show_loading(status_text)
+
+        def worker() -> None:
+            try:
+                result = task()
+            except Exception as error:  # noqa: BLE001
+                self.after(0, lambda: self._finish_conversion_error(error))
+                return
+            self.after(0, lambda: self._finish_conversion_success(result, on_success))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _show_loading(self, status_text: str) -> None:
+        self.is_busy = True
+        self.loading_status_label.configure(text=status_text)
+        self.loading_overlay.grid()
+        self.loading_overlay.lift()
+        self.loading_progress.start()
+
+    def _hide_loading(self) -> None:
+        self.loading_progress.stop()
+        self.loading_overlay.grid_remove()
+        self.is_busy = False
+
+    def _set_loading_status_from_worker(self, status_text: str) -> None:
+        self.after(0, lambda: self.loading_status_label.configure(text=status_text))
+
+    def _finish_conversion_success(self, result, on_success) -> None:
+        self._hide_loading()
+        on_success(result)
+
+    def _finish_conversion_error(self, error: Exception) -> None:
+        self._hide_loading()
+        messagebox.showerror("No se pudo convertir", str(error), parent=self)
 
     def _empty_label(self, parent, text: str, text_color: str) -> ctk.CTkLabel:
         return ctk.CTkLabel(

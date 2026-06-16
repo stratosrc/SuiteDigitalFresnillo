@@ -55,7 +55,7 @@ def build_menu_toolbar(parent, callbacks: dict):
         toolbar,
         TOPBAR_LABELS["help"],
         callbacks["on_show_help"],
-        width=86,
+        width=72,
     )
     help_button.pack(side=tk.LEFT, padx=(0, 4), pady=0)
 

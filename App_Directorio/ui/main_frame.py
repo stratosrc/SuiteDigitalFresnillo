@@ -85,7 +85,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
             text="Ayuda",
             command=self._show_help_dialog,
             height=24,
-            width=78,
+            width=72,
             corner_radius=0,
             fg_color=PRIMARY_BUTTON,
             hover_color=PRIMARY_BUTTON_ACTIVE,

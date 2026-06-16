@@ -12,10 +12,17 @@ from App_ConversorPDF.ui.theme import (
 )
 from components.shared.windowing import center_window
 
+try:
+    from tkinterdnd2 import TkinterDnD
+except ImportError:
+    TkinterDnD = None
+
 
 class PdfConverterApplication(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
+        if TkinterDnD is not None:
+            TkinterDnD.require(self)
         apply_theme()
         self.title(APP_TITLE)
         self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")

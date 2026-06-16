@@ -23,10 +23,7 @@ HELP_WINDOW_WIDTH: Final[int] = 550
 HELP_WINDOW_HEIGHT: Final[int] = 600
 HELP_WINDOW_MIN_WIDTH: Final[int] = 500
 HELP_WINDOW_MIN_HEIGHT: Final[int] = 520
-HELP_BULLET_WRAP_LENGTH: Final[int] = 580
-HELP_HEADING_FONT_SIZE: Final[int] = 18
-HELP_SECTION_FONT_SIZE: Final[int] = 15
-HELP_BODY_FONT_SIZE: Final[int] = 14
+HELP_BULLET_WRAP_LENGTH: Final[int] = 470
 
 HELP_DIALOG_TITLE: Final[str] = "Ayuda"
 HELP_DIALOG_HEADING: Final[str] = "Guia de uso"
@@ -85,16 +82,13 @@ def show_help_dialog(parent: tk.Misc) -> None:
 def _build_help_content(help_window: ctk.CTkToplevel) -> None:
     main_frame = ctk.CTkFrame(help_window, fg_color=APP_BACKGROUND, corner_radius=0)
     main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-    heading_font = make_font(HELP_HEADING_FONT_SIZE, "bold")
-    section_font = make_font(HELP_SECTION_FONT_SIZE, "bold")
-    body_font = make_font(HELP_BODY_FONT_SIZE)
 
     ctk.CTkLabel(
         main_frame,
         text=HELP_DIALOG_HEADING,
         fg_color=APP_BACKGROUND,
         text_color=TEXT_DARK,
-        font=heading_font,
+        font=make_font(18, "bold"),
         anchor="w",
     ).pack(fill=tk.X, anchor=tk.W, pady=(0, 12))
 
@@ -107,7 +101,7 @@ def _build_help_content(help_window: ctk.CTkToplevel) -> None:
     )
     scroll_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 14))
 
-    _populate_help_sections(scroll_frame, section_font, body_font)
+    _populate_help_sections(scroll_frame)
 
     ctk.CTkButton(
         main_frame,
@@ -117,39 +111,31 @@ def _build_help_content(help_window: ctk.CTkToplevel) -> None:
         hover_color=PRIMARY_BUTTON_ACTIVE,
         text_color=TEXT_LIGHT,
         corner_radius=0,
-        font=body_font,
+        font=make_font(12),
     ).pack(side=tk.BOTTOM, fill=tk.X)
 
 
-def _populate_help_sections(
-    scroll_frame: ctk.CTkScrollableFrame,
-    section_font: ctk.CTkFont,
-    body_font: ctk.CTkFont,
-) -> None:
+def _populate_help_sections(scroll_frame: ctk.CTkScrollableFrame) -> None:
     for section_title, bullet_items in HELP_SECTIONS:
-        tk.Label(
+        ctk.CTkLabel(
             scroll_frame,
             text=section_title,
-            bg=SURFACE_BACKGROUND,
-            fg=TEXT_DARK,
-            font=section_font,
+            fg_color=SURFACE_BACKGROUND,
+            text_color=TEXT_DARK,
+            font=make_font(13, "bold"),
             anchor="w",
             justify="left",
-            borderwidth=0,
-            highlightthickness=0,
         ).pack(fill=tk.X, anchor=tk.W, padx=12, pady=(14, 6))
 
         for bullet_text in bullet_items:
-            tk.Label(
+            ctk.CTkLabel(
                 scroll_frame,
                 text=f"* {bullet_text}",
-                bg=SURFACE_BACKGROUND,
-                fg=TEXT_DARK,
-                font=body_font,
+                fg_color=SURFACE_BACKGROUND,
+                text_color=TEXT_DARK,
+                font=make_font(12),
                 anchor="w",
                 justify="left",
-                borderwidth=0,
-                highlightthickness=0,
                 wraplength=HELP_BULLET_WRAP_LENGTH,
             ).pack(fill=tk.X, anchor=tk.W, padx=20, pady=(0, 5))
 
