@@ -90,14 +90,10 @@ class MainFrame(ctk.CTkFrame):
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_command(label="Abrir", command=self.open_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Guardar", command=self.save_project)
-        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Guardar como", command=self.save_project_as)
-        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_separator()
-        self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
+        self.file_menu.add_command(label="Guardar PDF", command=self.export_pdf)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Exportar imagen", command=self.export_image)
+        self.file_menu.add_command(label="Guardar imagen", command=self.export_image)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
 
     def _build_topbar(self) -> None:
@@ -560,8 +556,6 @@ class MainFrame(ctk.CTkFrame):
             return False
         if self._is_operation_running():
             self._show_operation_warning()
-            return False
-        if not self._confirm_save_before_export():
             return False
         return True
 

@@ -1,4 +1,4 @@
-"""Help dialog for the Directorio module."""
+﻿"""Help dialog for the Directorio module."""
 
 from typing import Final
 import tkinter as tk
@@ -25,41 +25,41 @@ HELP_WINDOW_MIN_HEIGHT: Final[int] = 520
 HELP_BULLET_WRAP_LENGTH: Final[int] = 470
 
 HELP_DIALOG_TITLE: Final[str] = "Ayuda"
-HELP_DIALOG_HEADING: Final[str] = "Guía de uso"
+HELP_DIALOG_HEADING: Final[str] = "GuÃ­a de uso"
 HELP_DIALOG_CLOSE: Final[str] = "Cerrar"
 
 HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
     (
         "1. ARCHIVO Y PROYECTO",
         (
-            "Para guardar y exportar se va a Archivo y Guardar.",
+            "Para generar el reporte se va a Archivo y Guardar PDF.",
             "Para empezar un nuevo proyecto se va a Archivo y Nuevo.",
         ),
     ),
     (
         "2. DATOS GENERALES",
         (
-            "En el campo de Área Administrativa (Título) va el nombre de la área administrativa correspondiente al directorio.",
-            "En el campo de Período va el período correspondiente.",
-            "En el Nombre de la Área va el nombre de la subdivisión de la área administrativa.",
+            "En el campo de Ãrea Administrativa (TÃ­tulo) va el nombre de la Ã¡rea administrativa correspondiente al directorio.",
+            "En el campo de PerÃ­odo va el perÃ­odo correspondiente.",
+            "En el Nombre de la Ãrea va el nombre de la subdivisiÃ³n de la Ã¡rea administrativa.",
         ),
     ),
     (
         "3. DATOS DEL COLABORADOR",
         (
-            "En el campo de Código (Rango/Clave/Nivel) va el código correspondiente del colaborador.",
+            "En el campo de CÃ³digo (Rango/Clave/Nivel) va el cÃ³digo correspondiente del colaborador.",
             "En el campo de Nombre va el nombre del colaborador.",
             "En el campo de Cargo va el cargo del colaborador.",
-            "En la Fecha de Alta va la fecha en la que comenzó a ejercer su cargo el colaborador.",
+            "En la Fecha de Alta va la fecha en la que comenzÃ³ a ejercer su cargo el colaborador.",
         ),
     ),
     (
-        "4. ÁREAS",
+        "4. ÃREAS",
         (
-            "El botón de Agregar Área permite agregar una subdivisión más a la área administrativa.",
-            'El icono verde "+" permite agregar una fila adicional de colaborador dentro de un área.',
+            "El botÃ³n de Agregar Ãrea permite agregar una subdivisiÃ³n mÃ¡s a la Ã¡rea administrativa.",
+            'El icono verde "+" permite agregar una fila adicional de colaborador dentro de un Ã¡rea.',
             'El icono "-" permite eliminar una fila de registro de colaborador.',
-            'El icono "x" permite eliminar un área completa.',
+            'El icono "x" permite eliminar un Ã¡rea completa.',
         ),
     ),
 )

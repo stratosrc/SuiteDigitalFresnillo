@@ -1,4 +1,4 @@
-"""Modal help dialog for the organization chart designer."""
+﻿"""Modal help dialog for the organization chart designer."""
 
 from __future__ import annotations
 
@@ -34,29 +34,40 @@ HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
         "1. MENU ARCHIVO Y METADATOS",
         (
             "Nuevo: Permite limpiar el lienzo actual y comenzar un documento completamente desde cero.\n",
-            "Exportar PDF: Genera y exporta el organigrama final en formato PDF vectorial.\n",
-            "Exportar Imagen: Permite guardar el organigrama en formatos de imagen estándar, soportando las extensiónes PNG, JPG y JPEG.\n",
+            "Guardar PDF: Genera y guarda el organigrama final en formato PDF vectorial.\n",
+            "Guardar imagen: Permite guardar el organigrama en formatos de imagen estÃ¡ndar, soportando las extensiÃ³nes PNG, JPG y JPEG.\n",
             "Titulo del Organigrama: Campo de texto para establecer el titulo oficial que encabeza el grafico.\n",
-            "Período: Campo de texto para indicar el rango cronológico del organigrama (Ej. Octubre - Diciembre 2026).\n",
+            "PerÃ­odo: Campo de texto para indicar el rango cronolÃ³gico del organigrama (Ej. Octubre - Diciembre 2026).\n",
         ),
     ),
     (
-        "2. CONTROLES DE EDICION Y SEGURIDAD",
+        "2. CONTROLES DE EDICION Y CONEXIONES",
         (
-            'Obstaculos de Ruta: Permite colocar puntos de obstruccion para forzar rutas alternativas en las conexiones.\n',
-            "Boton de Escudos: Activa o desactiva la visualizacion global de los escudos institucionales.\n",
+            "Clic izquierdo en un espacio vacio: Crea un nuevo nodo en la celda seleccionada.\n",
+            "Clic izquierdo en un nodo, conector u obstaculo: Selecciona el elemento.\n",
+            "Indicador de conexion: Al acercar el cursor a un nodo aparece el puerto disponible para conectar.\n",
+            "Conectar con clic: Haz clic izquierdo en el indicador del nodo origen y despues en el indicador del nodo destino.\n",
+            "Conectar arrastrando: Arrastra desde el indicador de origen hasta otro nodo; la linea fantasma muestra la previsualizacion.\n",
             "Eliminar Seleccion: Remueve del lienzo cualquier nodo, conector o elemento seleccionado.\n",
             "Atajos de Teclado: Tambien puedes eliminar la seleccion con [Supr] (Delete) o [Backspace].\n",
         ),
     ),
     (
-        "3. NAVEGACION Y VISUALIZACION DEL LIENZO",
+        "3. NAVEGACION Y MOVIMIENTO",
         (
+            "Clic derecho y arrastre sobre un nodo: Mueve el nodo a otra celda del lienzo.\n",
+            "Clic derecho y arrastre sobre el lienzo vacio: Desplaza la camara.\n",
             "Flechas Azules: Controles para desplazar la vista por el lienzo.\n",
-            'Arrastre con Mouse: Puedes navegar por el lienzo haciendo clic izquierdo y arrastrando, siempre que no este activo el modo "Bloquear Camino".\n',
             "Enfocar Ultimo: Centra la vista en el ultimo nodo agregado.\n",
             "Botones de Zoom: Permiten acercar o alejar la vista del organigrama.\n",
             "Atajo de Zoom: Usa [Ctrl] + rueda del mouse para controlar el zoom.\n",
+        ),
+    ),
+    (
+        "4. CONTROLES DE SEGURIDAD",
+        (
+            "Obstaculos de Ruta: Permite colocar puntos de obstruccion para forzar rutas alternativas en las conexiones.\n",
+            "Boton de Escudos: Activa o desactiva la visualizacion global de los escudos institucionales.\n",
         ),
     ),
 )

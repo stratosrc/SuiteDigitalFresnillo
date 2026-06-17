@@ -48,6 +48,7 @@ from App_Organigrama.ui.theme import (
 GridPoint = tuple[float, float]
 SELECTION_BLINK_INTERVAL_MS = 420
 CUSTOM_CURSOR_SIZE = 32
+NODE_PROXIMITY_RADIUS = 34.0
 
 
 class OrgGridCanvas(ctk.CTkFrame):
@@ -100,9 +101,17 @@ class OrgGridCanvas(ctk.CTkFrame):
         self._routes_dirty = True
         self._node_layout_cache: dict[tuple[str, bool], NodeLayout] = {}
         self.drag_press: tuple[int, int, float, float] | None = None
+        self.pan_drag_press: tuple[int, int, float, float] | None = None
         self.dragged = False
         self.drag_node_id: str | None = None
         self.drag_screen_point: tuple[int, int] | None = None
+        self.drag_node_offset: tuple[float, float] | None = None
+        self.pan_dragged = False
+        self.connection_drag_source_id: str | None = None
+        self.connection_drag_source_port: str | None = None
+        self.connection_drag_screen_point: tuple[int, int] | None = None
+        self.connection_press_source_id: str | None = None
+        self.connection_press_source_port: str | None = None
         self.redraw_after_id: str | None = None
         self.logo_source_image = self._load_logo_source()
         self.logo_cache: dict[int, ImageTk.PhotoImage] = {}
@@ -122,7 +131,9 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.canvas.bind("<ButtonPress-1>", self._on_press)
         self.canvas.bind("<B1-Motion>", self._on_drag)
         self.canvas.bind("<ButtonRelease-1>", self._on_release)
-        self.canvas.bind("<ButtonPress-3>", self._on_right_click)
+        self.canvas.bind("<ButtonPress-3>", self._on_pan_press)
+        self.canvas.bind("<B3-Motion>", self._on_pan_drag)
+        self.canvas.bind("<ButtonRelease-3>", self._on_pan_release)
         self.canvas.bind("<Double-Button-1>", self._on_double_click)
         self.canvas.bind("<Motion>", self._on_motion)
         self.canvas.bind("<Leave>", self._on_leave)
@@ -141,6 +152,11 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.pending_connection_source_id = None
         self.pending_source_port = None
         self.hover_port = None
+        self.connection_drag_source_id = None
+        self.connection_drag_source_port = None
+        self.connection_drag_screen_point = None
+        self.connection_press_source_id = None
+        self.connection_press_source_port = None
         self.preview_obstacle = None
         self.node_history = []
         self.last_node_id = None
@@ -240,6 +256,7 @@ class OrgGridCanvas(ctk.CTkFrame):
             self._routes_dirty = False
         self._draw_grid()
         self._draw_connections(self.route_cache)
+        self._draw_connection_drag_preview()
         self._draw_preview_routes()
         draw_connection_selection_overlay(self)
         self._draw_nodes()
@@ -297,6 +314,33 @@ class OrgGridCanvas(ctk.CTkFrame):
                 joinstyle="miter",
                 tags=("connection", f"connection:{route.connection.id}"),
             )
+
+    def _draw_connection_drag_preview(self) -> None:
+        if self.connection_drag_source_id is None or self.connection_drag_screen_point is None:
+            return
+        source_port = self.connection_drag_source_port or "bottom"
+        start = self._port_screen_position(self.connection_drag_source_id, source_port)
+        if start is None:
+            return
+
+        end = self.connection_drag_screen_point
+        if self.hover_port is not None:
+            hover_node_id, hover_port = self.hover_port
+            target = self._port_screen_position(hover_node_id, hover_port)
+            if target is not None:
+                end = (int(target[0]), int(target[1]))
+
+        self.canvas.create_line(
+            start[0],
+            start[1],
+            end[0],
+            end[1],
+            fill=ROUTE_PREVIEW_COLOR,
+            width=max(2, int(2 * self.zoom)),
+            dash=(8, 5),
+            arrow="last",
+            tags=("connection-drag-preview", "ghost"),
+        )
 
     def _draw_nodes(self) -> None:
         for node in self.document.nodes.values():
@@ -511,6 +555,8 @@ class OrgGridCanvas(ctk.CTkFrame):
 
         if self.last_hover_cell is None:
             return
+        if self._connection_at_hover_cell() is not None:
+            return
 
         grid_x, grid_y = self.last_hover_cell
         occupied = self.document.get_node_at(grid_x, grid_y) is not None
@@ -548,6 +594,8 @@ class OrgGridCanvas(ctk.CTkFrame):
     def _on_press(self, event: tk.Event[tk.Canvas]) -> None:
         self.canvas.focus_set()
         self.dragged = False
+        self.connection_press_source_id = None
+        self.connection_press_source_port = None
         self.drag_press = (event.x, event.y, self.pan_x, self.pan_y)
         if self.block_mode:
             self.drag_press = None
@@ -555,11 +603,30 @@ class OrgGridCanvas(ctk.CTkFrame):
             return
 
         node = self._node_at_screen(event.x, event.y)
-        self.drag_node_id = node.id if node is not None else None
-        self.drag_screen_point = (event.x, event.y) if node is not None else None
+        port_node = node or self._node_near_screen(event.x, event.y)
+        if port_node is not None:
+            port = self._nearest_port(port_node, event.x, event.y)
+            if node is None or self._is_near_port_marker(port_node, port, event.x, event.y):
+                self.drag_node_id = None
+                self.drag_screen_point = None
+                self.connection_drag_source_id = port_node.id
+                self.connection_drag_source_port = port
+                self.connection_drag_screen_point = (event.x, event.y)
+                self._update_custom_cursor(visible=False)
+                if self.pending_connection_source_id is None:
+                    self.pending_connection_source_id = port_node.id
+                    self.pending_source_port = port
+                self._set_selection(node_id=port_node.id)
+                self._emit_context_change("Arrastra hasta otro nodo para conectar")
+                self.request_redraw()
+                return
+
         if node is not None:
+            self.connection_press_source_id = node.id
+            self.connection_press_source_port = self._nearest_port(node, event.x, event.y)
+            self._update_custom_cursor(visible=False)
             self._set_selection(node_id=node.id)
-            self._emit_context_change("Arrastra para mover")
+            self._emit_context_change()
 
     def _on_drag(self, event: tk.Event[tk.Canvas]) -> None:
         if self.drag_press is None:
@@ -572,12 +639,25 @@ class OrgGridCanvas(ctk.CTkFrame):
             return
 
         self.dragged = True
-        self._emit_context_change("Arrastra para mover" if self.drag_node_id is not None else "Arrastra para desplazar el lienzo")
-        if self.drag_node_id is not None:
-            self.drag_screen_point = (event.x, event.y)
+        if self.connection_drag_source_id is None and self.connection_press_source_id is not None:
+            self.connection_drag_source_id = self.connection_press_source_id
+            self.connection_drag_source_port = self.connection_press_source_port or "bottom"
+            self.connection_drag_screen_point = (event.x, event.y)
+            if self.pending_connection_source_id is None:
+                self.pending_connection_source_id = self.connection_drag_source_id
+                self.pending_source_port = self.connection_drag_source_port
+            self._update_custom_cursor(visible=False)
+
+        if self.connection_drag_source_id is not None:
+            self.connection_drag_screen_point = (event.x, event.y)
+            target_node = self._node_near_screen(event.x, event.y)
+            if target_node is not None and target_node.id != self.connection_drag_source_id:
+                self.hover_port = (target_node.id, self._nearest_port(target_node, event.x, event.y))
+            else:
+                self.hover_port = None
+            self._emit_context_change("Suelta sobre un nodo para conectar")
         else:
-            self.pan_x = initial_pan_x + dx
-            self.pan_y = initial_pan_y + dy
+            self._emit_context_change()
         self.request_redraw()
 
     def _on_release(self, event: tk.Event[tk.Canvas]) -> None:
@@ -588,50 +668,88 @@ class OrgGridCanvas(ctk.CTkFrame):
         drag_node_id = self.drag_node_id
         self.drag_node_id = None
         self.drag_screen_point = None
+        self.drag_node_offset = None
+        self.connection_press_source_id = None
+        self.connection_press_source_port = None
+        connection_source_id = self.connection_drag_source_id
+        connection_source_port = self.connection_drag_source_port
+        self.connection_drag_source_id = None
+        self.connection_drag_source_port = None
+        self.connection_drag_screen_point = None
+        if connection_source_id is not None:
+            if self.dragged:
+                self._finish_connection_drag(connection_source_id, connection_source_port or "bottom", event.x, event.y)
+            else:
+                self._connect_by_click(connection_source_id, connection_source_port or "bottom", event.x, event.y)
+            self.request_redraw()
+            self._emit_context_change()
+            return
+
         if self.dragged:
-            if drag_node_id is not None:
-                grid_x, grid_y = self._screen_to_grid(event.x, event.y)
-                if self.document.move_node(drag_node_id, grid_x, grid_y):
-                    self._mark_recent_node(drag_node_id)
-                    self._mark_document_changed()
-                self._set_selection(node_id=drag_node_id)
             self.request_redraw()
             self._emit_context_change()
             return
 
         self._handle_click(event.x, event.y)
 
-    def _on_right_click(self, event: tk.Event[tk.Canvas]) -> None:
+    def _on_pan_press(self, event: tk.Event[tk.Canvas]) -> None:
+        self.canvas.focus_set()
         if self.block_mode:
             return
-
+        self.pan_dragged = False
+        self.pan_drag_press = (event.x, event.y, self.pan_x, self.pan_y)
         node = self._node_at_screen(event.x, event.y)
-        if node is None:
-            if self._connection_at_screen(event.x, event.y) is not None:
-                self._cancel_connection()
-            return
-
-        self._set_selection(node_id=node.id)
-        port = self._nearest_port(node, event.x, event.y)
-        if self.pending_connection_source_id is None:
-            self.pending_connection_source_id = node.id
-            self.pending_source_port = port
-            self._emit_context_change()
-        else:
-            new_connection = self.document.add_connection(
-                self.pending_connection_source_id,
-                node.id,
-                source_port=self.pending_source_port or "bottom",
-                target_port=port,
+        self.drag_node_id = node.id if node is not None else None
+        self.drag_screen_point = None
+        self.drag_node_offset = None
+        if node is not None:
+            screen_layout = self._to_screen_layout(self._get_node_layout(node, include_logo=self.document.show_logos))
+            self.drag_node_offset = (screen_layout.center_x - event.x, screen_layout.center_y - event.y)
+            self.drag_screen_point = (
+                int(event.x + self.drag_node_offset[0]),
+                int(event.y + self.drag_node_offset[1]),
             )
-            self.pending_connection_source_id = None
-            self.pending_source_port = None
-            self.hover_port = None
-            if new_connection is not None:
-                self._set_selection(connection_id=new_connection.id)
-                self._mark_document_changed()
-        self._emit_context_change()
+            self._update_custom_cursor(visible=False)
+            self._set_selection(node_id=node.id)
+            self._emit_context_change("Arrastra con clic derecho para mover")
+        else:
+            self._update_custom_cursor(visible=False)
+            self._emit_context_change("Arrastra con clic derecho para desplazar el lienzo")
+
+    def _on_pan_drag(self, event: tk.Event[tk.Canvas]) -> None:
+        if self.pan_drag_press is None:
+            return
+        start_x, start_y, initial_pan_x, initial_pan_y = self.pan_drag_press
+        dx = event.x - start_x
+        dy = event.y - start_y
+        if abs(dx) < 4 and abs(dy) < 4:
+            return
+        self.pan_dragged = True
+        if self.drag_node_id is not None:
+            offset_x, offset_y = self.drag_node_offset or (0.0, 0.0)
+            self.drag_screen_point = (int(event.x + offset_x), int(event.y + offset_y))
+        else:
+            self.pan_x = initial_pan_x + dx
+            self.pan_y = initial_pan_y + dy
         self.request_redraw()
+
+    def _on_pan_release(self, event: tk.Event[tk.Canvas]) -> None:
+        drag_node_id = self.drag_node_id
+        drop_point = self.drag_screen_point
+        self.drag_node_id = None
+        self.drag_screen_point = None
+        self.drag_node_offset = None
+        if drag_node_id is not None and self.pan_dragged:
+            drop_x, drop_y = drop_point or (event.x, event.y)
+            grid_x, grid_y = self._screen_to_grid(drop_x, drop_y)
+            if self.document.move_node(drag_node_id, grid_x, grid_y):
+                self._mark_recent_node(drag_node_id)
+                self._mark_document_changed()
+            self._set_selection(node_id=drag_node_id)
+        self.pan_drag_press = None
+        self.pan_dragged = False
+        self.request_redraw()
+        self._emit_context_change()
 
     def _on_double_click(self, event: tk.Event[tk.Canvas]) -> None:
         node = self._node_at_screen(event.x, event.y)
@@ -658,8 +776,11 @@ class OrgGridCanvas(ctk.CTkFrame):
             self._emit_context_change()
             return
 
-        node = self._node_at_screen(event.x, event.y)
-        self.hover_port = (node.id, self._nearest_port(node, event.x, event.y)) if node is not None else None
+        connection = self._connection_at_screen(event.x, event.y)
+        node = None if connection is not None else self._node_at_screen(event.x, event.y)
+        nearby_node = None if connection is not None else self._node_near_screen(event.x, event.y)
+        port_node = node or nearby_node
+        self.hover_port = (port_node.id, self._nearest_port(port_node, event.x, event.y)) if port_node is not None else None
         self._update_custom_cursor(event.x, event.y, visible=self.hover_port is not None)
         if node is not None:
             self.last_hover_cell = None
@@ -668,11 +789,11 @@ class OrgGridCanvas(ctk.CTkFrame):
             return
 
         grid_x, grid_y = self._screen_to_grid(event.x, event.y)
-        hover_cell = (grid_x, grid_y)
+        hover_cell = None if connection is not None else (grid_x, grid_y)
         if hover_cell != self.last_hover_cell:
             self.last_hover_cell = hover_cell
             self.request_redraw()
-            self._emit_context_change()
+        self._emit_context_change()
 
     def _on_leave(self, _event: tk.Event[tk.Canvas]) -> None:
         self.hover_port = None
@@ -801,6 +922,36 @@ class OrgGridCanvas(ctk.CTkFrame):
                 return node
         return None
 
+    def _node_near_screen(self, screen_x: int, screen_y: int) -> OrgNode | None:
+        max_distance = max(18.0, NODE_PROXIMITY_RADIUS * self.zoom)
+        closest_node: OrgNode | None = None
+        closest_distance = max_distance
+        for node in self.document.nodes.values():
+            layout = self._get_node_layout(node, include_logo=False)
+            left, top = self._world_to_screen(layout.box.left, layout.box.top)
+            right, bottom = self._world_to_screen(layout.box.right, layout.box.bottom)
+            dx = max(left - screen_x, 0, screen_x - right)
+            dy = max(top - screen_y, 0, screen_y - bottom)
+            distance = math.hypot(dx, dy)
+            if distance <= closest_distance:
+                closest_distance = distance
+                closest_node = node
+        return closest_node
+
+    def _is_near_port_marker(self, node: OrgNode, port: str, screen_x: int, screen_y: int) -> bool:
+        point = self._port_screen_position(node.id, port)
+        if point is None:
+            return False
+        radius = max(16.0, 18.0 * self.zoom)
+        return math.hypot(screen_x - point[0], screen_y - point[1]) <= radius
+
+    def _port_screen_position(self, node_id: str, port: str) -> tuple[float, float] | None:
+        node = self.document.nodes.get(node_id)
+        if node is None:
+            return None
+        world_x, world_y = self.rendering_engine.get_node_port(node, port)
+        return self._world_to_screen(world_x, world_y)
+
     def _blocked_point_at_screen(self, screen_x: int, screen_y: int) -> GridPoint | None:
         return find_blocked_point_at_screen(
             self.document.blocked_points,
@@ -820,9 +971,58 @@ class OrgGridCanvas(ctk.CTkFrame):
             self._world_to_screen,
         )
 
+    def _connection_at_hover_cell(self) -> ConnectionRoute | None:
+        if self.last_hover_cell is None:
+            return None
+        world_x, world_y = self.rendering_engine.grid_to_world(self.last_hover_cell[0], self.last_hover_cell[1])
+        screen_x, screen_y = self._world_to_screen(world_x, world_y)
+        return self._connection_at_screen(int(screen_x), int(screen_y))
+
     def _nearest_port(self, node: OrgNode, screen_x: int, screen_y: int) -> str:
         layout = self._get_node_layout(node, include_logo=False)
         return nearest_port(node, screen_x, screen_y, layout, self.zoom, self._world_to_screen)
+
+    def _connect_by_click(self, source_id: str, source_port: str, screen_x: int, screen_y: int) -> None:
+        target_node = self._node_at_screen(screen_x, screen_y) or self._node_near_screen(screen_x, screen_y)
+        if self.pending_connection_source_id is None or self.pending_connection_source_id == source_id:
+            self.pending_connection_source_id = source_id
+            self.pending_source_port = source_port
+            self._set_selection(node_id=source_id)
+            return
+
+        if target_node is None:
+            return
+        self._create_connection_to_target(target_node, screen_x, screen_y)
+
+    def _finish_connection_drag(self, source_id: str, source_port: str, screen_x: int, screen_y: int) -> None:
+        target_node = self._node_at_screen(screen_x, screen_y) or self._node_near_screen(screen_x, screen_y)
+        if target_node is None or target_node.id == source_id:
+            self.pending_connection_source_id = None
+            self.pending_source_port = None
+            self.hover_port = None
+            return
+
+        self.pending_connection_source_id = source_id
+        self.pending_source_port = source_port
+        self._create_connection_to_target(target_node, screen_x, screen_y)
+
+    def _create_connection_to_target(self, target_node: OrgNode, screen_x: int, screen_y: int) -> None:
+        source_id = self.pending_connection_source_id
+        if source_id is None:
+            return
+        target_port = self._nearest_port(target_node, screen_x, screen_y)
+        new_connection = self.document.add_connection(
+            source_id,
+            target_node.id,
+            source_port=self.pending_source_port or "bottom",
+            target_port=target_port,
+        )
+        self.pending_connection_source_id = None
+        self.pending_source_port = None
+        self.hover_port = None
+        if new_connection is not None:
+            self._set_selection(connection_id=new_connection.id)
+            self._mark_document_changed()
 
     def _world_to_screen(self, world_x: float, world_y: float) -> tuple[float, float]:
         return world_to_screen(world_x, world_y, self.pan_x, self.pan_y, self.zoom)
@@ -898,6 +1098,11 @@ class OrgGridCanvas(ctk.CTkFrame):
         self.pending_connection_source_id = None
         self.pending_source_port = None
         self.hover_port = None
+        self.connection_drag_source_id = None
+        self.connection_drag_source_port = None
+        self.connection_drag_screen_point = None
+        self.connection_press_source_id = None
+        self.connection_press_source_port = None
         self._update_custom_cursor(visible=self.block_mode)
         self.request_redraw()
         self._emit_context_change()
@@ -922,12 +1127,14 @@ class OrgGridCanvas(ctk.CTkFrame):
     def _context_message(self) -> str:
         if self.block_mode:
             return "Clic para marcar o quitar obstaculo"
+        if self.connection_drag_source_id is not None:
+            return "Suelta sobre un nodo para conectar"
         if self.pending_connection_source_id is not None:
-            return "Clic derecho en el nodo destino para conectar"
+            return "Clic izquierdo en el nodo destino para conectar"
         if self.hover_port is not None:
-            return "Clic derecho en dos nodos para conectar"
+            return "Clic izquierdo o arrastra desde el indicador para conectar"
         if self.selected_node_id is not None:
-            return "Arrastra para mover. Doble clic para editar"
+            return "Clic derecho y arrastra para mover. Doble clic para editar"
         if self.selected_connection_id is not None:
             return "Conexion seleccionada. Supr para eliminar"
         if self.selected_blocked_point is not None:

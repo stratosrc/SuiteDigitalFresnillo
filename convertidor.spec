@@ -25,14 +25,28 @@ datas = []
 datas += collect_tree(libreoffice_source, "vendor/libreoffice")
 datas += collect_tree(project_root / "App_ConversorPDF" / "assets", "App_ConversorPDF/assets")
 datas += collect_tree(project_root / "App_ConversorPDF" / "vendor" / "python", "App_ConversorPDF/vendor/python")
+datas += collect_tree(project_root / "App_Directorio" / "assets", "App_Directorio/assets")
+datas += collect_tree(project_root / "App_Organigrama" / "assets", "App_Organigrama/assets")
+datas += collect_tree(project_root / "App_TestData" / "assets", "App_TestData/assets")
 datas += collect_tree(project_root / "components" / "assets", "components/assets")
+
+hiddenimports = [
+    "App_TestData",
+    "App_Organigrama",
+    "App_Directorio",
+    "App_ConversorPDF",
+    "tkinterdnd2",
+    "fitz",
+    "PIL.Image",
+    "PIL.ImageTk",
+]
 
 a = Analysis(
     ["main.py"],
     pathex=[str(project_root)],
     binaries=[],
     datas=datas,
-    hiddenimports=[],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -49,7 +63,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="convertidor",
+    name="SuiteFresnillo",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -70,5 +84,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="convertidor",
+    name="SuiteFresnillo",
 )

@@ -58,7 +58,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
             activeforeground=TEXT_LIGHT,
         )
         self.file_menu.add_command(label="Nuevo", command=self.nuevo_proyecto)
-        self.file_menu.add_command(label="Exportar PDF", command=self.guardar_pdf)
+        self.file_menu.add_command(label="Guardar PDF", command=self.guardar_pdf)
 
     def _build_topbar(self) -> None:
         topbar = ctk.CTkFrame(self, fg_color=PRIMARY_BUTTON_PRESSED, corner_radius=0, height=24)
