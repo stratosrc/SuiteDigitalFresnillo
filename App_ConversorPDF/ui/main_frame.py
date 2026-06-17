@@ -21,6 +21,8 @@ from App_ConversorPDF.config import (
     DOWNLOAD_ITEM_ICON_PATH,
     DOWNLOAD_ICON_PATH,
     PDF_EXTENSIONS,
+    SEPARATE_ICON_ON_PATH,
+    SEPARATE_ICON_PATH,
     SUPPORTED_EXTENSIONS,
     UPLOAD_ICON_HOVER_PATH,
     UPLOAD_ICON_PATH,
@@ -46,12 +48,17 @@ from App_ConversorPDF.ui.theme import (
     make_font,
 )
 from components.shared.images import load_ctk_image
+from components.shared.tooltip import Tooltip
+
+
+SPLIT_TOGGLE_TOOLTIP = "Separar cada hoja o pagina seleccionada en PDFs individuales."
 
 
 @dataclass(slots=True)
 class SourceFileItem:
     path: Path
     sheet_var: tk.StringVar | None = None
+    split_var: tk.BooleanVar | None = None
     output_names: list[str] = field(default_factory=list)
 
 
@@ -68,6 +75,8 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.download_icon_image: ctk.CTkImage | None = None
         self.download_icon_hover_image: ctk.CTkImage | None = None
         self.download_item_icon_image: ctk.CTkImage | None = None
+        self.separate_icon_image: ctk.CTkImage | None = None
+        self.separate_icon_on_image: ctk.CTkImage | None = None
         self.is_busy = False
         self._build_layout()
         self._refresh_outputs()
@@ -266,6 +275,8 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.download_icon_image = load_ctk_image(DOWNLOAD_ICON_PATH, (180, 180), crop_alpha=True)
         self.download_icon_hover_image = load_ctk_image(DOWNLOAD_ICON_HOVER_PATH, (180, 180), crop_alpha=True)
         self.download_item_icon_image = load_ctk_image(DOWNLOAD_ITEM_ICON_PATH, (18, 18), crop_alpha=True)
+        self.separate_icon_image = load_ctk_image(SEPARATE_ICON_PATH, (28, 28), crop_alpha=True)
+        self.separate_icon_on_image = load_ctk_image(SEPARATE_ICON_ON_PATH, (28, 28), crop_alpha=True)
         self.download_icon_button = ctk.CTkButton(
             self.right_panel,
             text="" if self.download_icon_image is not None else "Download",
@@ -332,17 +343,23 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         show_help_dialog(self)
 
     def _add_files(self, raw_paths) -> None:
-        existing = {item.path for item in self.files}
         changed = False
         for raw_path in raw_paths:
             path = Path(raw_path)
-            if path in existing or path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+            if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
                 continue
             sheet_var = tk.StringVar(value="")
+            split_var = tk.BooleanVar(value=False)
             if path.suffix.lower() in DOCUMENT_EXTENSIONS | PDF_EXTENSIONS:
                 sheet_var.trace_add("write", lambda *_args: self._refresh_outputs())
-            self.files.append(SourceFileItem(path=path, sheet_var=sheet_var if path.suffix.lower() in DOCUMENT_EXTENSIONS | PDF_EXTENSIONS else None))
-            existing.add(path)
+                split_var.trace_add("write", lambda *_args: self._refresh_outputs())
+            self.files.append(
+                SourceFileItem(
+                    path=path,
+                    sheet_var=sheet_var if path.suffix.lower() in DOCUMENT_EXTENSIONS | PDF_EXTENSIONS else None,
+                    split_var=split_var if path.suffix.lower() in DOCUMENT_EXTENSIONS | PDF_EXTENSIONS else None,
+                )
+            )
             changed = True
 
         if not changed:
@@ -377,6 +394,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             row = ctk.CTkFrame(self.files_frame, fg_color="#1E2858", corner_radius=0)
             row.grid(row=row_index * 2, column=0, sticky="ew", pady=(0, 1))
             row.grid_columnconfigure(1, weight=1)
+            row.grid_columnconfigure(2, weight=0)
 
             ctk.CTkButton(
                 row,
@@ -407,6 +425,22 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             ).grid(row=1, column=1, sticky="ew", padx=12, pady=(0, 6))
 
             if item.sheet_var is not None:
+                split_button = ctk.CTkButton(
+                    row,
+                    text="" if self._split_toggle_image(item) is not None else self._split_toggle_text(item),
+                    image=self._split_toggle_image(item),
+                    command=lambda source=item: self._toggle_split_output(source),
+                    width=34,
+                    height=34,
+                    corner_radius=0,
+                    fg_color=PRIMARY_BUTTON if item.split_var is not None and item.split_var.get() else "#344077",
+                    hover_color=PRIMARY_BUTTON_ACTIVE,
+                    text_color=TEXT_LIGHT,
+                    font=make_font(11, "bold"),
+                )
+                split_button.grid(row=0, column=2, rowspan=2, sticky="e", padx=(6, 8), pady=12)
+                split_button.tooltip = Tooltip(split_button, SPLIT_TOGGLE_TOOLTIP, delay_ms=0)
+
                 entry = ctk.CTkEntry(
                     self.files_frame,
                     placeholder_text="Hojas a exportar, ej. 2-4. Dejar vacio para convertir todas.",
@@ -474,12 +508,34 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             return
         item.sheet_var.set(value)
 
+    def _toggle_split_output(self, item: SourceFileItem) -> None:
+        if item.split_var is None:
+            return
+        item.split_var.set(not item.split_var.get())
+        self._render_files()
+        self._refresh_outputs()
+
+    def _split_toggle_text(self, item: SourceFileItem) -> str:
+        if item.split_var is not None and item.split_var.get():
+            return "N"
+        return "1"
+
+    def _split_toggle_image(self, item: SourceFileItem) -> ctk.CTkImage | None:
+        if item.split_var is not None and item.split_var.get():
+            return self.separate_icon_on_image
+        return self.separate_icon_image
+
     def _build_output_items(self) -> list[tuple[SourceFileItem, str | None, str]]:
         outputs: list[tuple[SourceFileItem, str | None, str]] = []
         for item in self.files:
             sheet_range = self._parse_sheet_input(item.sheet_var.get()) if item.sheet_var is not None else None
             if sheet_range is None:
                 outputs.append((item, None, f"{item.path.stem}.pdf"))
+                continue
+            if item.split_var is not None and item.split_var.get():
+                for single_sheet in self._expand_sheet_input(sheet_range):
+                    safe_sheet = self._safe_filename(single_sheet)
+                    outputs.append((item, single_sheet, f"{item.path.stem}_{safe_sheet}.pdf"))
                 continue
             safe_range = self._safe_filename(sheet_range)
             outputs.append((item, sheet_range, f"{item.path.stem}_{safe_range}.pdf"))
@@ -505,6 +561,27 @@ class PdfConverterMainFrame(ctk.CTkFrame):
                 continue
             normalized_parts.append(f"{start_number}-{end_number}")
         return ",".join(normalized_parts) or None
+
+    def _expand_sheet_input(self, raw_value: str) -> list[str]:
+        parts = [part.strip() for part in raw_value.replace(";", ",").split(",")]
+        expanded: list[str] = []
+        for part in parts:
+            if not part:
+                continue
+            if "-" not in part:
+                expanded.append(part)
+                continue
+            start, end, *extra = [value.strip() for value in part.split("-")]
+            if extra or not start.isdigit() or not end.isdigit():
+                expanded.append(part)
+                continue
+            start_number = int(start)
+            end_number = int(end)
+            if start_number > end_number:
+                expanded.append(part)
+                continue
+            expanded.extend(str(number) for number in range(start_number, end_number + 1))
+        return expanded or [raw_value]
 
     def _convert_first_output(self) -> None:
         if self.is_busy:
@@ -626,7 +703,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             return
         target = filedialog.asksaveasfilename(
             parent=self,
-            title="Guardar PDF",
+            title="Exportar PDF",
             defaultextension=".pdf",
             initialfile=output_name,
             filetypes=[("Archivo PDF", "*.pdf"), ("Todos los archivos", "*.*")],

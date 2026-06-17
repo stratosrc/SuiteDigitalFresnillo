@@ -4,6 +4,7 @@ from pathlib import Path
 from App_Organigrama.models.document import Connection, OrgGridDocument, OrgNode
 
 DEFAULT_DOCUMENT_TITLE = "Titulo del organigrama"
+PROJECT_APP_ID = "organigrama"
 
 
 class PersistenceManager:
@@ -12,6 +13,7 @@ class PersistenceManager:
     def save(self, document: OrgGridDocument, target_path: str | Path) -> Path:
         path = Path(target_path)
         payload = {
+            "app": PROJECT_APP_ID,
             "schema_version": 1,
             "document": document.to_dict(),
         }
@@ -22,6 +24,10 @@ class PersistenceManager:
     def load(self, source_path: str | Path) -> OrgGridDocument:
         path = Path(source_path)
         payload = json.loads(path.read_text(encoding="utf-8"))
+        if payload.get("app", PROJECT_APP_ID) != PROJECT_APP_ID:
+            raise ValueError("Este archivo no es un proyecto de Organigrama.")
+        if "document" not in payload and not any(key in payload for key in ("nodes", "connections", "title")):
+            raise ValueError("El archivo seleccionado no parece ser un proyecto de Organigrama.")
         raw_document = payload.get("document", payload)
 
         nodes = {

@@ -157,6 +157,13 @@ class PersonnelRow:
             start_date=values[4] if len(values) > 4 else "",
         )
 
+    def set_data(self, person: PersonReportRow) -> None:
+        values = (person.rank, person.name, person.position, person.email, person.start_date)
+        for entry, value in zip(self.entries, values):
+            entry.delete(0, tk.END)
+            entry.insert(0, value)
+        self.validate_date()
+
     def has_data(self) -> bool:
         return any(entry.get().strip() for entry in self.entries)
 
@@ -351,6 +358,21 @@ class AreaSection(ctk.CTkFrame):
         personnel = [row for row in personnel if any((row.rank, row.name, row.position, row.email, row.start_date))]
         return AreaReportData(name=area_name, personnel=personnel)
 
+    def set_data(self, area: AreaReportData) -> None:
+        if self.area_name_entry is not None:
+            self.area_name_entry.delete(0, tk.END)
+            self.area_name_entry.insert(0, area.name)
+
+        for row in self.rows:
+            row.destroy()
+        self.rows.clear()
+
+        personnel = area.personnel or [PersonReportRow("", "", "", "", "")]
+        for person in personnel:
+            self.add_person_row()
+            self.rows[-1].set_data(person)
+        self._refresh_rows()
+
     def validate_dates(self) -> bool:
         results = [row.validate_date() for row in self.rows]
         return all(results)
@@ -520,6 +542,18 @@ class DirectoryFormFrame(ctk.CTkFrame):
             period=self.period_var.get().strip(),
             areas=[section.get_data(fallback_name=title) for section in self.area_sections],
         )
+
+    def set_report_data(self, data: DirectoryReportData) -> None:
+        self.title_var.set(data.title)
+        self.period_var.set(data.period)
+        for section in self.area_sections:
+            section.destroy()
+        self.area_sections.clear()
+
+        areas = data.areas or [AreaReportData("", [])]
+        for index, area in enumerate(areas):
+            self.add_area(removable=index > 0)
+            self.area_sections[-1].set_data(area)
 
     def reset_form(self) -> None:
         self.title_var.set("")

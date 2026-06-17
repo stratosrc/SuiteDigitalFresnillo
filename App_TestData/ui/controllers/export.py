@@ -91,7 +91,7 @@ class ExportController:
 
         if hasattr(self.app, "file_menu"):
             try:
-                self.app.file_menu.entryconfig(FILE_MENU_LABELS["save_pdf"], state=state)
+                self.app.file_menu.entryconfig(FILE_MENU_LABELS["export_pdf"], state=state)
             except tk.TclError:
                 pass
 

@@ -14,7 +14,7 @@ Checklist minimo antes de entregar una version:
 - Crear un nuevo trabajo y cargar un PDF valido.
 - Navegar entre paginas y verificar que los botones anterior/siguiente se deshabiliten en limites.
 - Dibujar un recuadro, editarlo con doble clic y probar deshacer/rehacer.
-- Guardar proyecto JSON, cerrar, volver a abrirlo y confirmar que PDF, pagina, zoom y recuadros se restauren.
+- Guardar proyecto `.td`, cerrar, volver a abrirlo y confirmar que PDF, pagina, zoom y recuadros se restauren.
 - Exportar PDF estandar y confirmar que se genera el archivo.
 - Exportar PDF para Comite con datos capturados y confirmar portada/resumen.
 
@@ -24,13 +24,14 @@ Checklist minimo antes de entregar una version:
 - Mover nodos arrastrando y comprobar que la barra contextual cambie de mensaje.
 - Conectar dos nodos con clic derecho y verificar que la seleccion de conexion no tape nodos.
 - Activar obstaculos de ruta y confirmar que las conexiones se enruten alrededor.
-- Guardar proyecto, abrirlo de nuevo y confirmar nodos/conexiones.
+- Guardar proyecto `.og`, abrirlo de nuevo y confirmar nodos/conexiones.
 - Exportar PDF horizontal y vertical.
 - Exportar imagen PNG.
 
 ## Directorio
 
 - Capturar titulo, periodo, areas y personas.
+- Guardar proyecto `.dir`, cerrar, volver a abrirlo y confirmar que titulo, periodo, areas y personas se restauren.
 - Reordenar areas y personas con los botones de flecha.
 - Intentar exportar con una fecha vacia o invalida y confirmar que la vista previa lo advierta.
 - Corregir fechas y exportar PDF.

@@ -6,7 +6,8 @@ FILE_MENU_LABELS = {
     "button": "Archivo",
     "new_job": "Nuevo",
     "open_project": "Abrir",
-    "save_pdf": "Guardar PDF",
+    "save_project": "Guardar proyecto",
+    "export_pdf": "Exportar PDF",
 }
 
 TOPBAR_LABELS = {
@@ -85,7 +86,7 @@ CATALOGUE_DIALOG = {
 }
 
 EXPORT_DIALOG = {
-    "title": "Guardar PDF",
+    "title": "Exportar PDF",
     "tabs": {
         "area": "Versión pública de área generadora",
         "committee": "Versión pública del Comité de Transparencia",
@@ -170,7 +171,7 @@ EXPORT_MESSAGES = {
     "export_running_message": "Espera a que termine la generación actual antes de iniciar otra.",
     "no_changes_title": "Sin cambios",
     "no_changes_message": "Dibuja al menos un rectángulo antes de generar el PDF.",
-    "save_dialog_title": "Guardar PDF",
+    "save_dialog_title": "Exportar PDF",
     "save_dialog_filetypes_label": "Archivos PDF",
     "invalid_path_title": "Ruta inválida",
     "invalid_path_message": "Guarda el PDF generado con un nombre distinto al archivo original.",

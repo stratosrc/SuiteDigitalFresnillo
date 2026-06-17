@@ -10,6 +10,7 @@ from App_Directorio.config import (
     APP_TITLE,
     DIRECTORY_ICON_PATH,
 )
+from App_Directorio.services.persistence import DirectoryPersistenceManager
 from App_Directorio.services.pdf_exporter import DirectoryPdfExporter
 from App_Directorio.ui.dialogs import show_help_dialog
 from App_Directorio.ui.forms import DirectoryFormFrame
@@ -36,6 +37,8 @@ class DirectoryMainFrame(ctk.CTkFrame):
         super().__init__(master, fg_color=APP_BACKGROUND, corner_radius=0)
         self.master = master
         self.header_icon_image: ctk.CTkImage | None = None
+        self.current_project_path: Path | None = None
+        self.persistence_manager = DirectoryPersistenceManager()
         self._build_layout()
         self._build_menu()
 
@@ -58,7 +61,10 @@ class DirectoryMainFrame(ctk.CTkFrame):
             activeforeground=TEXT_LIGHT,
         )
         self.file_menu.add_command(label="Nuevo", command=self.nuevo_proyecto)
-        self.file_menu.add_command(label="Guardar PDF", command=self.guardar_pdf)
+        self.file_menu.add_command(label="Abrir", command=self.abrir_proyecto)
+        self.file_menu.add_command(label="Guardar proyecto", command=self.guardar_proyecto)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exportar PDF", command=self.guardar_pdf)
 
     def _build_topbar(self) -> None:
         topbar = ctk.CTkFrame(self, fg_color=PRIMARY_BUTTON_PRESSED, corner_radius=0, height=24)
@@ -242,6 +248,64 @@ class DirectoryMainFrame(ctk.CTkFrame):
 
     def nuevo_proyecto(self) -> None:
         self.directory_form.reset_form()
+        self.current_project_path = None
+
+    def abrir_proyecto(self) -> None:
+        source_path = filedialog.askopenfilename(
+            parent=self,
+            title="Abrir proyecto",
+            filetypes=[("Proyecto Directorio", "*.dir"), ("Todos los archivos", "*.*")],
+        )
+        if not source_path:
+            return
+
+        try:
+            data = self.persistence_manager.load(source_path)
+        except Exception as error:
+            LOGGER.exception("Unable to load directory project from %s", source_path)
+            messagebox.showerror(
+                "No se pudo abrir",
+                f"No fue posible cargar el proyecto.\n\n{error}",
+                parent=self,
+            )
+            return
+
+        self.current_project_path = Path(source_path)
+        self.directory_form.set_report_data(data)
+
+    def guardar_proyecto(self) -> None:
+        if self.current_project_path is None:
+            self.guardar_proyecto_como()
+            return
+        self._save_project_to_path(self.current_project_path)
+
+    def guardar_proyecto_como(self) -> None:
+        data = self.directory_form.get_report_data()
+        safe_name = "".join(character for character in (data.title or "directorio") if character not in '<>:"/\\|?*')
+        target_path = filedialog.asksaveasfilename(
+            parent=self,
+            title="Guardar proyecto como",
+            defaultextension=".dir",
+            initialfile=f"{safe_name.strip() or 'directorio'}.dir",
+            filetypes=[("Proyecto Directorio", "*.dir"), ("Todos los archivos", "*.*")],
+        )
+        if not target_path:
+            return
+        self.current_project_path = Path(target_path)
+        self._save_project_to_path(self.current_project_path)
+
+    def _save_project_to_path(self, target_path: Path) -> None:
+        try:
+            saved_path = self.persistence_manager.save(self.directory_form.get_report_data(), target_path)
+        except Exception as error:
+            LOGGER.exception("Unable to save directory project to %s", target_path)
+            messagebox.showerror(
+                "No se pudo guardar",
+                f"No fue posible guardar el proyecto.\n\n{error}",
+                parent=self,
+            )
+            return
+        messagebox.showinfo("Proyecto guardado", f"Proyecto guardado en:\n{saved_path}", parent=self)
 
     def confirm_exit(self) -> None:
         if not messagebox.askyesno(

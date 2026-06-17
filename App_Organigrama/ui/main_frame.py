@@ -90,10 +90,12 @@ class MainFrame(ctk.CTkFrame):
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_command(label="Abrir", command=self.open_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_separator()
-        self.file_menu.add_command(label="Guardar PDF", command=self.export_pdf)
+        self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
-        self.file_menu.add_command(label="Guardar imagen", command=self.export_image)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
+        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
+        self.file_menu.add_command(label="Exportar imagen", command=self.export_image)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
 
     def _build_topbar(self) -> None:
@@ -420,8 +422,12 @@ class MainFrame(ctk.CTkFrame):
 
         source_path = filedialog.askopenfilename(
             parent=self,
-            title="Abrir",
-            filetypes=[("Proyecto JSON", "*.json"), ("Todos los archivos", "*.*")],
+            title="Abrir proyecto",
+            filetypes=[
+                ("Proyecto Organigrama", "*.og"),
+                ("Proyecto JSON anterior", "*.json"),
+                ("Todos los archivos", "*.*"),
+            ],
         )
         if not source_path:
             return
@@ -456,9 +462,9 @@ class MainFrame(ctk.CTkFrame):
         target_path = filedialog.asksaveasfilename(
             parent=self,
             title="Guardar proyecto como",
-            defaultextension=".json",
-            filetypes=[("Proyecto JSON", "*.json"), ("Todos los archivos", "*.*")],
-            initialfile="organigrama.json",
+            defaultextension=".og",
+            filetypes=[("Proyecto Organigrama", "*.og"), ("Todos los archivos", "*.*")],
+            initialfile="organigrama.og",
         )
         if not target_path:
             return

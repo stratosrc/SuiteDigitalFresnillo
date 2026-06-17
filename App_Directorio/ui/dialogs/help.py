@@ -32,7 +32,9 @@ HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
     (
         "1. ARCHIVO Y PROYECTO",
         (
-            "Para generar el reporte se va a Archivo y Guardar PDF.",
+            "Para generar el reporte se va a Archivo y Exportar PDF.",
+            "Para guardar el proyecto editable se va a Archivo y Guardar proyecto; se crea un archivo .dir.",
+            "Para continuar un proyecto anterior se va a Archivo y Abrir.",
             "Para empezar un nuevo proyecto se va a Archivo y Nuevo.",
         ),
     ),

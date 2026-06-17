@@ -389,8 +389,12 @@ class TestDataGeneratorApp(ctk.CTk):
     def open_project(self) -> None:
         source_path = filedialog.askopenfilename(
             parent=self,
-            title="Abrir",
-            filetypes=[("Proyecto JSON", "*.json"), ("Todos los archivos", "*.*")],
+            title="Abrir proyecto",
+            filetypes=[
+                ("Proyecto TestData", "*.td"),
+                ("Proyecto JSON anterior", "*.json"),
+                ("Todos los archivos", "*.*"),
+            ],
         )
         if not source_path:
             return
@@ -450,10 +454,10 @@ class TestDataGeneratorApp(ctk.CTk):
 
         target_path = filedialog.asksaveasfilename(
             parent=self,
-            title="Guardar como",
-            defaultextension=".json",
-            initialfile="testado.json",
-            filetypes=[("Proyecto JSON", "*.json"), ("Todos los archivos", "*.*")],
+            title="Guardar proyecto como",
+            defaultextension=".td",
+            initialfile="testado.td",
+            filetypes=[("Proyecto TestData", "*.td"), ("Todos los archivos", "*.*")],
         )
         if not target_path:
             return

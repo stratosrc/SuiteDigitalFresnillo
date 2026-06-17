@@ -12,7 +12,7 @@ Modulo para trabajar con versiones publicas de documentos PDF.
 - Permite dibujar recuadros de testado sobre paginas.
 - Registra conceptos y metadatos por recuadro.
 - Incluye deshacer, rehacer y eliminacion de recuadros.
-- Guarda y abre proyectos de trabajo en progreso.
+- Guarda y abre proyectos de trabajo en progreso con extension `.td`.
 - Exporta PDF testado y PDF para Comite con portada/resumen.
 
 ### Organigrama
@@ -25,7 +25,7 @@ Modulo para disenar organigramas institucionales en un canvas.
 - Desplaza la camara con clic derecho y arrastre sobre espacio vacio.
 - Crea conexiones con clic izquierdo o arrastrando desde indicadores de conexion.
 - Permite agregar obstaculos de ruta para modificar el recorrido de conexiones.
-- Guarda y abre proyectos editables.
+- Guarda y abre proyectos editables con extension `.og`.
 - Exporta PDF e imagen.
 
 ### Directorio
@@ -33,6 +33,7 @@ Modulo para disenar organigramas institucionales en un canvas.
 Modulo para generar directorios de area en PDF.
 
 - Captura titulo, periodo, areas y colaboradores.
+- Guarda y abre proyectos editables con extension `.dir`.
 - Cada colaborador incluye rango/clave/nivel, nombre, cargo, correo electronico y fecha de alta.
 - Permite reordenar areas y filas de colaboradores.
 - Mantiene una fila minima por area.
@@ -171,6 +172,7 @@ Ejecutar el compilado:
 ## Notas de Uso
 
 - En Directorio, la fecha se considera valida si respeta el formato `dd/mm/aaaa`.
+- TestData guarda proyectos editables como `.td`, Organigrama como `.og` y Directorio como `.dir`; los `.json` anteriores de TestData/Organigrama se conservan como compatibilidad de apertura.
 - En Conversor a PDF, las selecciones de paginas/hojas aceptan valores como `1`, `2-4` o vacio para convertir todo.
 - Si un PDF de salida ya existe, el conversor crea un nombre unico para evitar sobrescritura accidental.
 - El proyecto usa rutas relativas y `pathlib.Path` para funcionar en desarrollo y en compilado.

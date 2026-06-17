@@ -34,8 +34,9 @@ HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
         "1. MENU ARCHIVO Y METADATOS",
         (
             "Nuevo: Permite limpiar el lienzo actual y comenzar un documento completamente desde cero.\n",
-            "Guardar PDF: Genera y guarda el organigrama final en formato PDF vectorial.\n",
-            "Guardar imagen: Permite guardar el organigrama en formatos de imagen estÃ¡ndar, soportando las extensiÃ³nes PNG, JPG y JPEG.\n",
+            "Guardar proyecto: Conserva el organigrama editable para abrirlo despues.\n",
+            "Exportar PDF: Genera el organigrama final en formato PDF vectorial.\n",
+            "Exportar imagen: Permite exportar el organigrama en formatos de imagen estÃ¡ndar, soportando las extensiÃ³nes PNG, JPG y JPEG.\n",
             "Titulo del Organigrama: Campo de texto para establecer el titulo oficial que encabeza el grafico.\n",
             "PerÃ­odo: Campo de texto para indicar el rango cronolÃ³gico del organigrama (Ej. Octubre - Diciembre 2026).\n",
         ),

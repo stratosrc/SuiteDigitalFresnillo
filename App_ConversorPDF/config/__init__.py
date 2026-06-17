@@ -9,6 +9,8 @@ UPLOAD_ICON_HOVER_PATH = ASSETS_DIR / "upload_hover.png"
 DOWNLOAD_ICON_PATH = ASSETS_DIR / "download.png"
 DOWNLOAD_ICON_HOVER_PATH = ASSETS_DIR / "download_hover.png"
 DOWNLOAD_ITEM_ICON_PATH = ASSETS_DIR / "dl.png"
+SEPARATE_ICON_PATH = ASSETS_DIR / "separate.png"
+SEPARATE_ICON_ON_PATH = ASSETS_DIR / "separate_on.png"
 
 APP_TITLE = "Conversor de archivos a PDF"
 APP_DESCRIPTION = "Conversor de archivos a PDF"
@@ -30,6 +32,8 @@ __all__ = [
     "DOCUMENT_EXTENSIONS",
     "IMAGE_EXTENSIONS",
     "PDF_EXTENSIONS",
+    "SEPARATE_ICON_ON_PATH",
+    "SEPARATE_ICON_PATH",
     "SHEET_EXTENSIONS",
     "SUPPORTED_EXTENSIONS",
     "UPLOAD_ICON_HOVER_PATH",

@@ -10,6 +10,7 @@ from typing import Any
 from App_TestData.domain.document_state import DocumentState, RectangleData
 
 
+PROJECT_APP_ID = "testdata"
 PROJECT_VERSION = 1
 _TRANSIENT_RECTANGLE_FIELDS = {"canvas_rect_id", "canvas_text_id", "rect"}
 
@@ -25,6 +26,7 @@ def calculate_file_hash(file_path: str | Path) -> str:
 def save_project(state: DocumentState, target_path: str | Path) -> Path:
     target = Path(target_path)
     payload = {
+        "app": PROJECT_APP_ID,
         "version": PROJECT_VERSION,
         "pdf_path": state.current_pdf_path,
         "pdf_sha256": calculate_file_hash(state.current_pdf_path) if state.current_pdf_path else "",
@@ -43,6 +45,8 @@ def save_project(state: DocumentState, target_path: str | Path) -> Path:
 def load_project(source_path: str | Path) -> dict[str, Any]:
     source = Path(source_path)
     payload = json.loads(source.read_text(encoding="utf-8"))
+    if payload.get("app", PROJECT_APP_ID) != PROJECT_APP_ID:
+        raise ValueError("Este archivo no es un proyecto de TestData.")
     if payload.get("version") != PROJECT_VERSION:
         raise ValueError("Version de proyecto no compatible.")
     return payload

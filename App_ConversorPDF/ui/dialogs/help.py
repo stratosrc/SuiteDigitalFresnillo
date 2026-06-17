@@ -34,6 +34,7 @@ HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
         (
             "Usa el area izquierda para cargar archivos con clic en el icono de carga.",
             "Tambien puedes arrastrar archivos soportados al area de carga.",
+            "Puedes cargar el mismo archivo varias veces si necesitas configuraciones distintas.",
             "Se aceptan imagenes y documentos de Office o formatos equivalentes.",
         ),
     ),
@@ -42,6 +43,7 @@ HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
         (
             "En documentos, hojas de calculo o presentaciones puedes escribir las hojas o paginas a exportar.",
             "Usa un numero unico como 1, un rango como 2-4, o varias selecciones como 1,3-5.",
+            "El boton de separar de cada fila cambia entre un solo PDF o PDFs separados por cada hoja/pagina seleccionada.",
             "Deja el campo vacio para convertir todo el archivo.",
         ),
     ),
