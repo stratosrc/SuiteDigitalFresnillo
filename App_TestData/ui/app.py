@@ -53,7 +53,7 @@ from App_TestData.ui.controllers import ExportController, NavigationController, 
 from App_TestData.ui.dialogs.catalogue_dialog import show_catalogue_dialog
 from App_TestData.ui.dialogs.help_dialog import show_help_dialog
 from App_TestData.ui.layout.main_layout import build_main_layout
-from components.shared.windowing import center_window
+from components.shared.windowing import center_window, prepare_window_for_open, reveal_window_maximized
 from components.styles.styles import apply_ctk_style, styles
 
 
@@ -62,6 +62,7 @@ class TestDataGeneratorApp(ctk.CTk):
 
     def __init__(self) -> None:
         super().__init__()
+        prepare_window_for_open(self)
         apply_ctk_style(ctk)
         self.title(APP_WINDOW_TITLE)
         self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
@@ -94,6 +95,7 @@ class TestDataGeneratorApp(ctk.CTk):
             on_zoom_out=lambda: self.navigation_controller.change_zoom("out"),
         )
         self.protocol("WM_DELETE_WINDOW", self.confirm_exit)
+        reveal_window_maximized(self)
 
     def _build_callbacks(self) -> dict[str, Any]:
         """Build the callback map consumed by UI components."""

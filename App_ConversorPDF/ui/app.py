@@ -10,7 +10,7 @@ from App_ConversorPDF.ui.theme import (
     WINDOW_WIDTH,
     apply_theme,
 )
-from components.shared.windowing import center_window
+from components.shared.windowing import center_window, prepare_window_for_open, reveal_window_maximized
 
 try:
     from tkinterdnd2 import TkinterDnD
@@ -21,6 +21,7 @@ except ImportError:
 class PdfConverterApplication(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
+        prepare_window_for_open(self)
         if TkinterDnD is not None:
             TkinterDnD.require(self)
         apply_theme()
@@ -31,3 +32,4 @@ class PdfConverterApplication(ctk.CTk):
         center_window(self, WINDOW_WIDTH, WINDOW_HEIGHT)
         self.main_frame = PdfConverterMainFrame(self)
         self.protocol("WM_DELETE_WINDOW", self.main_frame.confirm_exit)
+        reveal_window_maximized(self)
