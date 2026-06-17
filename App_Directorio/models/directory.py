@@ -6,6 +6,7 @@ class PersonReportRow:
     rank: str
     name: str
     position: str
+    email: str
     start_date: str
 
 

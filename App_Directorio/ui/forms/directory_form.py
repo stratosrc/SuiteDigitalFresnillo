@@ -32,8 +32,8 @@ from App_Directorio.ui.widgets import HoverIconButton, IconPair, load_icon_pair
 from App_Directorio.utils import is_date_input_prefix, is_valid_date
 
 
-PERSONNEL_COLUMN_WEIGHTS = (2, 2, 1, 1)
-PERSONNEL_COLUMN_PADX = ((0, 8), (0, 9), (0, 8), (0, 0))
+PERSONNEL_COLUMN_WEIGHTS = (14, 18, 16, 17, 10)
+PERSONNEL_COLUMN_PADX = ((0, 8), (0, 8), (0, 8), (0, 8), (0, 0))
 
 
 class PersonnelRow:
@@ -68,6 +68,7 @@ class PersonnelRow:
             "Rango / Clave / Nivel",
             "Nombre",
             "Cargo",
+            "Correo electronico",
             "dd/mm/aaaa",
         )
         for column, (placeholder, padx) in enumerate(zip(placeholders, PERSONNEL_COLUMN_PADX)):
@@ -82,7 +83,7 @@ class PersonnelRow:
                 placeholder_text_color=TEXT_MUTED,
                 font=make_font(12),
             )
-            if column == 3:
+            if column == 4:
                 validate_command = (self.master.register(is_date_input_prefix), "%P")
                 entry.configure(validate="key", validatecommand=validate_command)
                 entry.bind("<FocusOut>", self._handle_date_focus_out)
@@ -99,7 +100,7 @@ class PersonnelRow:
                 width=30,
                 height=30,
             )
-            up_button.grid(row=self.grid_row, column=4, padx=(10, 4), pady=(0, 8), sticky="e")
+            up_button.grid(row=self.grid_row, column=5, padx=(10, 4), pady=(0, 8), sticky="e")
             self.widgets.append(up_button)
 
             down_button = HoverIconButton(
@@ -109,7 +110,7 @@ class PersonnelRow:
                 width=30,
                 height=30,
             )
-            down_button.grid(row=self.grid_row, column=5, padx=(0, 4), pady=(0, 8), sticky="e")
+            down_button.grid(row=self.grid_row, column=6, padx=(0, 4), pady=(0, 8), sticky="e")
             self.widgets.append(down_button)
 
             remove_button = HoverIconButton(
@@ -119,7 +120,7 @@ class PersonnelRow:
                 width=30,
                 height=30,
             )
-            remove_button.grid(row=self.grid_row, column=6, padx=(0, 0), pady=(0, 8), sticky="e")
+            remove_button.grid(row=self.grid_row, column=7, padx=(0, 0), pady=(0, 8), sticky="e")
             self.widgets.append(remove_button)
 
     def _handle_remove(self) -> None:
@@ -152,7 +153,8 @@ class PersonnelRow:
             rank=values[0] if len(values) > 0 else "",
             name=values[1] if len(values) > 1 else "",
             position=values[2] if len(values) > 2 else "",
-            start_date=values[3] if len(values) > 3 else "",
+            email=values[3] if len(values) > 3 else "",
+            start_date=values[4] if len(values) > 4 else "",
         )
 
     def has_data(self) -> bool:
@@ -253,7 +255,7 @@ class AreaSection(ctk.CTkFrame):
         self.detail_frame.grid(row=1, column=0, sticky="ew", padx=(44, 16), pady=(14, 14))
         for column, weight in enumerate(PERSONNEL_COLUMN_WEIGHTS):
             self.detail_frame.grid_columnconfigure(column, weight=weight, uniform="personnel")
-        for column in (4, 5, 6):
+        for column in (5, 6, 7):
             self.detail_frame.grid_columnconfigure(column, weight=0)
 
         self._build_headers(self.detail_frame)
@@ -269,7 +271,7 @@ class AreaSection(ctk.CTkFrame):
         self.add_person_row()
 
     def _build_headers(self, parent: ctk.CTkFrame) -> None:
-        headers = ("Rango / Clave / Nivel", "Nombre", "Cargo", "Fecha de Alta")
+        headers = ("Rango / Clave / Nivel", "Nombre", "Cargo", "Correo electronico", "Fecha de Alta")
         for column, (label, padx) in enumerate(zip(headers, PERSONNEL_COLUMN_PADX)):
             ctk.CTkLabel(
                 parent,
@@ -339,14 +341,14 @@ class AreaSection(ctk.CTkFrame):
         if self.add_person_button is None:
             return
 
-        self.add_person_button.grid(row=len(self.rows) + 1, column=6, sticky="e", pady=(2, 0))
+        self.add_person_button.grid(row=len(self.rows) + 1, column=7, sticky="e", pady=(2, 0))
 
     def get_data(self, fallback_name: str = "") -> AreaReportData:
         area_name = self.area_name_entry.get().strip() if self.area_name_entry is not None else ""
         if not area_name:
             area_name = fallback_name
         personnel = [row.get_data() for row in self.rows]
-        personnel = [row for row in personnel if any((row.rank, row.name, row.position, row.start_date))]
+        personnel = [row for row in personnel if any((row.rank, row.name, row.position, row.email, row.start_date))]
         return AreaReportData(name=area_name, personnel=personnel)
 
     def validate_dates(self) -> bool:

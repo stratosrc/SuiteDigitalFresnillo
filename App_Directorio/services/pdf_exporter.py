@@ -127,6 +127,7 @@ class DirectoryPdfExporter:
                 Paragraph("Rango/Clave/Nivel", header_style),
                 Paragraph("Nombre", header_style),
                 Paragraph("Cargo", header_style),
+                Paragraph("Correo electronico", header_style),
                 Paragraph("Fecha de Alta", header_style),
             ]
         ]
@@ -144,6 +145,7 @@ class DirectoryPdfExporter:
         for area in data.areas:
             area_row_index = len(rows)
             rows.append([Paragraph(self._pdf_text(area.name or "Área sin nombre"), area_style), "", "", ""])
+            rows[-1].append("")
             styles.extend(
                 [
                     ("SPAN", (0, area_row_index), (-1, area_row_index)),
@@ -157,6 +159,7 @@ class DirectoryPdfExporter:
                         Paragraph(self._pdf_text(person.rank), body_style),
                         Paragraph(self._pdf_text(person.name), body_style),
                         Paragraph(self._pdf_text(person.position), body_style),
+                        Paragraph(self._pdf_text(person.email), body_style),
                         Paragraph(self._pdf_text(person.start_date), body_style),
                     ]
                 )
@@ -164,10 +167,11 @@ class DirectoryPdfExporter:
         table = Table(
             rows,
             colWidths=[
-                available_width * 0.22,
-                available_width * 0.30,
-                available_width * 0.32,
                 available_width * 0.16,
+                available_width * 0.24,
+                available_width * 0.25,
+                available_width * 0.22,
+                available_width * 0.13,
             ],
             repeatRows=1,
         )

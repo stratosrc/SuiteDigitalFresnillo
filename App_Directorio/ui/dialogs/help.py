@@ -50,6 +50,7 @@ HELP_SECTIONS: Final[tuple[DialogSection, ...]] = (
             "En el campo de CÃ³digo (Rango/Clave/Nivel) va el cÃ³digo correspondiente del colaborador.",
             "En el campo de Nombre va el nombre del colaborador.",
             "En el campo de Cargo va el cargo del colaborador.",
+            "En el campo de Correo electronico va el correo institucional del colaborador.",
             "En la Fecha de Alta va la fecha en la que comenzÃ³ a ejercer su cargo el colaborador.",
         ),
     ),

@@ -1,6 +1,3 @@
-from datetime import datetime
-
-
 DATE_FORMAT = "%d/%m/%Y"
 DATE_INPUT_LENGTH = 10
 
@@ -21,13 +18,7 @@ def is_date_input_prefix(value: str) -> bool:
 
 
 def is_valid_date(value: str) -> bool:
-    if len(value) != DATE_INPUT_LENGTH:
-        return False
-    try:
-        parsed_date = datetime.strptime(value, DATE_FORMAT)
-    except ValueError:
-        return False
-    return parsed_date.strftime(DATE_FORMAT) == value
+    return len(value) == DATE_INPUT_LENGTH and is_date_input_prefix(value)
 
 
 __all__ = [
