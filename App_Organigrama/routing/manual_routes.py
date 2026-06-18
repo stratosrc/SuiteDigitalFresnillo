@@ -53,7 +53,7 @@ def move_intermediate_segment(
     if not is_movable_segment(route_points, segment_index):
         raise ValueError("Solo se pueden mover segmentos intermedios.")
 
-    points = [normalize_point(point) for point in route_points]
+    points = [(float(point[0]), float(point[1])) for point in route_points]
     start = points[segment_index]
     end = points[segment_index + 1]
     pointer_x, pointer_y = normalize_point(pointer)
@@ -68,31 +68,84 @@ def move_intermediate_segment(
     return simplify_orthogonal_route(points)
 
 
+def move_bend_point(
+    route_points: Sequence[GridPoint],
+    point_index: int,
+    pointer: GridPoint,
+) -> list[GridPoint]:
+    """Move an internal bend freely while preserving an orthogonal route."""
+    if not 1 <= point_index < len(route_points) - 1:
+        raise ValueError("Solo se pueden mover puntos de doblez internos.")
+
+    points = [(float(point[0]), float(point[1])) for point in route_points]
+    previous = points[point_index - 1]
+    current = points[point_index]
+    following = points[point_index + 1]
+    pointer_x, pointer_y = normalize_point(pointer)
+
+    incoming_horizontal = previous[1] == current[1]
+    incoming_vertical = previous[0] == current[0]
+    outgoing_horizontal = current[1] == following[1]
+    outgoing_vertical = current[0] == following[0]
+    if not (incoming_horizontal or incoming_vertical) or not (outgoing_horizontal or outgoing_vertical):
+        raise ValueError("La conexión debe conservar segmentos ortogonales.")
+
+    moved = (pointer_x, pointer_y)
+    before = (
+        (pointer_x, previous[1])
+        if incoming_horizontal
+        else (previous[0], pointer_y)
+    )
+    after = (
+        (pointer_x, following[1])
+        if outgoing_horizontal
+        else (following[0], pointer_y)
+    )
+    candidate = [
+        *points[:point_index],
+        before,
+        moved,
+        after,
+        *points[point_index + 1 :],
+    ]
+    return simplify_orthogonal_route(candidate)
+
+
+def route_box_collisions(
+    route_points: Sequence[GridPoint],
+    boxes: Sequence[GridBox],
+    epsilon: float = 1e-6,
+) -> set[int]:
+    """Return indexes of boxes whose interior is crossed by the route."""
+    collisions: set[int] = set()
+    for start, end in zip(route_points, route_points[1:]):
+        x1, y1 = start
+        x2, y2 = end
+        for index, box in enumerate(boxes):
+            left = box.left + epsilon
+            right = box.right - epsilon
+            top = box.top + epsilon
+            bottom = box.bottom - epsilon
+            if abs(x1 - x2) <= epsilon:
+                segment_top, segment_bottom = sorted((y1, y2))
+                if left < x1 < right and max(segment_top, top) < min(segment_bottom, bottom):
+                    collisions.add(index)
+            elif abs(y1 - y2) <= epsilon:
+                segment_left, segment_right = sorted((x1, x2))
+                if top < y1 < bottom and max(segment_left, left) < min(segment_right, right):
+                    collisions.add(index)
+            else:
+                raise ValueError("La conexión debe conservar segmentos ortogonales.")
+    return collisions
+
+
 def route_crosses_boxes(
     route_points: Sequence[GridPoint],
     boxes: Sequence[GridBox],
     epsilon: float = 1e-6,
 ) -> bool:
     """Return whether an orthogonal route enters the interior of any box."""
-    for start, end in zip(route_points, route_points[1:]):
-        x1, y1 = normalize_point(start)
-        x2, y2 = normalize_point(end)
-        for box in boxes:
-            left = box.left + epsilon
-            right = box.right - epsilon
-            top = box.top + epsilon
-            bottom = box.bottom - epsilon
-            if x1 == x2:
-                segment_top, segment_bottom = sorted((y1, y2))
-                if left < x1 < right and max(segment_top, top) < min(segment_bottom, bottom):
-                    return True
-            elif y1 == y2:
-                segment_left, segment_right = sorted((x1, x2))
-                if top < y1 < bottom and max(segment_left, left) < min(segment_right, right):
-                    return True
-            else:
-                raise ValueError("La conexión debe conservar segmentos ortogonales.")
-    return False
+    return bool(route_box_collisions(route_points, boxes, epsilon))
 
 
 def is_movable_segment(
@@ -111,7 +164,7 @@ def simplify_orthogonal_route(points: Sequence[GridPoint]) -> list[GridPoint]:
     """Remove duplicate and collinear points without changing route shape."""
     normalized: list[GridPoint] = []
     for point in points:
-        current = normalize_point(point)
+        current = (float(point[0]), float(point[1]))
         if not normalized or normalized[-1] != current:
             normalized.append(current)
 
@@ -141,8 +194,10 @@ __all__ = [
     "GridPoint",
     "build_manual_route",
     "is_movable_segment",
+    "move_bend_point",
     "move_intermediate_segment",
     "normalize_point",
+    "route_box_collisions",
     "route_crosses_boxes",
     "simplify_orthogonal_route",
 ]

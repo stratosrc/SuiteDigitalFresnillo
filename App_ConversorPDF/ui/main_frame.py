@@ -516,8 +516,8 @@ class PdfConverterMainFrame(ctk.CTkFrame):
     @staticmethod
     def _selection_placeholder(suffix: str) -> str:
         if suffix in SHEET_EXTENSIONS:
-            return "Hojas del libro a exportar, ej. 2-4. Dejar vacío para todas."
-        return "Páginas a exportar, ej. 2-4. Dejar vacío para convertir todas."
+            return "Hojas del libro a exportar, ej. 2-4 o 1, 4-6. Dejar vacío para todas."
+        return "Páginas a exportar, ej. 2-4 o 1, 4-6. Dejar vacío para convertir todas."
 
     def _build_output_items(self) -> list[PlannedOutput]:
         return build_output_plan(self.files)

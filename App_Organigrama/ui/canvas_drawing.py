@@ -24,6 +24,7 @@ from App_Organigrama.ui.theme import (
     PRIMARY_BUTTON,
     ROUTE_PREVIEW_COLOR,
     SELECTION_COLOR,
+    SURFACE_BACKGROUND,
     TEXT_LIGHT,
 )
 
@@ -109,6 +110,67 @@ class CanvasDrawingMixin:
             arrow="last",
             tags=("connection-drag-preview", "ghost"),
         )
+
+    def _draw_manual_route_ghost(self) -> None:
+        route = self.manual_drag_candidate_route
+        if route is None:
+            return
+        points: list[float] = []
+        color = OBSTACLE_COLOR if self.manual_drag_collision_node_ids else SELECTION_COLOR
+        for grid_x, grid_y in route:
+            world_x, world_y = self.rendering_engine.grid_to_world(grid_x, grid_y)
+            screen_x, screen_y = self._world_to_screen(world_x, world_y)
+            points.extend((screen_x, screen_y))
+        self.canvas.create_line(
+            *points,
+            fill=color,
+            width=max(3, int(3 * self.zoom)),
+            dash=(8, 5),
+            capstyle="round",
+            joinstyle="round",
+            tags=("manual-route-ghost", "ghost"),
+        )
+
+    def _draw_manual_route_handles(self) -> None:
+        route = self._selected_connection_route()
+        if route is None:
+            return
+        radius = max(5.0, 6.0 * self.zoom)
+        for index, (grid_x, grid_y) in enumerate(route.points[1:-1], start=1):
+            world_x, world_y = self.rendering_engine.grid_to_world(grid_x, grid_y)
+            screen_x, screen_y = self._world_to_screen(world_x, world_y)
+            active = (
+                self.manual_drag_kind == "bend"
+                and self.manual_drag_point_index == index
+            )
+            self.canvas.create_oval(
+                screen_x - radius,
+                screen_y - radius,
+                screen_x + radius,
+                screen_y + radius,
+                fill=SELECTION_COLOR if active else SURFACE_BACKGROUND,
+                outline=SELECTION_COLOR,
+                width=max(2, int(2 * self.zoom)),
+                tags=("manual-route-handle", "connection-editor"),
+            )
+
+        for node_id in self.manual_drag_collision_node_ids:
+            node = self.document.nodes.get(node_id)
+            if node is None:
+                continue
+            layout = self._to_screen_layout(self._get_node_layout(node, include_logo=False))
+            create_rounded_rectangle(
+                self.canvas,
+                layout.box.left,
+                layout.box.top,
+                layout.box.right,
+                layout.box.bottom,
+                radius=max(0, int(12 * self.zoom)),
+                fill="",
+                outline=OBSTACLE_COLOR,
+                width=max(3, int(3 * self.zoom)),
+                tags=("manual-route-collision", "connection-editor"),
+            )
 
     def _draw_nodes(self) -> None:
         for node in self.document.nodes.values():

@@ -407,8 +407,15 @@ class MainFrame(ctk.CTkFrame):
         if self._metadata_sync_paused:
             return
 
-        self.document.title = self.title_var.get()
-        self.document.period = self.period_var.get()
+        title = self.title_var.get().upper()
+        period = self.period_var.get().upper()
+        if title != self.title_var.get() or period != self.period_var.get():
+            self._metadata_sync_paused = True
+            self.title_var.set(title)
+            self.period_var.set(period)
+            self._metadata_sync_paused = False
+        self.document.title = title
+        self.document.period = period
         self._record_document_change()
 
     def _bind_history_shortcuts(self) -> None:
@@ -698,6 +705,8 @@ class MainFrame(ctk.CTkFrame):
         self.master.title(f"Organigramas")
 
     def _load_document_into_ui(self, document: OrgGridDocument) -> None:
+        document.title = document.title.upper()
+        document.period = document.period.upper()
         self._metadata_sync_paused = True
         self.title_var.set(document.title)
         self.period_var.set(document.period)

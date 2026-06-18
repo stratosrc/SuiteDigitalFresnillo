@@ -4,7 +4,7 @@ import math
 from typing import TYPE_CHECKING
 
 from App_Organigrama.models.document import Connection, OrgGridDocument, OrgNode
-from App_Organigrama.routing.manual_routes import build_manual_route
+from App_Organigrama.routing.manual_routes import build_manual_route, simplify_orthogonal_route
 
 if TYPE_CHECKING:
     from App_Organigrama.rendering.engine import RenderingEngine
@@ -118,7 +118,7 @@ class ManhattanRouter:
             route.insert(0, exact_start)
         if route[-1] != exact_goal:
             route.append(exact_goal)
-        return route
+        return simplify_orthogonal_route(route)
 
     def route_traffic_points(self, route: list[GridPoint]) -> set[GridPoint]:
         points: set[GridPoint] = set()

@@ -36,6 +36,17 @@ PERSONNEL_COLUMN_WEIGHTS = (14, 18, 16, 17, 10)
 PERSONNEL_COLUMN_PADX = ((0, 8), (0, 8), (0, 8), (0, 8), (0, 0))
 
 
+def bind_uppercase(variable: tk.StringVar) -> None:
+    """Keep a Tk string variable normalized to uppercase while editing."""
+    def normalize(*_args: object) -> None:
+        value = variable.get()
+        uppercase = value.upper()
+        if value != uppercase:
+            variable.set(uppercase)
+
+    variable.trace_add("write", normalize)
+
+
 class PersonnelRow:
     def __init__(
         self,
@@ -208,6 +219,8 @@ class AreaSection(ctk.CTkFrame):
         self.person_remove_icons = person_remove_icons
         self.removable = removable
         self.rows: list[PersonnelRow] = []
+        self.area_name_var = tk.StringVar()
+        bind_uppercase(self.area_name_var)
         self.area_name_entry: ctk.CTkEntry | None = None
         self.detail_frame: ctk.CTkFrame | None = None
         self.add_person_button: HoverIconButton | None = None
@@ -222,6 +235,7 @@ class AreaSection(ctk.CTkFrame):
 
         self.area_name_entry = ctk.CTkEntry(
             header_frame,
+            textvariable=self.area_name_var,
             height=34,
             corner_radius=0,
             fg_color=SURFACE_BACKGROUND,
@@ -351,7 +365,7 @@ class AreaSection(ctk.CTkFrame):
         self.add_person_button.grid(row=len(self.rows) + 1, column=7, sticky="e", pady=(2, 0))
 
     def get_data(self, fallback_name: str = "") -> AreaReportData:
-        area_name = self.area_name_entry.get().strip() if self.area_name_entry is not None else ""
+        area_name = self.area_name_var.get().strip()
         if not area_name:
             area_name = fallback_name
         personnel = [row.get_data() for row in self.rows]
@@ -359,9 +373,7 @@ class AreaSection(ctk.CTkFrame):
         return AreaReportData(name=area_name, personnel=personnel)
 
     def set_data(self, area: AreaReportData) -> None:
-        if self.area_name_entry is not None:
-            self.area_name_entry.delete(0, tk.END)
-            self.area_name_entry.insert(0, area.name)
+        self.area_name_var.set(area.name)
 
         for row in self.rows:
             row.destroy()
@@ -383,6 +395,8 @@ class DirectoryFormFrame(ctk.CTkFrame):
         super().__init__(master, fg_color=APP_BACKGROUND, corner_radius=0)
         self.title_var = tk.StringVar()
         self.period_var = tk.StringVar()
+        bind_uppercase(self.title_var)
+        bind_uppercase(self.period_var)
         self.plus_icons = load_icon_pair(PLUS_ICON_PATH, PLUS_ICON_HOVER_PATH, (22, 22))
         self.move_up_icons = load_icon_pair(UP_ICON_PATH, UP_ICON_HOVER_PATH, (20, 20))
         self.move_down_icons = load_icon_pair(DOWN_ICON_PATH, DOWN_ICON_HOVER_PATH, (20, 20))

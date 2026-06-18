@@ -6,6 +6,7 @@ from App_Organigrama.rendering.engine import RenderingEngine
 from App_Organigrama.routing.manhattan_router import ConnectionRoute
 from App_Organigrama.ui.canvas_hit_testing import (
     distance_to_segment,
+    find_bend_point_at_screen,
     find_connection_at_screen,
     find_movable_segment_at_screen,
     nearest_port,
@@ -47,6 +48,33 @@ class OrgCanvasHelperTests(unittest.TestCase):
         )
         self.assertIsNone(
             find_movable_segment_at_screen(route, 250, 400, engine, identity)
+        )
+
+    def test_connection_bend_points_can_be_hit_individually(self):
+        engine = RenderingEngine()
+        route = ConnectionRoute(
+            connection=Connection(source_id="a", target_id="b"),
+            points=((0.0, 0.0), (0.5, 0.0), (0.5, 1.0), (1.0, 1.0)),
+        )
+
+        self.assertEqual(
+            find_bend_point_at_screen(
+                route,
+                125,
+                0,
+                engine,
+                lambda x, y: (x, y),
+            ),
+            1,
+        )
+        self.assertIsNone(
+            find_bend_point_at_screen(
+                route,
+                0,
+                0,
+                engine,
+                lambda x, y: (x, y),
+            )
         )
 
     def test_nearest_port(self):

@@ -8,10 +8,16 @@ from PIL import Image, ImageTk
 from App_Organigrama.models.document import OrgGridDocument, OrgNode
 from App_Organigrama.rendering.engine import NodeLayout, RenderingEngine
 from App_Organigrama.routing.manhattan_router import ConnectionRoute, ManhattanRouter
-from App_Organigrama.routing.manual_routes import GridBox, move_intermediate_segment, route_crosses_boxes
+from App_Organigrama.routing.manual_routes import (
+    GridBox,
+    move_bend_point,
+    move_intermediate_segment,
+    route_box_collisions,
+)
 from App_Organigrama.config.assets import CROSS_CURSOR_PATH, NODE_LOGO_PATH
 from App_Organigrama.ui.canvas_hit_testing import (
     find_blocked_point_at_screen,
+    find_bend_point_at_screen,
     find_connection_at_screen,
     find_movable_segment_at_screen,
     nearest_port,
@@ -102,10 +108,13 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
         self.connection_press_source_id: str | None = None
         self.connection_press_source_port: str | None = None
         self.manual_drag_connection_id: str | None = None
+        self.manual_drag_kind: str | None = None
         self.manual_drag_segment_index: int | None = None
+        self.manual_drag_point_index: int | None = None
         self.manual_drag_original_route: tuple[GridPoint, ...] | None = None
-        self.manual_drag_preview_route: tuple[GridPoint, ...] | None = None
-        self.manual_drag_collision = False
+        self.manual_drag_candidate_route: tuple[GridPoint, ...] | None = None
+        self.manual_drag_collision_node_ids: tuple[str, ...] = ()
+        self.manual_ghost_after_id: str | None = None
         self.redraw_after_id: str | None = None
         self.logo_source_image = self._load_logo_source()
         self.logo_cache: dict[int, ImageTk.PhotoImage] = {}
@@ -261,7 +270,8 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
             self.route_cache = self.router.route_document(self.document)
             self._routes_dirty = False
         self._draw_grid()
-        self._draw_connections(self._routes_for_display())
+        self._draw_connections(self.route_cache)
+        self._draw_manual_route_ghost()
         self._draw_connection_drag_preview()
         self._draw_preview_routes()
         draw_connection_selection_overlay(self)
@@ -270,6 +280,7 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
         self._draw_hover_port()
         self._draw_ghost()
         draw_node_selection_overlay(self)
+        self._draw_manual_route_handles()
         self._draw_custom_cursor()
 
     def request_redraw(self) -> None:
@@ -296,14 +307,29 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
             self._select_or_add_blocked_point(event.x, event.y)
             return
 
+        bend_point = self._selected_bend_point_at_screen(event.x, event.y)
+        if bend_point is not None:
+            self._clear_retained_manual_ghost()
+            route, point_index = bend_point
+            self.manual_drag_connection_id = route.connection.id
+            self.manual_drag_kind = "bend"
+            self.manual_drag_point_index = point_index
+            self.manual_drag_original_route = route.points
+            self.manual_drag_candidate_route = route.points
+            self.manual_drag_collision_node_ids = ()
+            self._emit_context_change("Arrastra el punto de doblez libremente")
+            return
+
         movable_segment = self._selected_movable_segment_at_screen(event.x, event.y)
         if movable_segment is not None:
+            self._clear_retained_manual_ghost()
             route, segment_index = movable_segment
             self.manual_drag_connection_id = route.connection.id
+            self.manual_drag_kind = "segment"
             self.manual_drag_segment_index = segment_index
             self.manual_drag_original_route = route.points
-            self.manual_drag_preview_route = route.points
-            self.manual_drag_collision = False
+            self.manual_drag_candidate_route = route.points
+            self.manual_drag_collision_node_ids = ()
             self._emit_context_change("Arrastra el segmento en su eje perpendicular")
             return
 
@@ -530,61 +556,113 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
         )
         return (route, segment_index) if segment_index is not None else None
 
+    def _selected_bend_point_at_screen(
+        self,
+        screen_x: int,
+        screen_y: int,
+    ) -> tuple[ConnectionRoute, int] | None:
+        if self.selected_connection_id is None:
+            return None
+        route = next(
+            (item for item in self.route_cache if item.connection.id == self.selected_connection_id),
+            None,
+        )
+        if route is None:
+            return None
+        point_index = find_bend_point_at_screen(
+            route,
+            screen_x,
+            screen_y,
+            self.rendering_engine,
+            self._world_to_screen,
+            max_distance=max(9.0, 10.0 * self.zoom),
+        )
+        return (route, point_index) if point_index is not None else None
+
     def _preview_manual_segment_drag(self, screen_x: int, screen_y: int) -> None:
         route = self.manual_drag_original_route
-        segment_index = self.manual_drag_segment_index
-        if route is None or segment_index is None:
+        if route is None:
             return
-        candidate = move_intermediate_segment(
-            route,
-            segment_index,
-            self._screen_to_subgrid(screen_x, screen_y),
-        )
-        self.manual_drag_collision = self._route_crosses_nodes(candidate)
-        if not self.manual_drag_collision:
-            self.manual_drag_preview_route = tuple(candidate)
+        pointer = self._screen_to_subgrid(screen_x, screen_y)
+        if self.manual_drag_kind == "bend" and self.manual_drag_point_index is not None:
+            candidate = move_bend_point(route, self.manual_drag_point_index, pointer)
+        elif self.manual_drag_kind == "segment" and self.manual_drag_segment_index is not None:
+            candidate = move_intermediate_segment(route, self.manual_drag_segment_index, pointer)
+        else:
+            return
+        self.manual_drag_candidate_route = tuple(candidate)
+        self.manual_drag_collision_node_ids = self._route_collision_node_ids(candidate)
         self._emit_context_change(
-            "Posición no válida: el segmento atravesaría un nodo"
-            if self.manual_drag_collision
-            else "Suelta para guardar la ruta manual"
+            "Posición no válida: el ghost rojo muestra la ruta y los nodos atravesados"
+            if self.manual_drag_collision_node_ids
+            else "Ghost verde: suelta para guardar esta ruta"
         )
         self.request_redraw()
 
     def _finish_manual_segment_drag(self) -> None:
         connection_id = self.manual_drag_connection_id
         original = self.manual_drag_original_route
-        preview = self.manual_drag_preview_route
+        candidate = self.manual_drag_candidate_route
+        is_valid = not self.manual_drag_collision_node_ids
         changed = (
             connection_id is not None
-            and preview is not None
+            and candidate is not None
             and original is not None
-            and preview != original
+            and candidate != original
+            and is_valid
         )
+        invalid_candidate = (
+            candidate
+            if candidate is not None
+            and original is not None
+            and candidate != original
+            and not is_valid
+            else None
+        )
+        collision_node_ids = self.manual_drag_collision_node_ids
         self._clear_manual_drag()
-        if changed and connection_id is not None and preview is not None:
-            self.document.set_connection_manual_points(connection_id, preview[1:-1])
+        if changed and connection_id is not None and candidate is not None:
+            self.document.set_connection_manual_points(connection_id, candidate[1:-1])
             self._mark_document_changed()
             self._emit_selection_change()
+        elif invalid_candidate is not None:
+            self.manual_drag_candidate_route = invalid_candidate
+            self.manual_drag_collision_node_ids = collision_node_ids
+            self.manual_ghost_after_id = self.after(1400, self._expire_retained_manual_ghost)
+            self.request_redraw()
         else:
             self.request_redraw()
         self._emit_context_change()
 
     def _clear_manual_drag(self) -> None:
+        if self.manual_ghost_after_id is not None:
+            self.after_cancel(self.manual_ghost_after_id)
+            self.manual_ghost_after_id = None
         self.manual_drag_connection_id = None
+        self.manual_drag_kind = None
         self.manual_drag_segment_index = None
+        self.manual_drag_point_index = None
         self.manual_drag_original_route = None
-        self.manual_drag_preview_route = None
-        self.manual_drag_collision = False
+        self.manual_drag_candidate_route = None
+        self.manual_drag_collision_node_ids = ()
+
+    def _clear_retained_manual_ghost(self) -> None:
+        if self.manual_ghost_after_id is not None:
+            self.after_cancel(self.manual_ghost_after_id)
+            self.manual_ghost_after_id = None
+        if self.manual_drag_connection_id is None:
+            self.manual_drag_candidate_route = None
+            self.manual_drag_collision_node_ids = ()
+            self.request_redraw()
+
+    def _expire_retained_manual_ghost(self) -> None:
+        self.manual_ghost_after_id = None
+        self.manual_drag_candidate_route = None
+        self.manual_drag_collision_node_ids = ()
+        self.request_redraw()
 
     def _routes_for_display(self) -> list[ConnectionRoute]:
-        if self.manual_drag_connection_id is None or self.manual_drag_preview_route is None:
-            return self.route_cache
-        return [
-            ConnectionRoute(route.connection, self.manual_drag_preview_route)
-            if route.connection.id == self.manual_drag_connection_id
-            else route
-            for route in self.route_cache
-        ]
+        return self.route_cache
 
     def _selected_connection_route(self) -> ConnectionRoute | None:
         return next(
@@ -596,11 +674,13 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
             None,
         )
 
-    def _route_crosses_nodes(self, route_points: list[GridPoint]) -> bool:
+    def _route_collision_node_ids(self, route_points: list[GridPoint]) -> tuple[str, ...]:
+        node_ids: list[str] = []
         boxes: list[GridBox] = []
         cell_width = self.rendering_engine.base_cell_width
         cell_height = self.rendering_engine.base_cell_height
         for node in self.document.nodes.values():
+            node_ids.append(node.id)
             box = self._get_node_layout(node, include_logo=False).box
             boxes.append(
                 GridBox(
@@ -610,7 +690,8 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
                     bottom=box.bottom / cell_height,
                 )
             )
-        return route_crosses_boxes(route_points, boxes)
+        collisions = route_box_collisions(route_points, boxes)
+        return tuple(node_ids[index] for index in sorted(collisions))
 
     def _on_leave(self, _event: tk.Event[tk.Canvas]) -> None:
         self.hover_port = None
