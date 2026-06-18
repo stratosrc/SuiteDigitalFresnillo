@@ -1,4 +1,4 @@
-﻿"""PDF loading, rendering, and export helpers."""
+"""PDF loading, rendering, and export helpers."""
 
 from __future__ import annotations
 
@@ -117,7 +117,7 @@ class PDFManager:
                 self._callbacks.set_status(PDF_MANAGER_MESSAGES["loaded_status"])
                 return True
             return False
-        except fitz.FileError:
+        except (fitz.FileDataError, fitz.EmptyFileError):
             self._state.reset_for_new_job()
             self._callbacks.clear_document_view()
             self._callbacks.set_status(PDF_MANAGER_MESSAGES["invalid_pdf_status"])

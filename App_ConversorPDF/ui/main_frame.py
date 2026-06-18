@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
 from pathlib import Path
 import threading
 import tkinter as tk
@@ -23,11 +24,13 @@ from App_ConversorPDF.config import (
     PDF_EXTENSIONS,
     SEPARATE_ICON_ON_PATH,
     SEPARATE_ICON_PATH,
+    SHEET_EXTENSIONS,
     SUPPORTED_EXTENSIONS,
     UPLOAD_ICON_HOVER_PATH,
     UPLOAD_ICON_PATH,
 )
 from App_ConversorPDF.services.converter import ConversionRequest, PdfConverter
+from App_ConversorPDF.services.output_planner import PlannedOutput, build_output_plan
 from App_ConversorPDF.ui.dialogs import show_help_dialog
 from App_ConversorPDF.ui.theme import (
     APP_BACKGROUND,
@@ -49,9 +52,11 @@ from App_ConversorPDF.ui.theme import (
 )
 from components.shared.images import load_ctk_image
 from components.shared.tooltip import Tooltip
+from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
 
 SPLIT_TOGGLE_TOOLTIP = "Separar cada hoja o pagina seleccionada en PDFs individuales."
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -78,6 +83,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.separate_icon_image: ctk.CTkImage | None = None
         self.separate_icon_on_image: ctk.CTkImage | None = None
         self.is_busy = False
+        self._dnd_available = DND_FILES is not None
         self._build_layout()
         self._refresh_outputs()
 
@@ -92,49 +98,27 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self._build_loading_overlay()
 
     def _build_topbar(self) -> None:
-        topbar = ctk.CTkFrame(self, fg_color=PRIMARY_BUTTON_PRESSED, corner_radius=0, height=24)
-        topbar.grid(row=0, column=0, sticky="ew")
-        topbar.grid_columnconfigure(2, weight=1)
-        topbar.grid_propagate(False)
+        build_topbar(
+            self,
+            self._topbar_style(),
+            (
+                TopbarButton("new", "Nuevo", self.reset_work, 0),
+                TopbarButton("help", "Ayuda", self._show_help_dialog, 1),
+                TopbarButton("exit", "Salir", self.confirm_exit, 3, danger=True),
+            ),
+        )
 
-        ctk.CTkButton(
-            topbar,
-            text="Nuevo",
-            command=self.reset_work,
-            height=24,
-            width=72,
-            corner_radius=0,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=PRIMARY_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
+    @staticmethod
+    def _topbar_style() -> TopbarStyle:
+        return TopbarStyle(
+            background=PRIMARY_BUTTON_PRESSED,
+            primary=PRIMARY_BUTTON,
+            primary_hover=PRIMARY_BUTTON_ACTIVE,
+            danger=DANGER_BUTTON,
+            danger_hover=DANGER_BUTTON_ACTIVE,
+            text=TEXT_LIGHT,
             font=make_font(12),
-        ).grid(row=0, column=0, padx=(0, 4), sticky="w")
-
-        ctk.CTkButton(
-            topbar,
-            text="Ayuda",
-            command=self._show_help_dialog,
-            height=24,
-            width=72,
-            corner_radius=0,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=PRIMARY_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
-            font=make_font(12),
-        ).grid(row=0, column=1, padx=(0, 4), sticky="w")
-
-        ctk.CTkButton(
-            topbar,
-            text="Salir",
-            command=self.confirm_exit,
-            height=24,
-            width=72,
-            corner_radius=0,
-            fg_color=DANGER_BUTTON,
-            hover_color=DANGER_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
-            font=make_font(12),
-        ).grid(row=0, column=3, padx=(4, 0), sticky="e")
+        )
 
     def _build_header(self) -> None:
         header = ctk.CTkFrame(self, fg_color=DARK_BACKGROUND, corner_radius=0, height=118)
@@ -443,7 +427,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
 
                 entry = ctk.CTkEntry(
                     self.files_frame,
-                    placeholder_text="Hojas a exportar, ej. 2-4. Dejar vacio para convertir todas.",
+                    placeholder_text=self._selection_placeholder(item.path.suffix.lower()),
                     height=15,
                     corner_radius=0,
                     fg_color=SURFACE_BACKGROUND,
@@ -470,14 +454,14 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             self._sync_action_buttons()
             return
 
-        for index, (item, sheet_name, output_name) in enumerate(outputs):
+        for index, output in enumerate(outputs):
             row = ctk.CTkFrame(self.outputs_frame, fg_color=RIGHT_PANEL_BACKGROUND, corner_radius=0)
             row.grid(row=index, column=0, sticky="ew", pady=(0, 8))
             row.grid_columnconfigure(0, weight=1)
 
             ctk.CTkLabel(
                 row,
-                text=output_name,
+                text=output.filename,
                 height=38,
                 corner_radius=0,
                 fg_color="#E7E9F1",
@@ -490,7 +474,11 @@ class PdfConverterMainFrame(ctk.CTkFrame):
                 row,
                 text="" if self.download_item_icon_image is not None else "DL",
                 image=self.download_item_icon_image,
-                command=lambda source=item, sheet=sheet_name, name=output_name: self._save_output(source, sheet, name),
+                command=lambda planned=output: self._save_output(
+                    planned.source,
+                    planned.selection,
+                    planned.filename,
+                ),
                 width=38,
                 height=38,
                 corner_radius=0,
@@ -525,63 +513,14 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             return self.separate_icon_on_image
         return self.separate_icon_image
 
-    def _build_output_items(self) -> list[tuple[SourceFileItem, str | None, str]]:
-        outputs: list[tuple[SourceFileItem, str | None, str]] = []
-        for item in self.files:
-            sheet_range = self._parse_sheet_input(item.sheet_var.get()) if item.sheet_var is not None else None
-            if sheet_range is None:
-                outputs.append((item, None, f"{item.path.stem}.pdf"))
-                continue
-            if item.split_var is not None and item.split_var.get():
-                for single_sheet in self._expand_sheet_input(sheet_range):
-                    safe_sheet = self._safe_filename(single_sheet)
-                    outputs.append((item, single_sheet, f"{item.path.stem}_{safe_sheet}.pdf"))
-                continue
-            safe_range = self._safe_filename(sheet_range)
-            outputs.append((item, sheet_range, f"{item.path.stem}_{safe_range}.pdf"))
-        return outputs
+    @staticmethod
+    def _selection_placeholder(suffix: str) -> str:
+        if suffix in SHEET_EXTENSIONS:
+            return "Hojas del libro a exportar, ej. 2-4. Dejar vacío para todas."
+        return "Páginas a exportar, ej. 2-4. Dejar vacío para convertir todas."
 
-    def _parse_sheet_input(self, raw_value: str) -> str | None:
-        parts = [part.strip() for part in raw_value.replace(";", ",").split(",")]
-        normalized_parts: list[str] = []
-        for part in parts:
-            if not part:
-                continue
-            if "-" not in part:
-                normalized_parts.append(part)
-                continue
-            start, end, *extra = [value.strip() for value in part.split("-")]
-            if extra or not start.isdigit() or not end.isdigit():
-                normalized_parts.append(part)
-                continue
-            start_number = int(start)
-            end_number = int(end)
-            if start_number > end_number:
-                normalized_parts.append(part)
-                continue
-            normalized_parts.append(f"{start_number}-{end_number}")
-        return ",".join(normalized_parts) or None
-
-    def _expand_sheet_input(self, raw_value: str) -> list[str]:
-        parts = [part.strip() for part in raw_value.replace(";", ",").split(",")]
-        expanded: list[str] = []
-        for part in parts:
-            if not part:
-                continue
-            if "-" not in part:
-                expanded.append(part)
-                continue
-            start, end, *extra = [value.strip() for value in part.split("-")]
-            if extra or not start.isdigit() or not end.isdigit():
-                expanded.append(part)
-                continue
-            start_number = int(start)
-            end_number = int(end)
-            if start_number > end_number:
-                expanded.append(part)
-                continue
-            expanded.extend(str(number) for number in range(start_number, end_number + 1))
-        return expanded or [raw_value]
+    def _build_output_items(self) -> list[PlannedOutput]:
+        return build_output_plan(self.files)
 
     def _convert_first_output(self) -> None:
         if self.is_busy:
@@ -590,8 +529,8 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         if not outputs:
             messagebox.showinfo("Sin archivos", "Carga al menos un archivo para convertir.", parent=self)
             return
-        item, sheet_name, output_name = outputs[0]
-        self._save_output(item, sheet_name, output_name)
+        output = outputs[0]
+        self._save_output(output.source, output.selection, output.filename)
 
     def _save_all_outputs(self) -> None:
         if self.is_busy:
@@ -616,23 +555,23 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             ),
         )
 
-    def _convert_all_outputs(self, outputs: list[tuple[SourceFileItem, str | None, str]], output_dir: Path) -> list[Path]:
+    def _convert_all_outputs(self, outputs: list[PlannedOutput], output_dir: Path) -> list[Path]:
         saved_paths: list[Path] = []
         errors: list[str] = []
-        for index, (item, sheet_name, output_name) in enumerate(outputs, start=1):
+        for index, output in enumerate(outputs, start=1):
             self._set_loading_status_from_worker(f"Convirtiendo {index} de {len(outputs)}...")
             try:
                 saved_paths.append(
                     self.converter.convert(
                         ConversionRequest(
-                            source_path=item.path,
-                            target_path=output_dir / output_name,
-                            sheet_name=sheet_name,
+                            source_path=output.source.path,
+                            target_path=output_dir / output.filename,
+                            sheet_name=output.selection,
                         )
                     )
                 )
             except Exception as error:  # noqa: BLE001
-                errors.append(f"{output_name}: {error}")
+                errors.append(f"{output.filename}: {error}")
 
         if errors:
             message = "\n".join(errors[:5])
@@ -646,14 +585,18 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             button.configure(image=image)
 
     def _enable_file_drop(self, widget) -> None:
-        if DND_FILES is None:
+        if not self._dnd_available:
             return
         register = getattr(widget, "drop_target_register", None)
         bind = getattr(widget, "dnd_bind", None)
         if register is None or bind is None:
             return
-        register(DND_FILES)
-        bind("<<Drop>>", self._handle_file_drop)
+        try:
+            register(DND_FILES)
+            bind("<<Drop>>", self._handle_file_drop)
+        except tk.TclError:
+            self._dnd_available = False
+            LOGGER.warning("TkDND is unavailable; drag and drop has been disabled")
 
     def _handle_file_drop(self, event) -> None:
         self._add_files(self.tk.splitlist(event.data))
@@ -661,42 +604,19 @@ class PdfConverterMainFrame(ctk.CTkFrame):
     def _sync_action_buttons(self) -> None:
         has_files = bool(self.files)
         has_outputs = bool(self._build_output_items())
+        self._set_grid_visibility(self.upload_icon_button, not has_files)
+        self._set_grid_visibility(self.files_frame, has_files)
+        self._set_grid_visibility(self.upload_action_button, has_files)
+        self._set_grid_visibility(self.download_icon_button, not has_outputs)
+        self._set_grid_visibility(self.outputs_frame, has_outputs)
+        self._set_grid_visibility(self.download_action_button, has_outputs)
 
-        if hasattr(self, "upload_icon_button"):
-            if has_files:
-                self.upload_icon_button.grid_remove()
-            else:
-                self.upload_icon_button.grid()
-
-        if hasattr(self, "files_frame"):
-            if has_files:
-                self.files_frame.grid()
-            else:
-                self.files_frame.grid_remove()
-
-        if hasattr(self, "upload_action_button"):
-            if has_files:
-                self.upload_action_button.grid()
-            else:
-                self.upload_action_button.grid_remove()
-
-        if hasattr(self, "download_icon_button"):
-            if has_outputs:
-                self.download_icon_button.grid_remove()
-            else:
-                self.download_icon_button.grid()
-
-        if hasattr(self, "outputs_frame"):
-            if has_outputs:
-                self.outputs_frame.grid()
-            else:
-                self.outputs_frame.grid_remove()
-
-        if hasattr(self, "download_action_button"):
-            if has_outputs:
-                self.download_action_button.grid()
-            else:
-                self.download_action_button.grid_remove()
+    @staticmethod
+    def _set_grid_visibility(widget: tk.Misc, visible: bool) -> None:
+        if visible:
+            widget.grid()
+        else:
+            widget.grid_remove()
 
     def _save_output(self, item: SourceFileItem, sheet_name: str | None, output_name: str) -> None:
         if self.is_busy:
@@ -764,18 +684,6 @@ class PdfConverterMainFrame(ctk.CTkFrame):
     def _finish_conversion_error(self, error: Exception) -> None:
         self._hide_loading()
         messagebox.showerror("No se pudo convertir", str(error), parent=self)
-
-    def _empty_label(self, parent, text: str, text_color: str) -> ctk.CTkLabel:
-        return ctk.CTkLabel(
-            parent,
-            text=text,
-            text_color=text_color,
-            font=make_font(12),
-        )
-
-    def _safe_filename(self, value: str) -> str:
-        safe = "".join(character for character in value if character not in '<>:"/\\|?*')
-        return safe.strip() or "hoja"
 
     def confirm_exit(self) -> None:
         self.master.destroy()

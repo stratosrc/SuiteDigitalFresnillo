@@ -43,7 +43,7 @@ from App_TestData.ui.interactions.canvas_redactions import setup_canvas_events
 from App_TestData.domain.document_state import DocumentState, RectangleData, RedactionHistoryAction
 from App_TestData.services.pdf_service import PDFManager
 from App_TestData.services.project_persistence import (
-    calculate_file_hash,
+    LoadedProject,
     deserialize_rectangles,
     load_project,
     save_project,
@@ -71,6 +71,7 @@ class TestDataGeneratorApp(ctk.CTk):
 
         self.document_state = DocumentState()
         self.current_project_path: Path | None = None
+        self._loaded_project: LoadedProject | None = None
         self._init_state()
         self._render_resize_after_id = None
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="testdata-worker")
@@ -233,6 +234,7 @@ class TestDataGeneratorApp(ctk.CTk):
     def _start_new_job(self) -> None:
         """Reset the current job and then open the PDF selector."""
         self.pdf_manager.reset_current_job()
+        self._release_loaded_project()
         self.current_project_path = None
         self.after_idle(self.pdf_manager.load_new_job_pdf)
 
@@ -399,34 +401,45 @@ class TestDataGeneratorApp(ctk.CTk):
         if not source_path:
             return
 
+        loaded_project: LoadedProject | None = None
+        staged_pdf_document: fitz.Document | None = None
         try:
-            payload = load_project(source_path)
-            pdf_path = payload.get("pdf_path")
-            if not pdf_path or not os.path.isfile(pdf_path):
-                raise FileNotFoundError(f"No se encontró el PDF original: {pdf_path}")
-
-            expected_hash = payload.get("pdf_sha256", "")
-            if expected_hash and calculate_file_hash(pdf_path) != expected_hash:
+            loaded_project = load_project(source_path)
+            payload = loaded_project.payload
+            if payload.get("pdf_hash_matches") is False:
                 messagebox.showwarning(
                     "PDF modificado",
-                    "El PDF original cambió desde que se guardó el proyecto. Se abrirá, pero revisa los recuadros antes de exportar.",
+                    "El PDF original cambió desde que se guardó el proyecto. "
+                    "Se abrirá, pero revisa los recuadros antes de exportar.",
                     parent=self,
                 )
 
-            self.pdf_manager.reset_current_job()
-            self.current_pdf_path = pdf_path
-            self.pdf_document = fitz.open(pdf_path)
-            self.current_zoom = payload.get("current_zoom")
-            self.censored_rectangles = deserialize_rectangles(payload.get("rectangles", []))
-            self.current_page = min(
+            staged_pdf_document = fitz.open(loaded_project.pdf_path)
+            rectangles = deserialize_rectangles(payload.get("rectangles", []))
+            current_page = min(
                 max(int(payload.get("current_page", 0)), 0),
-                max(len(self.pdf_document) - 1, 0),
+                max(len(staged_pdf_document) - 1, 0),
             )
-            self.reserved_history[:] = list(payload.get("reserved_history", []))
-            self.confidential_history[:] = list(payload.get("confidential_history", []))
-            self.other_law_history[:] = list(payload.get("other_law_history", []))
+            reserved_history = list(payload.get("reserved_history", []))
+            confidential_history = list(payload.get("confidential_history", []))
+            other_law_history = list(payload.get("other_law_history", []))
+            committee_data = dict(payload.get("committee_data", {}))
+
+            self.pdf_manager.reset_current_job()
+            self._release_loaded_project()
+            self._loaded_project = loaded_project
+            loaded_project = None
+            self.current_pdf_path = str(self._loaded_project.pdf_path)
+            self.pdf_document = staged_pdf_document
+            staged_pdf_document = None
+            self.current_zoom = payload.get("current_zoom")
+            self.censored_rectangles = rectangles
+            self.current_page = current_page
+            self.reserved_history[:] = reserved_history
+            self.confidential_history[:] = confidential_history
+            self.other_law_history[:] = other_law_history
             self.document_state.committee_data.clear()
-            self.document_state.committee_data.update(payload.get("committee_data", {}))
+            self.document_state.committee_data.update(committee_data)
             self.undo_stack.clear()
             self.redo_stack.clear()
             self.selected_rect_id = None
@@ -435,6 +448,10 @@ class TestDataGeneratorApp(ctk.CTk):
             self.pdf_manager.render_current_page()
             self.set_status(f"Proyecto cargado: {self.current_project_path}")
         except Exception as error:  # noqa: BLE001
+            if staged_pdf_document is not None:
+                staged_pdf_document.close()
+            if loaded_project is not None:
+                loaded_project.close()
             self.show_error("No se pudo abrir", f"No fue posible cargar el proyecto.\n\n{error}")
 
     def save_project(self) -> None:
@@ -478,6 +495,11 @@ class TestDataGeneratorApp(ctk.CTk):
             return 1
         return max(rectangle.get("id", 0) for rectangle in self.censored_rectangles) + 1
 
+    def _release_loaded_project(self) -> None:
+        if self._loaded_project is not None:
+            self._loaded_project.close()
+            self._loaded_project = None
+
     def _generate_pdf(self, committee_data=None):
         self.export_controller.generate_pdf(committee_data=committee_data)
 
@@ -506,6 +528,7 @@ class TestDataGeneratorApp(ctk.CTk):
         ):
             if self.pdf_document:
                 self.pdf_document.close()
+            self._release_loaded_project()
             self._executor.shutdown(wait=False, cancel_futures=True)
             self.destroy()
 

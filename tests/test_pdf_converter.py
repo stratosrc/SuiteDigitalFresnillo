@@ -1,6 +1,7 @@
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock
 
 import fitz
 
@@ -33,6 +34,32 @@ class PdfConverterTests(unittest.TestCase):
 
             with fitz.open(saved_path) as result_document:
                 self.assertEqual(len(result_document), 2)
+
+    def test_spreadsheet_selection_is_delegated_as_workbook_tabs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source_path = root / "book.xlsx"
+            target_path = root / "selected.pdf"
+            source_path.write_bytes(b"spreadsheet")
+            converter = PdfConverter()
+            exporter = Mock()
+            exporter.export.return_value = target_path
+            converter._spreadsheet_exporter = exporter
+
+            saved_path = converter.convert(
+                ConversionRequest(
+                    source_path=source_path,
+                    target_path=target_path,
+                    sheet_name="2-4",
+                )
+            )
+
+            self.assertEqual(saved_path, target_path)
+            exporter.export.assert_called_once_with(
+                source_path,
+                target_path,
+                "2-4",
+            )
 
 
 if __name__ == "__main__":

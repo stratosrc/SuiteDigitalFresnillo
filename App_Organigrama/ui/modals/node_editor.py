@@ -21,8 +21,8 @@ class NodeEditorDialog(ctk.CTkToplevel):
         master: tk.Misc,
         title: str,
         on_save: Callable[[str, str, str], None],
-        nombre: str = "",
-        cargo: str = "",
+        name: str = "",
+        role: str = "",
         selected_color: str | None = None,
     ) -> None:
         super().__init__(master)
@@ -33,13 +33,13 @@ class NodeEditorDialog(ctk.CTkToplevel):
         self.grab_set()
 
         self.on_save = on_save
-        self.nombre_var = tk.StringVar(value=nombre)
-        self.cargo_var = tk.StringVar(value=cargo)
+        self.name_var = tk.StringVar(value=name)
+        self.role_var = tk.StringVar(value=role)
         self.selected_color = selected_color or NODE_COLOR_CHOICES[0][1]
         self.swatches: dict[str, tk.Canvas] = {}
 
         self._build()
-        self.after(60, self.nombre_entry.focus_set)
+        self.after(60, self.name_entry.focus_set)
 
     def _build(self) -> None:
         frame = ctk.CTkFrame(self, fg_color=SURFACE_BACKGROUND, corner_radius=0)
@@ -47,11 +47,11 @@ class NodeEditorDialog(ctk.CTkToplevel):
         frame.grid_columnconfigure(0, weight=1)
 
         self._build_label(frame, "Nombre", row=0)
-        self.nombre_entry = ctk.CTkEntry(frame, textvariable=self.nombre_var, width=340, corner_radius=0)
-        self.nombre_entry.grid(row=1, column=0, sticky="ew", pady=(4, 12))
+        self.name_entry = ctk.CTkEntry(frame, textvariable=self.name_var, width=340, corner_radius=0)
+        self.name_entry.grid(row=1, column=0, sticky="ew", pady=(4, 12))
 
         self._build_label(frame, "Cargo", row=2)
-        ctk.CTkEntry(frame, textvariable=self.cargo_var, width=340, corner_radius=0).grid(
+        ctk.CTkEntry(frame, textvariable=self.role_var, width=340, corner_radius=0).grid(
             row=3,
             column=0,
             sticky="ew",
@@ -115,13 +115,13 @@ class NodeEditorDialog(ctk.CTkToplevel):
         ).pack(side="left")
 
     def _save(self) -> None:
-        nombre = self.nombre_var.get().strip()
-        cargo = self.cargo_var.get().strip()
-        if not nombre:
-            self.nombre_entry.focus_set()
+        name = self.name_var.get().strip()
+        role = self.role_var.get().strip()
+        if not name:
+            self.name_entry.focus_set()
             return
 
-        self.on_save(nombre, cargo, self.selected_color)
+        self.on_save(name, role, self.selected_color)
         self.destroy()
 
     def _select_color(self, color: str) -> None:

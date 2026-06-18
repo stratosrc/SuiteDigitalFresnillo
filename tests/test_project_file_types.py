@@ -31,6 +31,35 @@ class ProjectFileTypeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 PersistenceManager().load(source)
 
+    def test_organigrama_loads_legacy_spanish_node_fields(self):
+        payload = {
+            "app": "organigrama",
+            "schema_version": 1,
+            "document": {
+                "nodes": {
+                    "legacy-node": {
+                        "id": "legacy-node",
+                        "nombre": "Persona",
+                        "cargo": "Cargo",
+                        "grid_x": 1,
+                        "grid_y": 2,
+                        "color": "#123456",
+                    }
+                },
+                "connections": [],
+                "blocked_points": [],
+            },
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "legacy.og"
+            source.write_text(json.dumps(payload), encoding="utf-8")
+
+            document = PersistenceManager().load(source)
+
+        node = document.nodes["legacy-node"]
+        self.assertEqual(node.name, "Persona")
+        self.assertEqual(node.role, "Cargo")
+
     def test_directorio_project_roundtrip_uses_dir_marker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             target = Path(temp_dir) / "directorio.dir"

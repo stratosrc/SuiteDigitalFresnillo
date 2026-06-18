@@ -1,4 +1,4 @@
-﻿"""Canonical application registry shared by the launcher and CLI entry points."""
+"""Canonical application registry shared by the launcher and CLI entry points."""
 
 from dataclasses import dataclass
 from importlib import import_module

@@ -11,8 +11,9 @@ import shutil
 import fitz
 from PIL import Image, ImageSequence
 
-from App_ConversorPDF.config import IMAGE_EXTENSIONS, PDF_EXTENSIONS
+from App_ConversorPDF.config import IMAGE_EXTENSIONS, PDF_EXTENSIONS, SHEET_EXTENSIONS
 from App_ConversorPDF.services.libreoffice import require_soffice_path
+from App_ConversorPDF.services.spreadsheet_exporter import SpreadsheetPdfExporter
 
 
 LIBREOFFICE_TIMEOUT_SECONDS = 180
@@ -26,6 +27,9 @@ class ConversionRequest:
 
 
 class PdfConverter:
+    def __init__(self) -> None:
+        self._spreadsheet_exporter = SpreadsheetPdfExporter()
+
     def convert(self, request: ConversionRequest) -> Path:
         self._validate_source(request.source_path)
         suffix = request.source_path.suffix.lower()
@@ -34,7 +38,26 @@ class PdfConverter:
             return self._convert_image(request.source_path, target_path)
         if suffix in PDF_EXTENSIONS:
             return self._convert_pdf(request.source_path, target_path, request.sheet_name)
+        if suffix in SHEET_EXTENSIONS:
+            return self._convert_spreadsheet(
+                request.source_path,
+                target_path,
+                request.sheet_name,
+            )
         return self._convert_office_document(request.source_path, target_path, request.sheet_name)
+
+    def _convert_spreadsheet(
+        self,
+        source_path: Path,
+        target_path: Path,
+        sheet_selection: str | None,
+    ) -> Path:
+        self._ensure_output_dir(target_path.parent)
+        return self._spreadsheet_exporter.export(
+            source_path,
+            target_path,
+            sheet_selection,
+        )
 
     def _convert_image(self, source_path: Path, target_path: Path) -> Path:
         try:
@@ -135,8 +158,6 @@ class PdfConverter:
     def _pdf_filter_name(self, suffix: str) -> str:
         if suffix in {".doc", ".docx", ".rtf", ".odt"}:
             return "writer_pdf_Export"
-        if suffix in {".xls", ".xlsx", ".ods", ".csv"}:
-            return "calc_pdf_Export"
         if suffix in {".ppt", ".pptx", ".odp"}:
             return "impress_pdf_Export"
         return "writer_pdf_Export"

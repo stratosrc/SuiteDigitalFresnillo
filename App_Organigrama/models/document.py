@@ -7,8 +7,8 @@ GridPoint = tuple[float, float]
 
 @dataclass(slots=True)
 class OrgNode:
-    nombre: str
-    cargo: str
+    name: str
+    role: str
     grid_x: int
     grid_y: int
     color: str
@@ -59,8 +59,8 @@ class OrgGridDocument:
             "show_logos": self.show_logos,
             "nodes": {
                 node_id: {
-                    "nombre": node.nombre,
-                    "cargo": node.cargo,
+                    "name": node.name,
+                    "role": node.role,
                     "grid_x": node.grid_x,
                     "grid_y": node.grid_y,
                     "color": node.color,
@@ -84,8 +84,8 @@ class OrgGridDocument:
 
     def add_node(
         self,
-        nombre: str,
-        cargo: str,
+        name: str,
+        role: str,
         grid_x: int,
         grid_y: int,
         color: str,
@@ -94,8 +94,8 @@ class OrgGridDocument:
             raise ValueError("La celda seleccionada ya contiene un nodo.")
 
         node = OrgNode(
-            nombre=nombre,
-            cargo=cargo,
+            name=name,
+            role=role,
             grid_x=grid_x,
             grid_y=grid_y,
             color=color,
@@ -104,10 +104,10 @@ class OrgGridDocument:
         self._node_ids_by_position[(grid_x, grid_y)] = node.id
         return node
 
-    def update_node(self, node_id: str, nombre: str, cargo: str, color: str) -> OrgNode:
+    def update_node(self, node_id: str, name: str, role: str, color: str) -> OrgNode:
         node = self.nodes[node_id]
-        node.nombre = nombre
-        node.cargo = cargo
+        node.name = name
+        node.role = role
         node.color = color
         return node
 

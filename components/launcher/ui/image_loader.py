@@ -28,7 +28,7 @@ class ImageLoader:
         if image is None:
             image = Image.new("RGBA", size, DARK_BG_ACTIVE)
 
-        image.thumbnail(size, Image.LANCZOS)
+        image.thumbnail(size, Image.Resampling.LANCZOS)
         canvas = Image.new("RGBA", size, (255, 255, 255, 0))
         x = (size[0] - image.width) // 2
         y = (size[1] - image.height) // 2

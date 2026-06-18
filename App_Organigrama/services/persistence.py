@@ -14,7 +14,7 @@ class PersistenceManager:
         path = Path(target_path)
         payload = {
             "app": PROJECT_APP_ID,
-            "schema_version": 1,
+            "schema_version": 2,
             "document": document.to_dict(),
         }
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -30,10 +30,12 @@ class PersistenceManager:
             raise ValueError("El archivo seleccionado no parece ser un proyecto de Organigrama.")
         raw_document = payload.get("document", payload)
 
-        nodes = {
-            node_id: OrgNode(**node_data)
-            for node_id, node_data in raw_document.get("nodes", {}).items()
-        }
+        nodes = {}
+        for node_id, raw_node in raw_document.get("nodes", {}).items():
+            node_data = dict(raw_node)
+            node_data["name"] = node_data.pop("nombre", node_data.get("name", ""))
+            node_data["role"] = node_data.pop("cargo", node_data.get("role", ""))
+            nodes[node_id] = OrgNode(**node_data)
         connections = [Connection(**connection_data) for connection_data in raw_document.get("connections", [])]
         blocked_points = [
             (float(point[0]), float(point[1]))

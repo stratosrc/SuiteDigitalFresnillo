@@ -187,8 +187,8 @@ class RenderingEngine:
     def layout_node(self, node: OrgNode, include_logo: bool = True) -> NodeLayout:
         style = self.get_node_style(node.color)
         center_x, center_y = self.grid_to_world(node.grid_x, node.grid_y)
-        name_lines = self.wrap_text(node.nombre or "ASIGNAR NOMBRE", style.name_font_size, style.width, style.text_padding_x)
-        role_lines = self.wrap_text(node.cargo, style.role_font_size, style.width, style.text_padding_x)
+        name_lines = self.wrap_text(node.name or "ASIGNAR NOMBRE", style.name_font_size, style.width, style.text_padding_x)
+        role_lines = self.wrap_text(node.role, style.role_font_size, style.width, style.text_padding_x)
 
         cursor_y = style.text_padding_top
         lines: list[NodeTextLine] = []

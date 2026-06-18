@@ -1,11 +1,11 @@
-﻿"""Centralized Spanish strings used by the user-facing interface."""
+"""Centralized Spanish strings used by the user-facing interface."""
 
 APP_WINDOW_TITLE = "Test Data"
 
 FILE_MENU_LABELS = {
     "button": "Archivo",
-    "new_job": "Nuevo",
-    "open_project": "Abrir",
+    "new_job": "Nuevo Proyecto",
+    "open_project": "Abrir Proyecto",
     "save_project": "Guardar proyecto",
     "export_pdf": "Exportar PDF",
 }

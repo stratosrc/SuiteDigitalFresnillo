@@ -59,3 +59,39 @@ def make_font(size: int, weight: str | None = None) -> ctk.CTkFont:
     if weight is not None:
         font_options["weight"] = weight
     return ctk.CTkFont(**font_options)
+
+
+__all__ = [
+    "APP_BACKGROUND",
+    "BORDER_COLOR",
+    "DANGER_BUTTON",
+    "DANGER_BUTTON_ACTIVE",
+    "DARK_BACKGROUND",
+    "DARK_BACKGROUND_ACTIVE",
+    "FONT_FAMILY",
+    "GHOST_AVAILABLE_FILL",
+    "GHOST_OCCUPIED_FILL",
+    "GRID_AXIS",
+    "GRID_LINE",
+    "OBSTACLE_COLOR",
+    "OBSTACLE_PREVIEW_COLOR",
+    "PORT_ACTIVE_COLOR",
+    "PORT_HOVER_COLOR",
+    "PORT_MARKER_OUTLINE",
+    "PRIMARY_BUTTON",
+    "PRIMARY_BUTTON_ACTIVE",
+    "PRIMARY_BUTTON_PRESSED",
+    "ROUTE_PREVIEW_COLOR",
+    "SELECTION_COLOR",
+    "SELECTED_OUTLINE",
+    "SURFACE_BACKGROUND",
+    "TEXT_DARK",
+    "TEXT_LIGHT",
+    "TEXT_MUTED",
+    "WINDOW_HEIGHT",
+    "WINDOW_MIN_HEIGHT",
+    "WINDOW_MIN_WIDTH",
+    "WINDOW_WIDTH",
+    "apply_theme",
+    "make_font",
+]

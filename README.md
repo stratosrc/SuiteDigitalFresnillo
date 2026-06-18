@@ -67,6 +67,14 @@ SuiteDigitalFresnillo/
 `-- tests/
 ```
 
+### Arquitectura interna
+
+- `components/shared/` contiene infraestructura reutilizable de ventanas, imágenes, tooltips, barras superiores y diálogos de ayuda.
+- Cada aplicación separa configuración, modelos o dominio, servicios y componentes de interfaz.
+- `App_Organigrama/ui/canvas.py` administra interacción y estado del lienzo; `canvas_drawing.py` concentra el renderizado.
+- `App_ConversorPDF/services/output_planner.py` interpreta hojas o páginas y construye el plan de archivos de salida sin depender de la interfaz.
+- Los proyectos nuevos de Organigrama guardan campos internos en inglés con esquema 2; el cargador mantiene compatibilidad con proyectos anteriores.
+
 ## Requisitos de Desarrollo
 
 - Windows recomendado.
@@ -172,8 +180,8 @@ Ejecutar el compilado:
 ## Notas de Uso
 
 - En Directorio, la fecha se considera valida si respeta el formato `dd/mm/aaaa`.
-- TestData guarda proyectos editables como `.td`, Organigrama como `.og` y Directorio como `.dir`; los `.json` anteriores de TestData/Organigrama se conservan como compatibilidad de apertura.
-- En Conversor a PDF, las selecciones de paginas/hojas aceptan valores como `1`, `2-4` o vacio para convertir todo.
+- TestData guarda proyectos portátiles como `.td`, incluyendo el PDF original dentro del archivo. Organigrama usa `.og` y Directorio `.dir`; los proyectos JSON anteriores de TestData y Organigrama se conservan como compatibilidad de apertura.
+- En Conversor a PDF, las selecciones aceptan valores como `1`, `2-4` o vacío. Para Excel, Calc, ODS y CSV los números representan pestañas completas del libro; para PDF, documentos y presentaciones representan páginas.
 - Si un PDF de salida ya existe, el conversor crea un nombre unico para evitar sobrescritura accidental.
 - El proyecto usa rutas relativas y `pathlib.Path` para funcionar en desarrollo y en compilado.
 

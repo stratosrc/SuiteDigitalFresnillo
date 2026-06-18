@@ -28,6 +28,7 @@ from App_Directorio.ui.theme import (
     make_font,
 )
 from components.shared.images import load_ctk_image
+from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
 LOGGER = logging.getLogger(__name__)
 
@@ -60,59 +61,37 @@ class DirectoryMainFrame(ctk.CTkFrame):
             activebackground=PRIMARY_BUTTON_ACTIVE,
             activeforeground=TEXT_LIGHT,
         )
-        self.file_menu.add_command(label="Nuevo", command=self.nuevo_proyecto)
-        self.file_menu.add_command(label="Abrir", command=self.abrir_proyecto)
-        self.file_menu.add_command(label="Guardar proyecto", command=self.guardar_proyecto)
+        self.file_menu.add_command(label="Nuevo Proyecto", command=self.new_project)
+        self.file_menu.add_command(label="Abrir Proyecto", command=self.open_project)
+        self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
         self.file_menu.add_separator()
-        self.file_menu.add_command(label="Exportar PDF", command=self.guardar_pdf)
+        self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
 
     def _build_topbar(self) -> None:
-        topbar = ctk.CTkFrame(self, fg_color=PRIMARY_BUTTON_PRESSED, corner_radius=0, height=24)
-        topbar.grid(row=0, column=0, sticky="ew")
-        topbar.grid_columnconfigure(2, weight=1)
-        topbar.grid_propagate(False)
+        _, buttons = build_topbar(
+            self,
+            self._topbar_style(),
+            (
+                TopbarButton("file", "Archivo", self._show_file_menu, 0, width=78),
+                TopbarButton("help", "Ayuda", self._show_help_dialog, 1),
+                TopbarButton("exit", "Salir", self.confirm_exit, 3, danger=True),
+            ),
+        )
+        self.file_button = buttons["file"]
+        self.help_button = buttons["help"]
+        self.exit_button = buttons["exit"]
 
-        self.file_button = ctk.CTkButton(
-            topbar,
-            text="Archivo",
-            command=self._show_file_menu,
-            height=24,
-            width=78,
-            corner_radius=0,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=PRIMARY_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
+    @staticmethod
+    def _topbar_style() -> TopbarStyle:
+        return TopbarStyle(
+            background=PRIMARY_BUTTON_PRESSED,
+            primary=PRIMARY_BUTTON,
+            primary_hover=PRIMARY_BUTTON_ACTIVE,
+            danger=DANGER_BUTTON,
+            danger_hover=DANGER_BUTTON_ACTIVE,
+            text=TEXT_LIGHT,
             font=make_font(12),
         )
-        self.file_button.grid(row=0, column=0, padx=(0, 4), sticky="w")
-
-        self.help_button = ctk.CTkButton(
-            topbar,
-            text="Ayuda",
-            command=self._show_help_dialog,
-            height=24,
-            width=72,
-            corner_radius=0,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=PRIMARY_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
-            font=make_font(12),
-        )
-        self.help_button.grid(row=0, column=1, padx=(0, 4), sticky="w")
-
-        self.exit_button = ctk.CTkButton(
-            topbar,
-            text="Salir",
-            command=self.confirm_exit,
-            height=24,
-            width=72,
-            corner_radius=0,
-            fg_color=DANGER_BUTTON,
-            hover_color=DANGER_BUTTON_ACTIVE,
-            text_color=TEXT_LIGHT,
-            font=make_font(12),
-        )
-        self.exit_button.grid(row=0, column=3, padx=(4, 0), sticky="e")
 
     def _build_header(self) -> None:
         header = ctk.CTkFrame(self, fg_color=DARK_BACKGROUND, corner_radius=0, height=118)
@@ -172,7 +151,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
     def _show_help_dialog(self) -> None:
         show_help_dialog(self)
 
-    def guardar_pdf(self) -> None:
+    def export_pdf(self) -> None:
         if not self.directory_form.validate_required_data():
             messagebox.showerror(
                 "Datos incompletos",
@@ -246,11 +225,11 @@ class DirectoryMainFrame(ctk.CTkFrame):
         lines.extend(["", "¿Generar PDF con estos datos?"])
         return messagebox.askyesno("Vista previa", "\n".join(lines), parent=self)
 
-    def nuevo_proyecto(self) -> None:
+    def new_project(self) -> None:
         self.directory_form.reset_form()
         self.current_project_path = None
 
-    def abrir_proyecto(self) -> None:
+    def open_project(self) -> None:
         source_path = filedialog.askopenfilename(
             parent=self,
             title="Abrir proyecto",
@@ -273,13 +252,13 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.current_project_path = Path(source_path)
         self.directory_form.set_report_data(data)
 
-    def guardar_proyecto(self) -> None:
+    def save_project(self) -> None:
         if self.current_project_path is None:
-            self.guardar_proyecto_como()
+            self.save_project_as()
             return
         self._save_project_to_path(self.current_project_path)
 
-    def guardar_proyecto_como(self) -> None:
+    def save_project_as(self) -> None:
         data = self.directory_form.get_report_data()
         safe_name = "".join(character for character in (data.title or "directorio") if character not in '<>:"/\\|?*')
         target_path = filedialog.asksaveasfilename(

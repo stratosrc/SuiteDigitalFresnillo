@@ -1,10 +1,9 @@
 """Shared UI widget factories and font helpers."""
 
-import tkinter as tk
-
 import customtkinter as ctk
 
 from components.shared.images import load_ctk_image as load_shared_ctk_image
+from components.shared.tooltip import Tooltip
 from components.styles.styles import (
     BORDER_BG,
     BUTTON_BG,
@@ -17,82 +16,6 @@ from components.styles.styles import (
     TEXT_LIGHT,
     BUTTON_BG2,
 )
-
-class Tooltip:
-    """Small hover tooltip for Tk/CustomTkinter widgets."""
-
-    def __init__(self, widget, text: str, delay_ms: int = 450, show_when_disabled: bool = False):
-        self.widget = widget
-        self.text = text
-        self.delay_ms = delay_ms
-        self.show_when_disabled = show_when_disabled
-        self._after_id = None
-        self._window = None
-
-        widget.bind("<Enter>", self._schedule, add=True)
-        widget.bind("<Leave>", self._hide, add=True)
-        widget.bind("<ButtonPress>", self._hide, add=True)
-        widget.bind("<FocusOut>", self._hide, add=True)
-        widget.bind("<Unmap>", self._hide, add=True)
-        widget.bind("<Destroy>", self._hide, add=True)
-
-    def _schedule(self, _event=None):
-        self._cancel()
-        if not self._can_show():
-            return
-        self._after_id = self.widget.after(self.delay_ms, self._show)
-
-    def _show(self):
-        if self._window is not None or not self.text or not self._can_show():
-            return
-
-        x = self.widget.winfo_rootx() + self.widget.winfo_width() // 2
-        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 6
-
-        self._window = tk.Toplevel(self.widget)
-        self._window.wm_overrideredirect(True)
-        self._window.transient(self.widget.winfo_toplevel())
-        self._window.wm_geometry(f"+{x}+{y}")
-        self._window.bind("<FocusOut>", self._hide, add=True)
-        self._window.bind("<ButtonPress>", self._hide, add=True)
-
-        label = tk.Label(
-            self._window,
-            text=self.text,
-            bg=SURFACE_BG,
-            fg=TEXT_DARK,
-            relief=tk.SOLID,
-            borderwidth=1,
-            padx=8,
-            pady=4,
-            font=(CTK_FONT_FAMILY, 9),
-        )
-        label.pack()
-
-    def _hide(self, _event=None):
-        self._cancel()
-        if self._window is not None:
-            try:
-                self._window.destroy()
-            except tk.TclError:
-                pass
-            self._window = None
-
-    def _cancel(self):
-        if self._after_id is not None:
-            try:
-                self.widget.after_cancel(self._after_id)
-            except tk.TclError:
-                pass
-            self._after_id = None
-
-    def _can_show(self) -> bool:
-        try:
-            if not self.widget.winfo_exists() or not self.widget.winfo_ismapped():
-                return False
-            return self.show_when_disabled or str(self.widget.cget("state")) != tk.DISABLED
-        except tk.TclError:
-            return False
 
 
 def build_font(size: int, weight: str | None = None) -> ctk.CTkFont:
