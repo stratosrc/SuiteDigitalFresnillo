@@ -9,9 +9,10 @@ from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
-from App_Organigrama.config.assets import TOOLBAR_LOGO_PATH
+from App_Organigrama.config.assets import REDO_ICON_PATH, TOOLBAR_LOGO_PATH, UNDO_ICON_PATH
 from App_Organigrama.exporters import PdfOrgChartExporter
 from App_Organigrama.models.document import OrgGridDocument
+from App_Organigrama.models.history import DocumentHistory
 from App_Organigrama.rendering.engine import RenderingEngine
 from App_Organigrama.routing.manhattan_router import ManhattanRouter
 from App_Organigrama.services.image_exporter import export_pdf_as_image
@@ -34,6 +35,7 @@ from App_Organigrama.ui.theme import (
     make_font,
 )
 from components.shared.images import load_ctk_image
+from components.shared.tooltip import Tooltip
 from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
 LOGGER = logging.getLogger(__name__)
@@ -46,6 +48,7 @@ class MainFrame(ctk.CTkFrame):
         self.rendering_engine = RenderingEngine()
         self.persistence_manager = PersistenceManager()
         self.document = OrgGridDocument()
+        self.document_history = DocumentHistory(self.document)
         self.router = ManhattanRouter(self.rendering_engine)
         self.pdf_exporter = PdfOrgChartExporter(self.rendering_engine, self.router)
 
@@ -55,6 +58,8 @@ class MainFrame(ctk.CTkFrame):
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="orgchart-worker")
         self._pending_task: Future[Path] | None = None
         self.toolbar_logo_image: ctk.CTkImage | None = None
+        self.undo_icon: ctk.CTkImage | None = None
+        self.redo_icon: ctk.CTkImage | None = None
 
         self.title_var = tk.StringVar(value=self.document.title)
         self.period_var = tk.StringVar(value=self.document.period)
@@ -64,6 +69,8 @@ class MainFrame(ctk.CTkFrame):
         self._build_layout()
         self._build_menu()
         self._bind_metadata()
+        self._bind_history_shortcuts()
+        self._update_history_buttons()
         self._update_window_title()
 
     def _build_layout(self) -> None:
@@ -250,6 +257,18 @@ class MainFrame(ctk.CTkFrame):
         )
         self.delete_button.pack(side="left", padx=(20, 0))
 
+        self.reset_route_button = ctk.CTkButton(
+            tools,
+            text="Restaurar ruta automática",
+            command=self._reset_selected_route,
+            width=165,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            state="disabled",
+            corner_radius=0,
+        )
+        self.reset_route_button.pack(side="left", padx=(10, 0))
+
         nav = ctk.CTkFrame(header, fg_color="transparent")
         nav.grid(row=0, column=1, sticky="e")
         self._build_nav_button(nav, "↑", "up", 0, 1, 68)
@@ -264,7 +283,7 @@ class MainFrame(ctk.CTkFrame):
             router=self.router,
             on_selection_change=self._update_delete_state,
             on_zoom_change=self._update_zoom_label,
-            on_document_change=self._mark_dirty,
+            on_document_change=self._record_document_change,
             on_context_change=self._update_context_status,
             corner_radius=0,
         )
@@ -293,16 +312,54 @@ class MainFrame(ctk.CTkFrame):
         footer.grid_columnconfigure(1, weight=1)
         footer.grid_propagate(False)
 
+        footer_actions = ctk.CTkFrame(footer, fg_color="transparent")
+        footer_actions.grid(row=0, column=0, padx=(5, 0), pady=5, sticky="w")
+
         ctk.CTkButton(
-            footer,
+            footer_actions,
             text="Enfocar último",
             command=self.grid_canvas.focus_last_node,
             height=25,
             width=130,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
             corner_radius=0,
-            
             font=make_font(12, "bold"),
-        ).grid(row=0, column=0, padx=(5, 0), pady=5, sticky="w")
+        ).pack(side="left")
+
+        self.undo_icon = load_ctk_image(UNDO_ICON_PATH, (18, 18), crop_alpha=True)
+        self.undo_button = ctk.CTkButton(
+            footer_actions,
+            text="",
+            image=self.undo_icon,
+            command=self.undo,
+            height=25,
+            width=34,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            state="disabled",
+            corner_radius=0,
+            font=make_font(12, "bold"),
+        )
+        self.undo_button.pack(side="left", padx=(6, 3))
+        Tooltip(self.undo_button, "Deshacer (Ctrl+Z)", show_when_disabled=True)
+
+        self.redo_icon = load_ctk_image(REDO_ICON_PATH, (18, 18), crop_alpha=True)
+        self.redo_button = ctk.CTkButton(
+            footer_actions,
+            text="",
+            image=self.redo_icon,
+            command=self.redo,
+            height=25,
+            width=34,
+            fg_color=PRIMARY_BUTTON,
+            hover_color=PRIMARY_BUTTON_ACTIVE,
+            state="disabled",
+            corner_radius=0,
+            font=make_font(12, "bold"),
+        )
+        self.redo_button.pack(side="left", padx=(3, 0))
+        Tooltip(self.redo_button, "Rehacer (Ctrl+Y)", show_when_disabled=True)
 
         self.context_status_label = ctk.CTkLabel(
             footer,
@@ -352,7 +409,12 @@ class MainFrame(ctk.CTkFrame):
 
         self.document.title = self.title_var.get()
         self.document.period = self.period_var.get()
-        self._mark_dirty()
+        self._record_document_change()
+
+    def _bind_history_shortcuts(self) -> None:
+        self.master.bind("<Control-z>", self.undo, add=True)
+        self.master.bind("<Control-y>", self.redo, add=True)
+        self.master.bind("<Control-Shift-Z>", self.redo, add=True)
 
     def _toggle_logos(self) -> None:
         self.document.show_logos = self.show_logos_var.get()
@@ -373,9 +435,16 @@ class MainFrame(ctk.CTkFrame):
 
     def _update_delete_state(self, has_selection: bool) -> None:
         self.delete_button.configure(state="normal" if has_selection else "disabled")
+        if hasattr(self, "grid_canvas"):
+            self.reset_route_button.configure(
+                state="normal" if self.grid_canvas.can_reset_selected_route() else "disabled"
+            )
 
     def _delete_selected(self) -> None:
         self.grid_canvas.delete_selected_item()
+
+    def _reset_selected_route(self) -> None:
+        self.grid_canvas.reset_selected_route()
 
     def _update_zoom_label(self, zoom_percent: int | None = None) -> None:
         percent = self.grid_canvas.zoom_percent() if zoom_percent is None else zoom_percent
@@ -392,7 +461,7 @@ class MainFrame(ctk.CTkFrame):
         self.current_project_path = None
         self.document = OrgGridDocument()
         self._load_document_into_ui(self.document)
-        self._set_dirty(False)
+        self._reset_document_history(mark_saved=True)
 
     def open_project(self) -> None:
         if not self._confirm_discard_changes():
@@ -423,7 +492,7 @@ class MainFrame(ctk.CTkFrame):
 
         self.current_project_path = Path(source_path)
         self._load_document_into_ui(self.document)
-        self._set_dirty(False)
+        self._reset_document_history(mark_saved=True)
 
     def save_project(self) -> None:
         if self.current_project_path is None:
@@ -432,7 +501,9 @@ class MainFrame(ctk.CTkFrame):
 
         self._sync_metadata()
         self.persistence_manager.save(self.document, self.current_project_path)
+        self.document_history.mark_saved(self.document)
         self._set_dirty(False)
+        self._update_history_buttons()
         messagebox.showinfo("Proyecto guardado", f"Proyecto guardado en:\n{self.current_project_path}", parent=self)
 
     def save_project_as(self) -> None:
@@ -449,7 +520,9 @@ class MainFrame(ctk.CTkFrame):
 
         self.current_project_path = Path(target_path)
         self.persistence_manager.save(self.document, self.current_project_path)
+        self.document_history.mark_saved(self.document)
         self._set_dirty(False)
+        self._update_history_buttons()
         messagebox.showinfo("Proyecto guardado", f"Proyecto guardado en:\n{self.current_project_path}", parent=self)
 
     def export_pdf(self) -> None:
@@ -581,8 +654,41 @@ class MainFrame(ctk.CTkFrame):
             parent=self,
         )
 
-    def _mark_dirty(self) -> None:
-        self._set_dirty(True)
+    def _record_document_change(self) -> None:
+        if self.document_history.record(self.document):
+            self._set_dirty(self.document_history.is_dirty)
+            self._update_history_buttons()
+
+    def undo(self, _event: tk.Event | None = None) -> str | None:
+        restored = self.document_history.undo()
+        if restored is None:
+            return "break" if _event is not None else None
+        self.document = restored
+        self._load_document_into_ui(restored)
+        self._set_dirty(self.document_history.is_dirty)
+        self._update_history_buttons()
+        return "break" if _event is not None else None
+
+    def redo(self, _event: tk.Event | None = None) -> str | None:
+        restored = self.document_history.redo()
+        if restored is None:
+            return "break" if _event is not None else None
+        self.document = restored
+        self._load_document_into_ui(restored)
+        self._set_dirty(self.document_history.is_dirty)
+        self._update_history_buttons()
+        return "break" if _event is not None else None
+
+    def _reset_document_history(self, *, mark_saved: bool) -> None:
+        self.document_history.reset(self.document, mark_saved=mark_saved)
+        self._set_dirty(self.document_history.is_dirty)
+        self._update_history_buttons()
+
+    def _update_history_buttons(self) -> None:
+        if not hasattr(self, "undo_button"):
+            return
+        self.undo_button.configure(state="normal" if self.document_history.can_undo else "disabled")
+        self.redo_button.configure(state="normal" if self.document_history.can_redo else "disabled")
 
     def _set_dirty(self, value: bool) -> None:
         self.is_dirty = value

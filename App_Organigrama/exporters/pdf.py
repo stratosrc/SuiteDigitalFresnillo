@@ -9,6 +9,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 
 from App_Organigrama.models.document import OrgGridDocument, OrgNode
+from App_Organigrama.rendering.connection_arrows import build_arrow_triangle
 from App_Organigrama.rendering.engine import Box, DocumentBounds, NodeLayout, PageLayout, RenderingEngine, VERTICAL_ORIENTATION
 from App_Organigrama.routing.manhattan_router import ConnectionRoute, ManhattanRouter
 from App_Organigrama.config.assets import (
@@ -179,20 +180,48 @@ class PdfOrgChartExporter:
 
     def _draw_connections(self, pdf: Canvas, transform: PdfTransform, routes: list[ConnectionRoute]) -> None:
         pdf.setStrokeColor(HexColor("#09519F"))
+        pdf.setFillColor(HexColor("#09519F"))
         for route in routes:
             if len(route.points) < 2:
                 continue
             line_width = self.rendering_engine.base_line_width * transform.scale
             pdf.setLineWidth(max(0.75, line_width))
+            pdf_points: list[tuple[float, float]] = []
             for start, end in zip(route.points, route.points[1:]):
                 start_x, start_y = self.rendering_engine.grid_to_world(start[0], start[1])
                 end_x, end_y = self.rendering_engine.grid_to_world(end[0], end[1])
+                if not pdf_points:
+                    pdf_points.append(
+                        (
+                            transform.world_to_pdf_x(start_x),
+                            transform.world_to_pdf_center_y(start_y),
+                        )
+                    )
+                pdf_points.append(
+                    (
+                        transform.world_to_pdf_x(end_x),
+                        transform.world_to_pdf_center_y(end_y),
+                    )
+                )
                 pdf.line(
                     transform.world_to_pdf_x(start_x),
                     transform.world_to_pdf_center_y(start_y),
                     transform.world_to_pdf_x(end_x),
                     transform.world_to_pdf_center_y(end_y),
                 )
+            arrow = build_arrow_triangle(
+                pdf_points,
+                length=max(4.5, 8.0 * transform.scale),
+                width=max(4.5, 7.0 * transform.scale),
+                target_gap=max(3.5, 6.0 * transform.scale),
+            )
+            if arrow is not None:
+                path = pdf.beginPath()
+                path.moveTo(*arrow[0])
+                path.lineTo(*arrow[1])
+                path.lineTo(*arrow[2])
+                path.close()
+                pdf.drawPath(path, fill=True, stroke=False)
 
     def _draw_nodes(self, pdf: Canvas, transform: PdfTransform, document: OrgGridDocument) -> None:
         for node in document.nodes.values():

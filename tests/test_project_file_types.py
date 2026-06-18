@@ -60,6 +60,33 @@ class ProjectFileTypeTests(unittest.TestCase):
         self.assertEqual(node.name, "Persona")
         self.assertEqual(node.role, "Cargo")
 
+    def test_organigrama_roundtrip_preserves_manual_route_points(self):
+        document = OrgGridDocument()
+        source = document.add_node("Origen", "Cargo", 0, 0, "#123456")
+        target = document.add_node("Destino", "Cargo", 2, 0, "#123456")
+        connection = document.add_connection(
+            source.id,
+            target.id,
+            source_port="right",
+            target_port="left",
+        )
+        self.assertIsNotNone(connection)
+        document.set_connection_manual_points(
+            connection.id,
+            [(0.5, 0.0), (0.5, 1.0), (1.5, 1.0), (1.5, 0.0)],
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target_path = Path(temp_dir) / "manual.og"
+            manager = PersistenceManager()
+            manager.save(document, target_path)
+            restored = manager.load(target_path)
+
+        self.assertEqual(
+            restored.connections[0].manual_points,
+            ((0.5, 0.0), (0.5, 1.0), (1.5, 1.0), (1.5, 0.0)),
+        )
+
     def test_directorio_project_roundtrip_uses_dir_marker(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             target = Path(temp_dir) / "directorio.dir"

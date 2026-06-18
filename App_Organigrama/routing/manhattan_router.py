@@ -4,6 +4,7 @@ import math
 from typing import TYPE_CHECKING
 
 from App_Organigrama.models.document import Connection, OrgGridDocument, OrgNode
+from App_Organigrama.routing.manual_routes import build_manual_route
 
 if TYPE_CHECKING:
     from App_Organigrama.rendering.engine import RenderingEngine
@@ -43,15 +44,30 @@ class ManhattanRouter:
                 if source_id != connection.source_id:
                     blocked_paths.update(traffic_points)
 
-            points = self.route(
-                source=source,
-                target=target,
-                occupied=occupied,
-                source_port=connection.source_port,
-                target_port=connection.target_port,
-                blocked_paths=blocked_paths,
-                custom_obstacles=set(document.blocked_points),
-            )
+            if connection.manual_points:
+                points = build_manual_route(
+                    self.rendering_engine.get_node_port_grid_position(
+                        source,
+                        connection.source_port,
+                    ),
+                    self.rendering_engine.get_node_port_grid_position(
+                        target,
+                        connection.target_port,
+                    ),
+                    connection.manual_points,
+                    connection.source_port,
+                    connection.target_port,
+                )
+            else:
+                points = self.route(
+                    source=source,
+                    target=target,
+                    occupied=occupied,
+                    source_port=connection.source_port,
+                    target_port=connection.target_port,
+                    blocked_paths=blocked_paths,
+                    custom_obstacles=set(document.blocked_points),
+                )
             routes.append(ConnectionRoute(connection=connection, points=tuple(points)))
             traffic_by_source.setdefault(connection.source_id, set()).update(self.route_traffic_points(points))
 

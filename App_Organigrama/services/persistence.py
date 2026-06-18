@@ -14,7 +14,7 @@ class PersistenceManager:
         path = Path(target_path)
         payload = {
             "app": PROJECT_APP_ID,
-            "schema_version": 2,
+            "schema_version": 3,
             "document": document.to_dict(),
         }
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -36,7 +36,14 @@ class PersistenceManager:
             node_data["name"] = node_data.pop("nombre", node_data.get("name", ""))
             node_data["role"] = node_data.pop("cargo", node_data.get("role", ""))
             nodes[node_id] = OrgNode(**node_data)
-        connections = [Connection(**connection_data) for connection_data in raw_document.get("connections", [])]
+        connections = []
+        for raw_connection in raw_document.get("connections", []):
+            connection_data = dict(raw_connection)
+            connection_data["manual_points"] = tuple(
+                (float(point[0]), float(point[1]))
+                for point in connection_data.get("manual_points", [])
+            )
+            connections.append(Connection(**connection_data))
         blocked_points = [
             (float(point[0]), float(point[1]))
             for point in raw_document.get("blocked_points", [])

@@ -5,6 +5,10 @@ from __future__ import annotations
 import math
 
 from App_Organigrama.models.document import OrgGridDocument
+from App_Organigrama.rendering.connection_arrows import (
+    build_arrow_triangle,
+    flatten_points,
+)
 from App_Organigrama.routing.manhattan_router import ConnectionRoute
 from App_Organigrama.ui.canvas_shapes import create_rounded_rectangle
 from App_Organigrama.ui.theme import (
@@ -50,18 +54,34 @@ class CanvasDrawingMixin:
     def _draw_connections(self, routes: list[ConnectionRoute]) -> None:
         for route in routes:
             points: list[float] = []
+            screen_points: list[tuple[float, float]] = []
             for grid_x, grid_y in route.points:
                 world_x, world_y = self.rendering_engine.grid_to_world(grid_x, grid_y)
                 screen_x, screen_y = self._world_to_screen(world_x, world_y)
+                screen_points.append((screen_x, screen_y))
                 points.extend((screen_x, screen_y))
+            connection_tags = ("connection", f"connection:{route.connection.id}")
             self.canvas.create_line(
                 *points,
                 fill=PRIMARY_BUTTON,
                 width=max(2, int(self.rendering_engine.base_line_width * self.zoom)),
                 capstyle="butt",
                 joinstyle="miter",
-                tags=("connection", f"connection:{route.connection.id}"),
+                tags=connection_tags,
             )
+            arrow = build_arrow_triangle(
+                screen_points,
+                length=max(8.0, 12.0 * self.zoom),
+                width=max(8.0, 11.0 * self.zoom),
+                target_gap=max(7.0, 10.0 * self.zoom),
+            )
+            if arrow is not None:
+                self.canvas.create_polygon(
+                    *flatten_points(arrow),
+                    fill=PRIMARY_BUTTON,
+                    outline=PRIMARY_BUTTON,
+                    tags=connection_tags,
+                )
 
     def _draw_connection_drag_preview(self) -> None:
         if self.connection_drag_source_id is None or self.connection_drag_screen_point is None:

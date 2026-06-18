@@ -8,10 +8,12 @@ from PIL import Image, ImageTk
 from App_Organigrama.models.document import OrgGridDocument, OrgNode
 from App_Organigrama.rendering.engine import NodeLayout, RenderingEngine
 from App_Organigrama.routing.manhattan_router import ConnectionRoute, ManhattanRouter
+from App_Organigrama.routing.manual_routes import GridBox, move_intermediate_segment, route_crosses_boxes
 from App_Organigrama.config.assets import CROSS_CURSOR_PATH, NODE_LOGO_PATH
 from App_Organigrama.ui.canvas_hit_testing import (
     find_blocked_point_at_screen,
     find_connection_at_screen,
+    find_movable_segment_at_screen,
     nearest_port,
 )
 from App_Organigrama.ui.canvas_drawing import CanvasDrawingMixin
@@ -99,6 +101,11 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
         self.connection_drag_screen_point: tuple[int, int] | None = None
         self.connection_press_source_id: str | None = None
         self.connection_press_source_port: str | None = None
+        self.manual_drag_connection_id: str | None = None
+        self.manual_drag_segment_index: int | None = None
+        self.manual_drag_original_route: tuple[GridPoint, ...] | None = None
+        self.manual_drag_preview_route: tuple[GridPoint, ...] | None = None
+        self.manual_drag_collision = False
         self.redraw_after_id: str | None = None
         self.logo_source_image = self._load_logo_source()
         self.logo_cache: dict[int, ImageTk.PhotoImage] = {}
@@ -144,6 +151,7 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
         self.connection_drag_screen_point = None
         self.connection_press_source_id = None
         self.connection_press_source_port = None
+        self._clear_manual_drag()
         self.preview_obstacle = None
         self.node_history = []
         self.last_node_id = None
@@ -234,6 +242,17 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
     def delete_selected_item(self) -> None:
         self._delete_selected()
 
+    def can_reset_selected_route(self) -> bool:
+        connection = self.document.get_connection(self.selected_connection_id or "")
+        return connection is not None and bool(connection.manual_points)
+
+    def reset_selected_route(self) -> None:
+        if self.selected_connection_id is None:
+            return
+        if self.document.reset_connection_route(self.selected_connection_id):
+            self._mark_document_changed()
+            self._emit_selection_change()
+
     def redraw(self) -> None:
         self.redraw_after_id = None
         self.canvas.delete("all")
@@ -242,7 +261,7 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
             self.route_cache = self.router.route_document(self.document)
             self._routes_dirty = False
         self._draw_grid()
-        self._draw_connections(self.route_cache)
+        self._draw_connections(self._routes_for_display())
         self._draw_connection_drag_preview()
         self._draw_preview_routes()
         draw_connection_selection_overlay(self)
@@ -277,6 +296,17 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
             self._select_or_add_blocked_point(event.x, event.y)
             return
 
+        movable_segment = self._selected_movable_segment_at_screen(event.x, event.y)
+        if movable_segment is not None:
+            route, segment_index = movable_segment
+            self.manual_drag_connection_id = route.connection.id
+            self.manual_drag_segment_index = segment_index
+            self.manual_drag_original_route = route.points
+            self.manual_drag_preview_route = route.points
+            self.manual_drag_collision = False
+            self._emit_context_change("Arrastra el segmento en su eje perpendicular")
+            return
+
         node = self._node_at_screen(event.x, event.y)
         port_node = node or self._node_near_screen(event.x, event.y)
         if port_node is not None:
@@ -292,7 +322,7 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
                     self.pending_connection_source_id = port_node.id
                     self.pending_source_port = port
                 self._set_selection(node_id=port_node.id)
-                self._emit_context_change("Arrastra hasta otro nodo para conectar")
+                self._emit_context_change()
                 self.request_redraw()
                 return
 
@@ -314,6 +344,10 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
             return
 
         self.dragged = True
+        if self.manual_drag_connection_id is not None:
+            self._preview_manual_segment_drag(event.x, event.y)
+            return
+
         if self.connection_drag_source_id is None and self.connection_press_source_id is not None:
             self.connection_drag_source_id = self.connection_press_source_id
             self.connection_drag_source_port = self.connection_press_source_port or "bottom"
@@ -330,7 +364,7 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
                 self.hover_port = (target_node.id, self._nearest_port(target_node, event.x, event.y))
             else:
                 self.hover_port = None
-            self._emit_context_change("Suelta sobre un nodo para conectar")
+            self._emit_context_change()
         else:
             self._emit_context_change()
         self.request_redraw()
@@ -340,6 +374,10 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
             return
 
         self.drag_press = None
+        if self.manual_drag_connection_id is not None:
+            self._finish_manual_segment_drag()
+            return
+
         self.drag_node_id = None
         self.drag_screen_point = None
         self.drag_node_offset = None
@@ -468,6 +506,111 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
             self.last_hover_cell = hover_cell
             self.request_redraw()
         self._emit_context_change()
+
+    def _selected_movable_segment_at_screen(
+        self,
+        screen_x: int,
+        screen_y: int,
+    ) -> tuple[ConnectionRoute, int] | None:
+        if self.selected_connection_id is None:
+            return None
+        route = next(
+            (item for item in self.route_cache if item.connection.id == self.selected_connection_id),
+            None,
+        )
+        if route is None:
+            return None
+        segment_index = find_movable_segment_at_screen(
+            route,
+            screen_x,
+            screen_y,
+            self.rendering_engine,
+            self._world_to_screen,
+            max_distance=max(10.0, 12.0 * self.zoom),
+        )
+        return (route, segment_index) if segment_index is not None else None
+
+    def _preview_manual_segment_drag(self, screen_x: int, screen_y: int) -> None:
+        route = self.manual_drag_original_route
+        segment_index = self.manual_drag_segment_index
+        if route is None or segment_index is None:
+            return
+        candidate = move_intermediate_segment(
+            route,
+            segment_index,
+            self._screen_to_subgrid(screen_x, screen_y),
+        )
+        self.manual_drag_collision = self._route_crosses_nodes(candidate)
+        if not self.manual_drag_collision:
+            self.manual_drag_preview_route = tuple(candidate)
+        self._emit_context_change(
+            "Posición no válida: el segmento atravesaría un nodo"
+            if self.manual_drag_collision
+            else "Suelta para guardar la ruta manual"
+        )
+        self.request_redraw()
+
+    def _finish_manual_segment_drag(self) -> None:
+        connection_id = self.manual_drag_connection_id
+        original = self.manual_drag_original_route
+        preview = self.manual_drag_preview_route
+        changed = (
+            connection_id is not None
+            and preview is not None
+            and original is not None
+            and preview != original
+        )
+        self._clear_manual_drag()
+        if changed and connection_id is not None and preview is not None:
+            self.document.set_connection_manual_points(connection_id, preview[1:-1])
+            self._mark_document_changed()
+            self._emit_selection_change()
+        else:
+            self.request_redraw()
+        self._emit_context_change()
+
+    def _clear_manual_drag(self) -> None:
+        self.manual_drag_connection_id = None
+        self.manual_drag_segment_index = None
+        self.manual_drag_original_route = None
+        self.manual_drag_preview_route = None
+        self.manual_drag_collision = False
+
+    def _routes_for_display(self) -> list[ConnectionRoute]:
+        if self.manual_drag_connection_id is None or self.manual_drag_preview_route is None:
+            return self.route_cache
+        return [
+            ConnectionRoute(route.connection, self.manual_drag_preview_route)
+            if route.connection.id == self.manual_drag_connection_id
+            else route
+            for route in self.route_cache
+        ]
+
+    def _selected_connection_route(self) -> ConnectionRoute | None:
+        return next(
+            (
+                route
+                for route in self._routes_for_display()
+                if route.connection.id == self.selected_connection_id
+            ),
+            None,
+        )
+
+    def _route_crosses_nodes(self, route_points: list[GridPoint]) -> bool:
+        boxes: list[GridBox] = []
+        cell_width = self.rendering_engine.base_cell_width
+        cell_height = self.rendering_engine.base_cell_height
+        for node in self.document.nodes.values():
+            box = self._get_node_layout(node, include_logo=False).box
+            boxes.append(
+                GridBox(
+                    left=box.left / cell_width,
+                    top=box.top / cell_height,
+                    right=box.right / cell_width,
+                    bottom=box.bottom / cell_height,
+                )
+            )
+        return route_crosses_boxes(route_points, boxes)
 
     def _on_leave(self, _event: tk.Event[tk.Canvas]) -> None:
         self.hover_port = None
@@ -777,6 +920,7 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
         self.connection_drag_screen_point = None
         self.connection_press_source_id = None
         self.connection_press_source_port = None
+        self._clear_manual_drag()
         self._update_custom_cursor(visible=self.block_mode)
         self.request_redraw()
         self._emit_context_change()
@@ -802,18 +946,76 @@ class OrgGridCanvas(CanvasDrawingMixin, ctk.CTkFrame):
         if self.block_mode:
             return "Clic para marcar o quitar obstaculo"
         if self.connection_drag_source_id is not None:
+            hover_target_id = self._hover_target_id(self.connection_drag_source_id)
+            if hover_target_id is not None:
+                return self._connection_flow_message(
+                    self.connection_drag_source_id,
+                    hover_target_id,
+                    "Suelta para conectar",
+                )
             return "Suelta sobre un nodo para conectar"
         if self.pending_connection_source_id is not None:
+            hover_target_id = self._hover_target_id(self.pending_connection_source_id)
+            if hover_target_id is not None:
+                return self._connection_flow_message(
+                    self.pending_connection_source_id,
+                    hover_target_id,
+                    "Clic para conectar",
+                )
             return "Clic izquierdo en el nodo destino para conectar"
         if self.hover_port is not None:
             return "Clic izquierdo o arrastra desde el indicador para conectar"
         if self.selected_node_id is not None:
             return "Clic derecho y arrastra para mover. Doble clic para editar"
         if self.selected_connection_id is not None:
+            connection = next(
+                (
+                    item
+                    for item in self.document.connections
+                    if item.id == self.selected_connection_id
+                ),
+                None,
+            )
+            if connection is not None:
+                return self._connection_flow_message(
+                    connection.source_id,
+                    connection.target_id,
+                    "Flujo",
+                ) + (
+                    ". Arrastra un tramo intermedio; puedes restaurar la ruta automática"
+                    if connection.manual_points
+                    else ". Arrastra un tramo intermedio para ajustar la ruta"
+                )
             return "Conexion seleccionada. Supr para eliminar"
         if self.selected_blocked_point is not None:
             return "Obstaculo seleccionado. Supr para eliminar"
         return "Clic para crear nodo"
+
+    def _hover_target_id(self, source_id: str) -> str | None:
+        if self.hover_port is None or self.hover_port[0] == source_id:
+            return None
+        return self.hover_port[0]
+
+    def _connection_flow_message(
+        self,
+        source_id: str,
+        target_id: str,
+        prefix: str,
+    ) -> str:
+        source = self.document.nodes.get(source_id)
+        target = self.document.nodes.get(target_id)
+        if source is None or target is None:
+            return f"{prefix}: origen → destino"
+        return (
+            f"{prefix}: {self._node_flow_label(source)} "
+            f"→ {self._node_flow_label(target)}"
+        )
+
+    @staticmethod
+    def _node_flow_label(node: OrgNode) -> str:
+        name = node.name.strip() or "Sin nombre"
+        role = node.role.strip()
+        return f"{name} — {role}" if role else name
 
     def _mark_document_changed(self, routes_dirty: bool = True, layout_dirty: bool = True) -> None:
         if layout_dirty:
