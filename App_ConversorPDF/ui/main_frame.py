@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import logging
 from pathlib import Path
+from queue import Empty, Queue
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -83,9 +84,13 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.separate_icon_image: ctk.CTkImage | None = None
         self.separate_icon_on_image: ctk.CTkImage | None = None
         self.is_busy = False
+        self._worker_events: Queue[tuple] = Queue()
+        self._worker_poll_after_id: str | None = None
+        self._closing = False
         self._dnd_available = DND_FILES is not None
         self._build_layout()
         self._refresh_outputs()
+        self._worker_poll_after_id = self.after(50, self._poll_worker_events)
 
     def _build_layout(self) -> None:
         self.pack(fill="both", expand=True)
@@ -656,9 +661,9 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             try:
                 result = task()
             except Exception as error:  # noqa: BLE001
-                self.after(0, lambda error=error: self._finish_conversion_error(error))
+                self._worker_events.put(("error", error))
                 return
-            self.after(0, lambda: self._finish_conversion_success(result, on_success))
+            self._worker_events.put(("success", result, on_success))
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -675,7 +680,26 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.is_busy = False
 
     def _set_loading_status_from_worker(self, status_text: str) -> None:
-        self.after(0, lambda: self.loading_status_label.configure(text=status_text))
+        self._worker_events.put(("status", status_text))
+
+    def _poll_worker_events(self) -> None:
+        self._worker_poll_after_id = None
+        while True:
+            try:
+                event = self._worker_events.get_nowait()
+            except Empty:
+                break
+
+            event_type = event[0]
+            if event_type == "status":
+                self.loading_status_label.configure(text=event[1])
+            elif event_type == "success":
+                self._finish_conversion_success(event[1], event[2])
+            elif event_type == "error":
+                self._finish_conversion_error(event[1])
+
+        if not self._closing and self.winfo_exists():
+            self._worker_poll_after_id = self.after(50, self._poll_worker_events)
 
     def _finish_conversion_success(self, result, on_success) -> None:
         self._hide_loading()
@@ -686,4 +710,22 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         messagebox.showerror("No se pudo convertir", str(error), parent=self)
 
     def confirm_exit(self) -> None:
+        if self.is_busy:
+            messagebox.showwarning(
+                "Conversión en curso",
+                "Espera a que termine la conversión antes de cerrar la aplicación.",
+                parent=self,
+            )
+            return
+        self._closing = True
+        if self._worker_poll_after_id is not None:
+            self.after_cancel(self._worker_poll_after_id)
+            self._worker_poll_after_id = None
         self.master.destroy()
+
+    def destroy(self) -> None:
+        self._closing = True
+        if self._worker_poll_after_id is not None:
+            self.after_cancel(self._worker_poll_after_id)
+            self._worker_poll_after_id = None
+        super().destroy()

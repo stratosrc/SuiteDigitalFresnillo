@@ -573,7 +573,6 @@ class MainFrame(ctk.CTkFrame):
         OrientationDialog(self, self._export_pdf_for_orientation)
 
     def _export_pdf_for_orientation(self, orientation: str) -> None:
-        self.document.page_orientation = orientation
         target_path = filedialog.asksaveasfilename(
             parent=self,
             title="Exportar organigrama como PDF",
@@ -585,6 +584,7 @@ class MainFrame(ctk.CTkFrame):
             return
 
         export_document = deepcopy(self.document)
+        export_document.page_orientation = orientation
         self._run_background_task(lambda: self.pdf_exporter.export(export_document, target_path), success_title="PDF exportado")
 
     def export_image(self) -> None:
@@ -593,7 +593,6 @@ class MainFrame(ctk.CTkFrame):
         OrientationDialog(self, self._export_image_for_orientation)
 
     def _export_image_for_orientation(self, orientation: str) -> None:
-        self.document.page_orientation = orientation
         target_path = filedialog.asksaveasfilename(
             parent=self,
             title="Exportar organigrama como imagen",
@@ -610,6 +609,7 @@ class MainFrame(ctk.CTkFrame):
             return
 
         export_document = deepcopy(self.document)
+        export_document.page_orientation = orientation
 
         def task() -> Path:
             temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")

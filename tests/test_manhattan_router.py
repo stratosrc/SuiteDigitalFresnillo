@@ -3,6 +3,7 @@ import unittest
 from App_Organigrama.models.document import OrgGridDocument
 from App_Organigrama.rendering.engine import RenderingEngine
 from App_Organigrama.routing.manhattan_router import ManhattanRouter
+from App_Organigrama.routing.manual_routes import route_crosses_boxes
 
 
 class ManhattanRouterTests(unittest.TestCase):
@@ -66,6 +67,24 @@ class ManhattanRouterTests(unittest.TestCase):
 
         for start, end in zip(route, route[1:]):
             self.assertTrue(start[0] == end[0] or start[1] == end[1])
+
+    def test_invalid_manual_route_falls_back_after_node_moves_into_path(self):
+        document = OrgGridDocument()
+        source = document.add_node("A", "Uno", 0, 0, "#09519F")
+        target = document.add_node("B", "Dos", 2, 0, "#09519F")
+        obstacle = document.add_node("C", "Tres", 1, 1, "#09519F")
+        connection = document.add_connection(source.id, target.id, source_port="right", target_port="left")
+        connection.manual_points = ((0.5, 0.0), (1.5, 0.0))
+
+        document.move_node(obstacle.id, 1, 0)
+        route = self.router.route_document(document)[0].points
+        obstacle_boxes = self.router._node_obstacle_boxes(
+            document,
+            excluded_node_ids={source.id, target.id},
+        )
+
+        self.assertFalse(route_crosses_boxes(route, obstacle_boxes))
+        self.assertEqual(connection.manual_points, ((0.5, 0.0), (1.5, 0.0)))
 
     def _node(self, grid_x, grid_y):
         return OrgGridDocument().add_node("Nombre", "Cargo", grid_x, grid_y, "#09519F")
