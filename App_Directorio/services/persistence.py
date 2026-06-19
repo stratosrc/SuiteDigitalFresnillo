@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from App_Directorio.models import AreaReportData, DirectoryReportData, PersonReportRow
+from components.shared.project_lifecycle import atomic_write_json
 
 PROJECT_APP_ID = "directorio"
 PROJECT_VERSION = 1
@@ -34,9 +35,7 @@ class DirectoryPersistenceManager:
                 ],
             },
         }
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        return path
+        return atomic_write_json(path, payload)
 
     def load(self, source_path: str | Path) -> DirectoryReportData:
         path = Path(source_path)

@@ -1,5 +1,6 @@
 import tkinter as tk
 import logging
+from dataclasses import asdict
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
@@ -28,6 +29,7 @@ from App_Directorio.ui.theme import (
     make_font,
 )
 from components.shared.images import load_ctk_image
+from components.shared.project_lifecycle import ProjectLifecycle
 from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
 LOGGER = logging.getLogger(__name__)
@@ -41,7 +43,14 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.current_project_path: Path | None = None
         self.persistence_manager = DirectoryPersistenceManager()
         self._build_layout()
+        self.project_lifecycle = ProjectLifecycle(
+            "directorio",
+            snapshot=lambda: asdict(self.directory_form.get_report_data()),
+            save=self.save_project,
+        )
         self._build_menu()
+        self._dirty_poll_after_id: str | None = None
+        self._poll_dirty_state()
 
     def _build_layout(self) -> None:
         self.pack(fill="both", expand=True)
@@ -63,9 +72,12 @@ class DirectoryMainFrame(ctk.CTkFrame):
         )
         self.file_menu.add_command(label="Nuevo Proyecto", command=self.new_project)
         self.file_menu.add_command(label="Abrir Proyecto", command=self.open_project)
+        self.recent_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.file_menu.add_cascade(label="Archivos recientes", menu=self.recent_menu)
         self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
+        self._refresh_recent_menu()
 
     def _build_topbar(self) -> None:
         _, buttons = build_topbar(
@@ -142,6 +154,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.directory_form.grid(row=0, column=0, sticky="nsew")
 
     def _show_file_menu(self) -> None:
+        self._refresh_recent_menu()
         self.file_menu.tk_popup(
             self.file_button.winfo_rootx(),
             self.file_button.winfo_rooty() + self.file_button.winfo_height(),
@@ -226,10 +239,16 @@ class DirectoryMainFrame(ctk.CTkFrame):
         return messagebox.askyesno("Vista previa", "\n".join(lines), parent=self)
 
     def new_project(self) -> None:
+        if not self.project_lifecycle.confirm_discard(self, "crear un proyecto nuevo"):
+            return
         self.directory_form.reset_form()
         self.current_project_path = None
+        self.project_lifecycle.reset(mark_saved=True)
+        self._update_window_title()
 
     def open_project(self) -> None:
+        if not self.project_lifecycle.confirm_discard(self, "abrir otro proyecto"):
+            return
         source_path = filedialog.askopenfilename(
             parent=self,
             title="Abrir proyecto",
@@ -251,14 +270,15 @@ class DirectoryMainFrame(ctk.CTkFrame):
 
         self.current_project_path = Path(source_path)
         self.directory_form.set_report_data(data)
+        self.project_lifecycle.mark_saved(self.current_project_path)
+        self._update_window_title()
 
-    def save_project(self) -> None:
+    def save_project(self) -> bool:
         if self.current_project_path is None:
-            self.save_project_as()
-            return
-        self._save_project_to_path(self.current_project_path)
+            return self.save_project_as()
+        return self._save_project_to_path(self.current_project_path)
 
-    def save_project_as(self) -> None:
+    def save_project_as(self) -> bool:
         data = self.directory_form.get_report_data()
         safe_name = "".join(character for character in (data.title or "directorio") if character not in '<>:"/\\|?*')
         target_path = filedialog.asksaveasfilename(
@@ -269,11 +289,14 @@ class DirectoryMainFrame(ctk.CTkFrame):
             filetypes=[("Proyecto Directorio", "*.dir"), ("Todos los archivos", "*.*")],
         )
         if not target_path:
-            return
-        self.current_project_path = Path(target_path)
-        self._save_project_to_path(self.current_project_path)
+            return False
+        candidate_path = Path(target_path)
+        if not self._save_project_to_path(candidate_path):
+            return False
+        self.current_project_path = candidate_path
+        return True
 
-    def _save_project_to_path(self, target_path: Path) -> None:
+    def _save_project_to_path(self, target_path: Path) -> bool:
         try:
             saved_path = self.persistence_manager.save(self.directory_form.get_report_data(), target_path)
         except Exception as error:
@@ -283,14 +306,61 @@ class DirectoryMainFrame(ctk.CTkFrame):
                 f"No fue posible guardar el proyecto.\n\n{error}",
                 parent=self,
             )
-            return
+            return False
+        self.current_project_path = saved_path
+        self.project_lifecycle.mark_saved(saved_path)
+        self._update_window_title()
         messagebox.showinfo("Proyecto guardado", f"Proyecto guardado en:\n{saved_path}", parent=self)
+        return True
 
     def confirm_exit(self) -> None:
-        if not messagebox.askyesno(
-            "Confirmar salida",
-            f"¿Estás seguro de que quieres salir de {APP_TITLE}?",
-            parent=self,
-        ):
+        if not self.project_lifecycle.confirm_discard(self, f"salir de {APP_TITLE}"):
             return
         self.master.destroy()
+
+    def _poll_dirty_state(self) -> None:
+        self._update_window_title()
+        self._dirty_poll_after_id = self.after(350, self._poll_dirty_state)
+
+    def _update_window_title(self) -> None:
+        marker = " *" if self.project_lifecycle.is_dirty else ""
+        self.master.title(f"{APP_TITLE}{marker}")
+
+    def _refresh_recent_menu(self) -> None:
+        if not hasattr(self, "recent_menu"):
+            return
+        self.recent_menu.delete(0, tk.END)
+        recent_paths = self.project_lifecycle.recent_files.list()
+        if not recent_paths:
+            self.recent_menu.add_command(label="Sin archivos recientes", state="disabled")
+            return
+        for path in recent_paths:
+            self.recent_menu.add_command(
+                label=str(path),
+                command=lambda selected=path: self._open_project_path(selected),
+            )
+
+    def _open_project_path(self, source_path: str | Path) -> None:
+        if not self.project_lifecycle.confirm_discard(self, "abrir otro proyecto"):
+            return
+        try:
+            data = self.persistence_manager.load(source_path)
+        except Exception as error:
+            self.project_lifecycle.recent_files.remove(source_path)
+            LOGGER.exception("Unable to load directory project from %s", source_path)
+            messagebox.showerror(
+                "No se pudo abrir",
+                f"No fue posible cargar el proyecto.\n\n{error}",
+                parent=self,
+            )
+            return
+        self.current_project_path = Path(source_path)
+        self.directory_form.set_report_data(data)
+        self.project_lifecycle.mark_saved(self.current_project_path)
+        self._update_window_title()
+
+    def destroy(self) -> None:
+        if self._dirty_poll_after_id is not None:
+            self.after_cancel(self._dirty_poll_after_id)
+            self._dirty_poll_after_id = None
+        super().destroy()

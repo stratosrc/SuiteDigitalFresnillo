@@ -101,6 +101,10 @@ class PDFManager:
         if not file_path:
             self._callbacks.set_status(PDF_MANAGER_MESSAGES["new_job_cancelled_status"])
             return False
+        return self.load_pdf_path(file_path)
+
+    def load_pdf_path(self, file_path: str) -> bool:
+        """Load a PDF path selected by the caller."""
 
         if not os.path.isfile(file_path):
             self._callbacks.show_error(

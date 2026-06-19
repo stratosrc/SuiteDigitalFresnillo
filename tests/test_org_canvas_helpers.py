@@ -37,7 +37,8 @@ class OrgCanvasHelperTests(unittest.TestCase):
             connection=Connection(source_id="a", target_id="b"),
             points=((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 2.0)),
         )
-        identity = lambda x, y: (x, y)
+        def identity(x, y):
+            return x, y
 
         self.assertIsNone(
             find_movable_segment_at_screen(route, 0, 100, engine, identity)

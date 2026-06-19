@@ -656,7 +656,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             try:
                 result = task()
             except Exception as error:  # noqa: BLE001
-                self.after(0, lambda: self._finish_conversion_error(error))
+                self.after(0, lambda error=error: self._finish_conversion_error(error))
                 return
             self.after(0, lambda: self._finish_conversion_success(result, on_success))
 

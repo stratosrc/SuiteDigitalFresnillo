@@ -71,9 +71,10 @@ SuiteDigitalFresnillo/
 
 - `components/shared/` contiene infraestructura reutilizable de ventanas, imágenes, tooltips, barras superiores y diálogos de ayuda.
 - Cada aplicación separa configuración, modelos o dominio, servicios y componentes de interfaz.
-- `App_Organigrama/ui/canvas.py` administra interacción y estado del lienzo; `canvas_drawing.py` concentra el renderizado.
+- `App_Organigrama/ui/canvas.py` compone el lienzo. Los controladores `canvas_node_controller.py`, `canvas_connection_controller.py`, `canvas_viewport_controller.py` y `canvas_interaction_controller.py` separan nodos, conexiones, viewport e interacción.
+- `components/shared/project_lifecycle.py` centraliza cambios sin guardar, escritura atómica y archivos recientes.
 - `App_ConversorPDF/services/output_planner.py` interpreta hojas o páginas y construye el plan de archivos de salida sin depender de la interfaz.
-- Los proyectos nuevos de Organigrama guardan campos internos en inglés con esquema 2; el cargador mantiene compatibilidad con proyectos anteriores.
+- Los proyectos nuevos de Organigrama guardan campos internos en inglés con esquema 3; el cargador mantiene compatibilidad con proyectos anteriores.
 
 ## Requisitos de Desarrollo
 
@@ -130,6 +131,12 @@ Ejecutar todas las pruebas:
 
 ```powershell
 python -m unittest discover -s tests -v
+```
+
+Ejecutar análisis estático:
+
+```powershell
+python -m ruff check .
 ```
 
 Compilar bytecode de los modulos principales:
@@ -191,3 +198,4 @@ Ejecutar el compilado:
 - Evitar mover LibreOffice fuera de `App_ConversorPDF/vendor` sin actualizar `convertidor.spec` y el resolvedor de rutas.
 - Al modificar interacciones visuales, actualizar tambien los cuadros de ayuda.
 - Al agregar campos al Directorio, actualizar modelo, formulario, exportador PDF y pruebas si aplica.
+- GitHub Actions ejecuta pruebas, compilación y Ruff mediante `.github/workflows/quality.yml`.

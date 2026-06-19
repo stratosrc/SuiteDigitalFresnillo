@@ -30,6 +30,7 @@ from App_Directorio.ui.theme import (
 )
 from App_Directorio.ui.widgets import HoverIconButton, IconPair, load_icon_pair
 from App_Directorio.utils import is_date_input_prefix, is_valid_date
+from components.shared.entries import VariablePlaceholderEntry
 
 
 PERSONNEL_COLUMN_WEIGHTS = (14, 18, 16, 17, 10)
@@ -43,6 +44,7 @@ def bind_uppercase(variable: tk.StringVar) -> None:
         uppercase = value.upper()
         if value != uppercase:
             variable.set(uppercase)
+            variable._root.after_idle(lambda: variable.set(variable.get()))
 
     variable.trace_add("write", normalize)
 
@@ -233,7 +235,7 @@ class AreaSection(ctk.CTkFrame):
         header_frame.grid(row=0, column=0, sticky="ew", padx=16, pady=(14, 0))
         header_frame.grid_columnconfigure(0, weight=1)
 
-        self.area_name_entry = ctk.CTkEntry(
+        self.area_name_entry = VariablePlaceholderEntry(
             header_frame,
             textvariable=self.area_name_var,
             height=34,
@@ -441,7 +443,7 @@ class DirectoryFormFrame(ctk.CTkFrame):
         self._build_labeled_entry(
             section,
             label="Período",
-            placeholder="ej. Enero - Diciembre 2026",
+            placeholder="ej. Enero - Marzo 2026",
             variable=self.period_var,
             column=1,
             padx=(10, 0),
@@ -463,7 +465,7 @@ class DirectoryFormFrame(ctk.CTkFrame):
             font=make_font(13, "bold"),
         ).grid(row=0, column=column, sticky="w", padx=padx)
 
-        ctk.CTkEntry(
+        VariablePlaceholderEntry(
             parent,
             textvariable=variable,
             height=34,

@@ -22,7 +22,9 @@ Checklist minimo antes de entregar una version:
 
 - Crear nodos con clic en el canvas.
 - Mover nodos arrastrando y comprobar que la barra contextual cambie de mensaje.
-- Conectar dos nodos con clic derecho y verificar que la seleccion de conexion no tape nodos.
+- Conectar dos nodos con clic izquierdo desde el indicador de conexión y verificar que la selección no tape nodos.
+- Seleccionar una conexión, mover un segmento y un punto de doblez, y comprobar los ghosts válido e inválido.
+- Probar deshacer y rehacer cambios del organigrama.
 - Activar obstaculos de ruta y confirmar que las conexiones se enruten alrededor.
 - Guardar proyecto `.og`, abrirlo de nuevo y confirmar nodos/conexiones.
 - Exportar PDF horizontal y vertical.
@@ -36,3 +38,9 @@ Checklist minimo antes de entregar una version:
 - Intentar exportar con una fecha vacia o invalida y confirmar que la vista previa lo advierta.
 - Corregir fechas y exportar PDF.
 - Crear un nuevo proyecto y confirmar que el formulario se limpia.
+
+## Ciclo de proyecto
+
+- Modificar un proyecto y confirmar que el título de la ventana muestre `*`.
+- Intentar crear, abrir o cerrar con cambios pendientes y verificar Guardar/Descartar/Cancelar.
+- Guardar un proyecto, abrirlo desde `Archivos recientes` y confirmar su contenido.

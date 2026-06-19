@@ -1,5 +1,6 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 import sys
 from pathlib import Path
 from typing import Any, Deque
@@ -54,6 +55,7 @@ from App_TestData.ui.dialogs.catalogue_dialog import show_catalogue_dialog
 from App_TestData.ui.dialogs.help_dialog import show_help_dialog
 from App_TestData.ui.layout.main_layout import build_main_layout
 from components.shared.windowing import center_window, prepare_window_for_open, reveal_window_maximized
+from components.shared.project_lifecycle import ProjectLifecycle
 from components.styles.styles import apply_ctk_style, styles
 
 
@@ -87,6 +89,14 @@ class TestDataGeneratorApp(ctk.CTk):
 
         widget_map = build_main_layout(self, self._build_callbacks())
         self._register_widgets(widget_map)
+        self.project_lifecycle = ProjectLifecycle(
+            "testdata",
+            snapshot=self._project_snapshot,
+            save=self.save_project,
+        )
+        self._configure_project_menu()
+        self._dirty_poll_after_id: str | None = None
+        self._poll_dirty_state()
 
         setup_canvas_events(self)
         setup_mousewheel_scroll(
@@ -233,10 +243,17 @@ class TestDataGeneratorApp(ctk.CTk):
 
     def _start_new_job(self) -> None:
         """Reset the current job and then open the PDF selector."""
+        file_path = self.request_pdf_file_path()
+        if not file_path:
+            self.set_status(PDF_MANAGER_MESSAGES["new_job_cancelled_status"])
+            return
+        if not self.project_lifecycle.confirm_discard(self, "iniciar un proyecto nuevo"):
+            return
         self.pdf_manager.reset_current_job()
         self._release_loaded_project()
         self.current_project_path = None
-        self.after_idle(self.pdf_manager.load_new_job_pdf)
+        if self.pdf_manager.load_pdf_path(file_path):
+            self.project_lifecycle.reset(mark_saved=True)
 
     def request_pdf_file_path(self) -> str | None:
         """Ask the user for the PDF used by the new job."""
@@ -388,17 +405,25 @@ class TestDataGeneratorApp(ctk.CTk):
     def _open_export_dialog(self):
         self.export_controller.open_export_dialog()
 
-    def open_project(self) -> None:
-        source_path = filedialog.askopenfilename(
-            parent=self,
-            title="Abrir proyecto",
-            filetypes=[
-                ("Proyecto TestData", "*.td"),
-                ("Proyecto JSON anterior", "*.json"),
-                ("Todos los archivos", "*.*"),
-            ],
-        )
+    def open_project(
+        self,
+        source_path: str | Path | None = None,
+        *,
+        confirm_discard: bool = True,
+    ) -> None:
+        if source_path is None:
+            source_path = filedialog.askopenfilename(
+                parent=self,
+                title="Abrir proyecto",
+                filetypes=[
+                    ("Proyecto TestData", "*.td"),
+                    ("Proyecto JSON anterior", "*.json"),
+                    ("Todos los archivos", "*.*"),
+                ],
+            )
         if not source_path:
+            return
+        if confirm_discard and not self.project_lifecycle.confirm_discard(self, "abrir otro proyecto"):
             return
 
         loaded_project: LoadedProject | None = None
@@ -446,6 +471,7 @@ class TestDataGeneratorApp(ctk.CTk):
             self.next_rectangle_id = self._next_rectangle_id_from_project()
             self.current_project_path = Path(source_path)
             self.pdf_manager.render_current_page()
+            self.project_lifecycle.mark_saved(self.current_project_path)
             self.set_status(f"Proyecto cargado: {self.current_project_path}")
         except Exception as error:  # noqa: BLE001
             if staged_pdf_document is not None:
@@ -454,20 +480,19 @@ class TestDataGeneratorApp(ctk.CTk):
                 loaded_project.close()
             self.show_error("No se pudo abrir", f"No fue posible cargar el proyecto.\n\n{error}")
 
-    def save_project(self) -> None:
+    def save_project(self) -> bool:
         if self.current_project_path is None:
-            self.save_project_as()
-            return
-        self._save_project_to_path(self.current_project_path)
+            return self.save_project_as()
+        return self._save_project_to_path(self.current_project_path)
 
-    def save_project_as(self) -> None:
+    def save_project_as(self) -> bool:
         if not self.pdf_document or not self.current_pdf_path:
             messagebox.showwarning(
                 "PDF requerido",
                 "Carga un PDF antes de guardar el proyecto.",
                 parent=self,
             )
-            return
+            return False
 
         target_path = filedialog.asksaveasfilename(
             parent=self,
@@ -477,18 +502,24 @@ class TestDataGeneratorApp(ctk.CTk):
             filetypes=[("Proyecto TestData", "*.td"), ("Todos los archivos", "*.*")],
         )
         if not target_path:
-            return
-        self.current_project_path = Path(target_path)
-        self._save_project_to_path(self.current_project_path)
+            return False
+        candidate_path = Path(target_path)
+        if not self._save_project_to_path(candidate_path):
+            return False
+        self.current_project_path = candidate_path
+        return True
 
-    def _save_project_to_path(self, target_path: Path) -> None:
+    def _save_project_to_path(self, target_path: Path) -> bool:
         try:
             saved_path = save_project(self.document_state, target_path)
         except Exception as error:  # noqa: BLE001
             self.show_error("No se pudo guardar", f"No fue posible guardar el proyecto.\n\n{error}")
-            return
+            return False
+        self.current_project_path = saved_path
+        self.project_lifecycle.mark_saved(saved_path)
         self.set_status(f"Proyecto guardado: {saved_path}")
         messagebox.showinfo("Proyecto guardado", f"Proyecto guardado en:\n{saved_path}", parent=self)
+        return True
 
     def _next_rectangle_id_from_project(self) -> int:
         if not self.censored_rectangles:
@@ -521,16 +552,67 @@ class TestDataGeneratorApp(ctk.CTk):
             )
             return
 
-        if messagebox.askyesno(
-            EXIT_MESSAGES["confirm_title"],
-            EXIT_MESSAGES["confirm_message"],
-            parent=self,
-        ):
-            if self.pdf_document:
-                self.pdf_document.close()
-            self._release_loaded_project()
-            self._executor.shutdown(wait=False, cancel_futures=True)
-            self.destroy()
+        if not self.project_lifecycle.confirm_discard(self, "salir"):
+            return
+        if self.pdf_document:
+            self.pdf_document.close()
+        self._release_loaded_project()
+        self._executor.shutdown(wait=False, cancel_futures=True)
+        self.destroy()
+
+    def _project_snapshot(self) -> dict[str, object]:
+        transient = {"canvas_rect_id", "canvas_text_id", "rect"}
+        rectangles = [
+            {
+                key: deepcopy(value)
+                for key, value in rectangle.items()
+                if key not in transient
+            }
+            for rectangle in self.censored_rectangles
+        ]
+        return {
+            "pdf": Path(self.current_pdf_path).name if self.current_pdf_path else None,
+            "current_page": self.current_page,
+            "current_zoom": self.current_zoom,
+            "rectangles": rectangles,
+            "reserved_history": deepcopy(self.reserved_history),
+            "confidential_history": deepcopy(self.confidential_history),
+            "other_law_history": deepcopy(self.other_law_history),
+            "committee_data": deepcopy(self.document_state.committee_data),
+        }
+
+    def _configure_project_menu(self) -> None:
+        self.recent_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.file_menu.insert_cascade(2, label="Archivos recientes", menu=self.recent_menu)
+        self._refresh_recent_menu()
+
+    def _refresh_recent_menu(self) -> None:
+        self.recent_menu.delete(0, tk.END)
+        recent_paths = self.project_lifecycle.recent_files.list()
+        if not recent_paths:
+            self.recent_menu.add_command(label="Sin archivos recientes", state="disabled")
+            return
+        for path in recent_paths:
+            self.recent_menu.add_command(
+                label=str(path),
+                command=lambda selected=path: self._open_recent_project(selected),
+            )
+
+    def _open_recent_project(self, source_path: Path) -> None:
+        if not self.project_lifecycle.confirm_discard(self, "abrir otro proyecto"):
+            return
+        self.open_project(source_path, confirm_discard=False)
+
+    def _poll_dirty_state(self) -> None:
+        marker = " *" if self.project_lifecycle.is_dirty else ""
+        self.title(f"{APP_WINDOW_TITLE}{marker}")
+        self._dirty_poll_after_id = self.after(350, self._poll_dirty_state)
+
+    def destroy(self) -> None:
+        if getattr(self, "_dirty_poll_after_id", None) is not None:
+            self.after_cancel(self._dirty_poll_after_id)
+            self._dirty_poll_after_id = None
+        super().destroy()
 
 
 if __name__ == "__main__":

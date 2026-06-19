@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from App_Organigrama.models.document import Connection, OrgGridDocument, OrgNode
+from components.shared.project_lifecycle import atomic_write_json
 
 DEFAULT_DOCUMENT_TITLE = "Titulo del organigrama"
 PROJECT_APP_ID = "organigrama"
@@ -17,9 +18,7 @@ class PersistenceManager:
             "schema_version": 3,
             "document": document.to_dict(),
         }
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        return path
+        return atomic_write_json(path, payload)
 
     def load(self, source_path: str | Path) -> OrgGridDocument:
         path = Path(source_path)

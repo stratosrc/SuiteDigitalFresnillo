@@ -35,6 +35,8 @@ from App_Organigrama.ui.theme import (
     make_font,
 )
 from components.shared.images import load_ctk_image
+from components.shared.entries import VariablePlaceholderEntry
+from components.shared.project_lifecycle import ProjectLifecycle
 from components.shared.tooltip import Tooltip
 from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
@@ -49,6 +51,11 @@ class MainFrame(ctk.CTkFrame):
         self.persistence_manager = PersistenceManager()
         self.document = OrgGridDocument()
         self.document_history = DocumentHistory(self.document)
+        self.project_lifecycle = ProjectLifecycle(
+            "organigrama",
+            snapshot=lambda: self.document.to_dict(),
+            save=self.save_project,
+        )
         self.router = ManhattanRouter(self.rendering_engine)
         self.pdf_exporter = PdfOrgChartExporter(self.rendering_engine, self.router)
 
@@ -98,6 +105,8 @@ class MainFrame(ctk.CTkFrame):
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_command(label="Abrir Proyecto", command=self.open_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
+        self.recent_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.file_menu.add_cascade(label="Archivos recientes", menu=self.recent_menu)
         self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_separator()
@@ -105,6 +114,7 @@ class MainFrame(ctk.CTkFrame):
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_command(label="Exportar imagen", command=self.export_image)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
+        self._refresh_recent_menu()
 
     def _build_topbar(self) -> None:
         _, buttons = build_topbar(
@@ -177,7 +187,7 @@ class MainFrame(ctk.CTkFrame):
             panel,
             label="Período",
             variable=self.period_var,
-            placeholder="Septiembre - Diciembre 2026",
+            placeholder="ej. Enero - Marzo 2026",
             column=1,
             padx=(0, 0),
         )
@@ -196,7 +206,7 @@ class MainFrame(ctk.CTkFrame):
             column=column,
             sticky="w",
         )
-        ctk.CTkEntry(
+        VariablePlaceholderEntry(
             parent,
             textvariable=variable,
             height=34,
@@ -431,6 +441,7 @@ class MainFrame(ctk.CTkFrame):
         self.grid_canvas.set_block_mode(self.block_mode_var.get())
 
     def _show_file_menu(self) -> None:
+        self._refresh_recent_menu()
         self.file_menu.tk_popup(
             self.file_button.winfo_rootx(),
             self.file_button.winfo_rooty() + self.file_button.winfo_height(),
@@ -469,6 +480,7 @@ class MainFrame(ctk.CTkFrame):
         self.document = OrgGridDocument()
         self._load_document_into_ui(self.document)
         self._reset_document_history(mark_saved=True)
+        self.project_lifecycle.reset(mark_saved=True)
 
     def open_project(self) -> None:
         if not self._confirm_discard_changes():
@@ -500,20 +512,31 @@ class MainFrame(ctk.CTkFrame):
         self.current_project_path = Path(source_path)
         self._load_document_into_ui(self.document)
         self._reset_document_history(mark_saved=True)
+        self.project_lifecycle.mark_saved(self.current_project_path)
 
-    def save_project(self) -> None:
+    def save_project(self) -> bool:
         if self.current_project_path is None:
-            self.save_project_as()
-            return
+            return self.save_project_as()
 
-        self._sync_metadata()
-        self.persistence_manager.save(self.document, self.current_project_path)
+        try:
+            self._sync_metadata()
+            self.persistence_manager.save(self.document, self.current_project_path)
+        except Exception as error:  # noqa: BLE001
+            LOGGER.exception("Unable to save organigram project")
+            messagebox.showerror(
+                "No se pudo guardar",
+                f"No fue posible guardar el proyecto:\n{error}",
+                parent=self,
+            )
+            return False
         self.document_history.mark_saved(self.document)
+        self.project_lifecycle.mark_saved(self.current_project_path)
         self._set_dirty(False)
         self._update_history_buttons()
         messagebox.showinfo("Proyecto guardado", f"Proyecto guardado en:\n{self.current_project_path}", parent=self)
+        return True
 
-    def save_project_as(self) -> None:
+    def save_project_as(self) -> bool:
         self._sync_metadata()
         target_path = filedialog.asksaveasfilename(
             parent=self,
@@ -523,14 +546,26 @@ class MainFrame(ctk.CTkFrame):
             initialfile="organigrama.og",
         )
         if not target_path:
-            return
+            return False
 
-        self.current_project_path = Path(target_path)
-        self.persistence_manager.save(self.document, self.current_project_path)
+        candidate_path = Path(target_path)
+        try:
+            self.persistence_manager.save(self.document, candidate_path)
+        except Exception as error:  # noqa: BLE001
+            LOGGER.exception("Unable to save organigram project")
+            messagebox.showerror(
+                "No se pudo guardar",
+                f"No fue posible guardar el proyecto:\n{error}",
+                parent=self,
+            )
+            return False
+        self.current_project_path = candidate_path
         self.document_history.mark_saved(self.document)
+        self.project_lifecycle.mark_saved(self.current_project_path)
         self._set_dirty(False)
         self._update_history_buttons()
         messagebox.showinfo("Proyecto guardado", f"Proyecto guardado en:\n{self.current_project_path}", parent=self)
+        return True
 
     def export_pdf(self) -> None:
         if not self._can_start_export():
@@ -653,13 +688,7 @@ class MainFrame(ctk.CTkFrame):
             self.file_menu.entryconfig(index, state=state)
 
     def _confirm_discard_changes(self) -> bool:
-        if not self.is_dirty:
-            return True
-        return messagebox.askyesno(
-            "Cambios sin guardar",
-            "Hay cambios sin guardar. ¿Desea continuar y descartarlos?",
-            parent=self,
-        )
+        return self.project_lifecycle.confirm_discard(self, "continuar")
 
     def _record_document_change(self) -> None:
         if self.document_history.record(self.document):
@@ -702,7 +731,8 @@ class MainFrame(ctk.CTkFrame):
         self._update_window_title()
 
     def _update_window_title(self) -> None:
-        self.master.title(f"Organigramas")
+        marker = " *" if self.project_lifecycle.is_dirty else ""
+        self.master.title(f"Organigramas{marker}")
 
     def _load_document_into_ui(self, document: OrgGridDocument) -> None:
         document.title = document.title.upper()
@@ -726,13 +756,42 @@ class MainFrame(ctk.CTkFrame):
             self._show_operation_warning()
             return
 
-        if not messagebox.askyesno(
-            "Confirmar salida",
-            "¿Estás seguro de que quieres salir?",
-            parent=self,
-        ):
+        if not self.project_lifecycle.confirm_discard(self, "salir"):
             return
         self.master.destroy()
+
+    def _refresh_recent_menu(self) -> None:
+        if not hasattr(self, "recent_menu"):
+            return
+        self.recent_menu.delete(0, tk.END)
+        recent_paths = self.project_lifecycle.recent_files.list()
+        if not recent_paths:
+            self.recent_menu.add_command(label="Sin archivos recientes", state="disabled")
+            return
+        for path in recent_paths:
+            self.recent_menu.add_command(
+                label=str(path),
+                command=lambda selected=path: self._open_project_path(selected),
+            )
+
+    def _open_project_path(self, source_path: str | Path) -> None:
+        if not self._confirm_discard_changes():
+            return
+        try:
+            self.document = self.persistence_manager.load(source_path)
+        except Exception as error:  # noqa: BLE001
+            self.project_lifecycle.recent_files.remove(source_path)
+            LOGGER.exception("Unable to load org chart project from %s", source_path)
+            messagebox.showerror(
+                "No se pudo abrir",
+                f"No fue posible cargar el proyecto:\n{error}",
+                parent=self,
+            )
+            return
+        self.current_project_path = Path(source_path)
+        self._load_document_into_ui(self.document)
+        self._reset_document_history(mark_saved=True)
+        self.project_lifecycle.mark_saved(self.current_project_path)
 
     def destroy(self) -> None:
         self._executor.shutdown(wait=False, cancel_futures=True)
