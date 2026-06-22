@@ -25,7 +25,7 @@ ACTION_LABELS = {
 }
 
 CONTENT_LABELS = {
-    "empty_state": "Inicia un nuevo trabajo.",
+    "empty_state": "Sin PDF cargado. Usa Nuevo (Ctrl+N) para elegir un documento o abre un proyecto con Ctrl+O.",
 }
 
 NAVIGATION_LABELS = {

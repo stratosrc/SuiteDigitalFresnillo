@@ -5,6 +5,7 @@ import tkinter as tk
 import customtkinter as ctk
 
 from components.shared.images import load_ctk_image
+from components.shared.tooltip import Tooltip
 
 
 IconPair = tuple[ctk.CTkImage | None, ctk.CTkImage | None]
@@ -28,6 +29,7 @@ class HoverIconButton(ctk.CTkButton):
         command: Callable[[], None],
         width: int,
         height: int,
+        tooltip_text: str = "",
     ) -> None:
         self.normal_icon, self.hover_icon = icons
         super().__init__(
@@ -45,6 +47,8 @@ class HoverIconButton(ctk.CTkButton):
         )
         self.bind("<Enter>", self._show_hover_icon)
         self.bind("<Leave>", self._show_normal_icon)
+        if tooltip_text:
+            self.tooltip = Tooltip(self, tooltip_text)
 
     def _show_hover_icon(self, _event: tk.Event) -> None:
         if self.hover_icon is not None:

@@ -21,6 +21,7 @@ class ExportController:
         self.app = app
         self.executor = executor
         self.pending_future = None
+        self.cancel_requested = False
 
     def open_export_dialog(self) -> None:
         if not self.app.pdf_document or not self.app.current_pdf_path:
@@ -67,6 +68,7 @@ class ExportController:
             return
 
         self.app.message_label.configure(text=EXPORT_MESSAGES["generating_status"])
+        self.cancel_requested = False
         self.set_controls_state("disabled")
         rectangles_snapshot = deepcopy(self.app.censored_rectangles)
         committee_snapshot = deepcopy(committee_data)
@@ -82,6 +84,13 @@ class ExportController:
 
     def is_running(self) -> bool:
         return self.pending_future is not None and not self.pending_future.done()
+
+    def cancel(self) -> None:
+        if self.pending_future is None:
+            return
+        self.cancel_requested = True
+        self.pending_future.cancel()
+        self.app.message_label.configure(text="Cancelando exportación...")
 
     def set_controls_state(self, state: str) -> None:
         for widget_name in ("file_button", "catalogue_button"):
@@ -101,7 +110,17 @@ class ExportController:
             return
 
         try:
+            if future.cancelled():
+                self.app.message_label.configure(text="Exportación cancelada")
+                return
             future.result()
+            if self.cancel_requested:
+                try:
+                    os.unlink(output_path)
+                except OSError:
+                    pass
+                self.app.message_label.configure(text="Exportación cancelada")
+                return
             self.app.message_label.configure(
                 text=EXPORT_MESSAGES["generated_status"].format(output_path=output_path)
             )
@@ -121,4 +140,5 @@ class ExportController:
         finally:
             if self.pending_future is future:
                 self.pending_future = None
+            self.cancel_requested = False
             self.set_controls_state("normal")

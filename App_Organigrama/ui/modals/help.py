@@ -61,6 +61,8 @@ HELP_SECTIONS: tuple[HelpSection, ...] = (
             "Botones de Zoom: Permiten acercar o alejar la vista del organigrama.\n",
             "Atajo de Zoom: Usa [Ctrl] + rueda del mouse para controlar el zoom.\n",
             "Deshacer y Rehacer: Los botones con flechas de la barra inferior revierten o recuperan cambios del organigrama. También puedes usar [Ctrl] + [Z] para deshacer y [Ctrl] + [Y] o [Ctrl] + [Mayús] + [Z] para rehacer.\n",
+            "Atajos de proyecto: [Ctrl]+[N] nuevo, [Ctrl]+[O] abrir, [Ctrl]+[S] guardar y [Ctrl]+[Mayús]+[S] guardar como.\n",
+            "Menú contextual: Haz clic derecho sin arrastrar sobre un nodo o conexión para editar, duplicar, eliminar o restaurar su ruta automática.\n",
         ),
     ),
     (

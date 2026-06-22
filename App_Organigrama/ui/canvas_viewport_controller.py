@@ -140,6 +140,8 @@ class CanvasViewportController:
                 self._mark_recent_node(drag_node_id)
                 self._mark_document_changed()
             self._set_selection(node_id=drag_node_id)
+        elif not self.pan_dragged:
+            self._show_context_menu(event)
         self.pan_drag_press = None
         self.pan_dragged = False
         self.interaction.transition(

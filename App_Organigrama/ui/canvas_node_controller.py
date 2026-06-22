@@ -20,6 +20,70 @@ NODE_PROXIMITY_RADIUS = 34.0
 
 
 class CanvasNodeController:
+    def edit_selected_node(self) -> None:
+        node = self.document.nodes.get(self.selected_node_id or "")
+        if node is not None:
+            self._open_node_dialog(node)
+
+    def duplicate_selected_node(self) -> None:
+        node = self.document.nodes.get(self.selected_node_id or "")
+        if node is None:
+            return
+        candidates = (
+            (node.grid_x + 1, node.grid_y),
+            (node.grid_x, node.grid_y + 1),
+            (node.grid_x - 1, node.grid_y),
+            (node.grid_x, node.grid_y - 1),
+        )
+        target = next(
+            (
+                point
+                for point in candidates
+                if self.document.get_node_at(*point) is None
+            ),
+            None,
+        )
+        if target is None:
+            return
+        duplicate = self.document.add_node(
+            node.name,
+            node.role,
+            target[0],
+            target[1],
+            node.color,
+        )
+        self._mark_recent_node(duplicate.id)
+        self._set_selection(node_id=duplicate.id)
+        self._mark_document_changed()
+
+    def _show_context_menu(self, event: tk.Event[tk.Canvas]) -> None:
+        node = self._node_at_screen(event.x, event.y)
+        connection = None if node is not None else self._connection_at_screen(event.x, event.y)
+        if node is None and connection is None and getattr(event, "keyboard", False):
+            node = self.document.nodes.get(self.selected_node_id or "")
+            connection = self._selected_connection_route()
+        if node is not None:
+            self._set_selection(node_id=node.id)
+        elif connection is not None:
+            self._set_selection(connection_id=connection.connection.id)
+        else:
+            return
+
+        menu = tk.Menu(self.canvas, tearoff=False)
+        if node is not None:
+            menu.add_command(label="Editar nodo", command=self.edit_selected_node)
+            menu.add_command(label="Duplicar nodo", command=self.duplicate_selected_node)
+        if connection is not None:
+            menu.add_command(
+                label="Restaurar ruta automática",
+                command=self.reset_selected_route,
+                state="normal" if self.can_reset_selected_route() else "disabled",
+            )
+        menu.add_separator()
+        menu.add_command(label="Eliminar", command=self.delete_selected_item)
+        menu.tk_popup(event.x_root, event.y_root)
+        menu.grab_release()
+
     def _open_node_dialog_at(self, grid_x: int, grid_y: int) -> None:
         def save(name: str, role: str, color: str) -> None:
             node = self.document.add_node(name, role, grid_x, grid_y, color)

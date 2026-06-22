@@ -45,6 +45,24 @@ class ProjectLifecycleTests(unittest.TestCase):
             store.add(first)
             self.assertEqual(store.list(), [first.resolve(), second.resolve()])
 
+    def test_autosave_writes_dirty_snapshot_and_mark_saved_clears_it(self):
+        state = {"value": 1}
+        lifecycle = ProjectLifecycle(
+            "autosave-test",
+            snapshot=lambda: dict(state),
+            save=lambda: True,
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            lifecycle.recovery_path = Path(temp_dir) / "recovery.json"
+            state["value"] = 2
+            lifecycle._autosave_tick()
+
+            payload = json.loads(lifecycle.recovery_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["snapshot"], {"value": 2})
+
+            lifecycle.mark_saved()
+            self.assertFalse(lifecycle.recovery_path.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -27,8 +27,9 @@ class PersistenceManager:
             raise ValueError("Este archivo no es un proyecto de Organigrama.")
         if "document" not in payload and not any(key in payload for key in ("nodes", "connections", "title")):
             raise ValueError("El archivo seleccionado no parece ser un proyecto de Organigrama.")
-        raw_document = payload.get("document", payload)
+        return self.from_dict(payload.get("document", payload))
 
+    def from_dict(self, raw_document: dict) -> OrgGridDocument:
         nodes = {}
         for node_id, raw_node in raw_document.get("nodes", {}).items():
             node_data = dict(raw_node)

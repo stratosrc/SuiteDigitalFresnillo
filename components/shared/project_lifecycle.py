@@ -1,4 +1,4 @@
-"""Shared project lifecycle, atomic persistence, and recent-file tracking."""
+"""Shared project lifecycle, atomic persistence, and recovery."""
 
 from __future__ import annotations
 
@@ -7,10 +7,15 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import time
 from tkinter import messagebox
 from typing import Any
 
+from components.shared.confirmation import ask_save_discard_cancel
+
+
 RECENT_FILES_LIMIT = 8
+AUTOSAVE_INTERVAL_MS = 20_000
 
 
 def app_data_dir() -> Path:
@@ -34,7 +39,6 @@ def atomic_write_text(
     *,
     encoding: str = "utf-8",
 ) -> Path:
-    """Write a text file through a sibling temporary file and atomic replace."""
     target = Path(target_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary_path: Path | None = None
@@ -75,9 +79,8 @@ class RecentFilesStore:
 
     def list(self) -> list[Path]:
         payload = self._load()
-        raw_items = payload.get(self.app_id, [])
         items: list[Path] = []
-        for raw_item in raw_items:
+        for raw_item in payload.get(self.app_id, []):
             path = Path(str(raw_item))
             if path.is_file() and path not in items:
                 items.append(path)
@@ -86,7 +89,7 @@ class RecentFilesStore:
     def add(self, path: str | Path) -> None:
         resolved = Path(path).resolve()
         payload = self._load()
-        items = [
+        payload[self.app_id] = [
             str(resolved),
             *(
                 item
@@ -94,7 +97,6 @@ class RecentFilesStore:
                 if Path(str(item)) != resolved
             ),
         ][: self.limit]
-        payload[self.app_id] = items
         atomic_write_json(self.path, payload)
 
     def remove(self, path: str | Path) -> None:
@@ -118,8 +120,6 @@ class RecentFilesStore:
 
 
 class ProjectLifecycle:
-    """Track saved state and coordinate common project confirmations."""
-
     def __init__(
         self,
         app_id: str,
@@ -133,6 +133,9 @@ class ProjectLifecycle:
         self.recent_files = RecentFilesStore(app_id)
         self.current_path: Path | None = None
         self._saved_fingerprint = stable_fingerprint(snapshot())
+        self.recovery_path = app_data_dir() / "recovery" / f"{app_id}.json"
+        self._autosave_owner = None
+        self._autosave_after_id: str | None = None
 
     @property
     def is_dirty(self) -> bool:
@@ -142,26 +145,88 @@ class ProjectLifecycle:
         self.current_path = Path(path) if path is not None else None
         if mark_saved:
             self._saved_fingerprint = stable_fingerprint(self.snapshot())
+            self.clear_recovery()
 
     def mark_saved(self, path: str | Path | None = None) -> None:
         if path is not None:
             self.current_path = Path(path)
             self.recent_files.add(self.current_path)
         self._saved_fingerprint = stable_fingerprint(self.snapshot())
+        self.clear_recovery()
 
     def confirm_discard(self, parent, action: str = "continuar") -> bool:
         if not self.is_dirty:
             return True
-        answer = messagebox.askyesnocancel(
-            "Cambios sin guardar",
-            f"Hay cambios sin guardar. ¿Deseas guardarlos antes de {action}?",
-            parent=parent,
-        )
-        if answer is None:
+        answer = ask_save_discard_cancel(parent, action)
+        if answer == "cancel":
             return False
-        if answer is False:
+        if answer == "discard":
+            self.clear_recovery()
             return True
         return bool(self.save()) and not self.is_dirty
+
+    def start_autosave(self, owner, restore: Callable[[Any, Path | None], None]) -> None:
+        self._autosave_owner = owner
+        self.offer_recovery(owner, restore)
+        self._schedule_autosave()
+
+    def stop_autosave(self) -> None:
+        if self._autosave_owner is not None and self._autosave_after_id is not None:
+            try:
+                self._autosave_owner.after_cancel(self._autosave_after_id)
+            except Exception:
+                pass
+        self._autosave_after_id = None
+        self._autosave_owner = None
+
+    def offer_recovery(self, parent, restore: Callable[[Any, Path | None], None]) -> bool:
+        if not self.recovery_path.is_file():
+            return False
+        try:
+            payload = json.loads(self.recovery_path.read_text(encoding="utf-8"))
+            snapshot = payload["snapshot"]
+            path = Path(payload["path"]) if payload.get("path") else None
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            self.clear_recovery()
+            return False
+        if not messagebox.askyesno(
+            "Recuperar trabajo",
+            "Se encontró un autoguardado de una sesión anterior. ¿Deseas recuperarlo?",
+            parent=parent,
+        ):
+            self.clear_recovery()
+            return False
+        restore(snapshot, path)
+        self.current_path = path
+        self._saved_fingerprint = stable_fingerprint({})
+        return True
+
+    def clear_recovery(self) -> None:
+        self.recovery_path.unlink(missing_ok=True)
+
+    def _schedule_autosave(self) -> None:
+        if self._autosave_owner is not None:
+            self._autosave_after_id = self._autosave_owner.after(
+                AUTOSAVE_INTERVAL_MS,
+                self._autosave_tick,
+            )
+
+    def _autosave_tick(self) -> None:
+        self._autosave_after_id = None
+        if self.is_dirty:
+            try:
+                atomic_write_json(
+                    self.recovery_path,
+                    {
+                        "app": self.app_id,
+                        "saved_at": time.time(),
+                        "path": str(self.current_path) if self.current_path else None,
+                        "snapshot": self.snapshot(),
+                    },
+                )
+            except (OSError, TypeError, ValueError):
+                pass
+        self._schedule_autosave()
 
 
 __all__ = [

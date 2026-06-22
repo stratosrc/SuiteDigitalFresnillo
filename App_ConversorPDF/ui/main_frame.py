@@ -52,6 +52,8 @@ from App_ConversorPDF.ui.theme import (
     make_font,
 )
 from components.shared.images import load_ctk_image
+from components.shared.accessibility import enable_visible_focus
+from components.shared.shortcuts import bind_common_shortcuts
 from components.shared.tooltip import Tooltip
 from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
@@ -87,10 +89,19 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self._worker_events: Queue[tuple] = Queue()
         self._worker_poll_after_id: str | None = None
         self._closing = False
+        self._cancel_event = threading.Event()
         self._dnd_available = DND_FILES is not None
         self._build_layout()
         self._refresh_outputs()
         self._worker_poll_after_id = self.after(50, self._poll_worker_events)
+        bind_common_shortcuts(
+            self.master,
+            new=self.reset_work,
+            open_=self._select_files,
+            save=self._convert_first_output,
+            save_as=self._save_all_outputs,
+        )
+        self.after_idle(lambda: enable_visible_focus(self))
 
     def _build_layout(self) -> None:
         self.pack(fill="both", expand=True)
@@ -209,6 +220,15 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             progress_color=PRIMARY_BUTTON,
         )
         self.loading_progress.grid(row=2, column=0, padx=42, pady=(0, 30), sticky="ew")
+        self.cancel_conversion_button = ctk.CTkButton(
+            content,
+            text="Cancelar",
+            command=self._cancel_conversion,
+            width=110,
+            fg_color=DANGER_BUTTON,
+            hover_color=DANGER_BUTTON_ACTIVE,
+        )
+        self.cancel_conversion_button.grid(row=3, column=0, pady=(0, 24))
         self.loading_overlay.grid_remove()
 
     def _build_upload_panel(self) -> None:
@@ -217,8 +237,9 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.upload_icon_hover_image = load_ctk_image(UPLOAD_ICON_HOVER_PATH, (180, 180), crop_alpha=True)
         self.upload_icon_button = ctk.CTkButton(
             self.left_panel,
-            text="" if self.upload_icon_image is not None else "Upload",
+            text="Arrastra archivos aquí o haz clic para comenzar",
             image=self.upload_icon_image,
+            compound="top",
             command=self._select_files,
             width=1,
             height=1,
@@ -229,6 +250,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             font=make_font(14, "bold"),
         )
         self.upload_icon_button.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        Tooltip(self.upload_icon_button, "Agregar archivos")
         self.upload_icon_button.bind("<Enter>", lambda _event: self._set_icon_hover(self.upload_icon_button, self.upload_icon_hover_image), add=True)
         self.upload_icon_button.bind("<Leave>", lambda _event: self._set_icon_hover(self.upload_icon_button, self.upload_icon_image), add=True)
         self._enable_file_drop(self.upload_icon_button)
@@ -268,8 +290,9 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.separate_icon_on_image = load_ctk_image(SEPARATE_ICON_ON_PATH, (28, 28), crop_alpha=True)
         self.download_icon_button = ctk.CTkButton(
             self.right_panel,
-            text="" if self.download_icon_image is not None else "Download",
+            text="Los archivos listos para convertir aparecerán aquí",
             image=self.download_icon_image,
+            compound="top",
             command=self._convert_first_output,
             width=1,
             height=1,
@@ -280,6 +303,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             font=make_font(14, "bold"),
         )
         self.download_icon_button.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        Tooltip(self.download_icon_button, "Convertir y guardar")
         self.download_icon_button.bind("<Enter>", lambda _event: self._set_icon_hover(self.download_icon_button, self.download_icon_hover_image), add=True)
         self.download_icon_button.bind("<Leave>", lambda _event: self._set_icon_hover(self.download_icon_button, self.download_icon_image), add=True)
 
@@ -493,6 +517,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
                 font=make_font(11, "bold"),
             )
             button.grid(row=0, column=1, sticky="e")
+            Tooltip(button, f"Guardar {output.filename}")
             self.output_buttons.append(button)
         self._sync_action_buttons()
 
@@ -553,17 +578,15 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self._run_conversion_task(
             status_text=f"Convirtiendo 1 de {len(outputs)}...",
             task=lambda: self._convert_all_outputs(outputs, output_dir),
-            on_success=lambda saved_paths: messagebox.showinfo(
-                "PDFs guardados",
-                f"Se guardaron {len(saved_paths)} archivo(s) en:\n{output_dir}",
-                parent=self,
-            ),
+            on_success=lambda report: self._show_batch_report(report, output_dir),
         )
 
-    def _convert_all_outputs(self, outputs: list[PlannedOutput], output_dir: Path) -> list[Path]:
+    def _convert_all_outputs(self, outputs: list[PlannedOutput], output_dir: Path) -> dict[str, object]:
         saved_paths: list[Path] = []
         errors: list[str] = []
         for index, output in enumerate(outputs, start=1):
+            if self._cancel_event.is_set():
+                break
             self._set_loading_status_from_worker(f"Convirtiendo {index} de {len(outputs)}...")
             try:
                 saved_paths.append(
@@ -578,12 +601,28 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             except Exception as error:  # noqa: BLE001
                 errors.append(f"{output.filename}: {error}")
 
+        return {
+            "saved": saved_paths,
+            "errors": errors,
+            "cancelled": self._cancel_event.is_set(),
+            "total": len(outputs),
+        }
+
+    def _show_batch_report(self, report: dict[str, object], output_dir: Path) -> None:
+        saved = list(report.get("saved", []))
+        errors = list(report.get("errors", []))
+        lines = [
+            f"Correctas: {len(saved)}",
+            f"Fallidas: {len(errors)}",
+        ]
+        if report.get("cancelled"):
+            lines.append("La operación fue cancelada.")
+        if saved:
+            lines.extend(["", "Archivos generados:", *(f"• {Path(path).name}" for path in saved[:8])])
         if errors:
-            message = "\n".join(errors[:5])
-            if len(errors) > 5:
-                message += f"\n... y {len(errors) - 5} error(es) mas."
-            raise RuntimeError(message)
-        return saved_paths
+            lines.extend(["", "Errores:", *(f"• {error}" for error in errors[:8])])
+        lines.extend(["", f"Carpeta: {output_dir}"])
+        messagebox.showinfo("Reporte de conversión", "\n".join(lines), parent=self)
 
     def _set_icon_hover(self, button: ctk.CTkButton, image: ctk.CTkImage | None) -> None:
         if image is not None:
@@ -655,6 +694,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
     def _run_conversion_task(self, status_text: str, task, on_success) -> None:
         if self.is_busy:
             return
+        self._cancel_event.clear()
         self._show_loading(status_text)
 
         def worker() -> None:
@@ -662,6 +702,10 @@ class PdfConverterMainFrame(ctk.CTkFrame):
                 result = task()
             except Exception as error:  # noqa: BLE001
                 self._worker_events.put(("error", error))
+                return
+            if self._cancel_event.is_set() and isinstance(result, Path):
+                result.unlink(missing_ok=True)
+                self._worker_events.put(("cancelled",))
                 return
             self._worker_events.put(("success", result, on_success))
 
@@ -678,6 +722,13 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.loading_progress.stop()
         self.loading_overlay.grid_remove()
         self.is_busy = False
+
+    def _cancel_conversion(self) -> None:
+        if not self.is_busy:
+            return
+        self._cancel_event.set()
+        self.cancel_conversion_button.configure(state="disabled")
+        self.loading_status_label.configure(text="Cancelando al terminar el archivo actual...")
 
     def _set_loading_status_from_worker(self, status_text: str) -> None:
         self._worker_events.put(("status", status_text))
@@ -697,16 +748,22 @@ class PdfConverterMainFrame(ctk.CTkFrame):
                 self._finish_conversion_success(event[1], event[2])
             elif event_type == "error":
                 self._finish_conversion_error(event[1])
+            elif event_type == "cancelled":
+                self._hide_loading()
+                self.cancel_conversion_button.configure(state="normal")
+                messagebox.showinfo("Conversión cancelada", "La conversión fue cancelada.", parent=self)
 
         if not self._closing and self.winfo_exists():
             self._worker_poll_after_id = self.after(50, self._poll_worker_events)
 
     def _finish_conversion_success(self, result, on_success) -> None:
         self._hide_loading()
+        self.cancel_conversion_button.configure(state="normal")
         on_success(result)
 
     def _finish_conversion_error(self, error: Exception) -> None:
         self._hide_loading()
+        self.cancel_conversion_button.configure(state="normal")
         messagebox.showerror("No se pudo convertir", str(error), parent=self)
 
     def confirm_exit(self) -> None:

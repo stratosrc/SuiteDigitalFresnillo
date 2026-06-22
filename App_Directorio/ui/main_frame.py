@@ -29,7 +29,9 @@ from App_Directorio.ui.theme import (
     make_font,
 )
 from components.shared.images import load_ctk_image
+from components.shared.accessibility import enable_visible_focus
 from components.shared.project_lifecycle import ProjectLifecycle
+from components.shared.shortcuts import bind_common_shortcuts
 from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
 LOGGER = logging.getLogger(__name__)
@@ -49,8 +51,22 @@ class DirectoryMainFrame(ctk.CTkFrame):
             save=self.save_project,
         )
         self._build_menu()
+        self._history: list[dict] = [asdict(self.directory_form.get_report_data())]
+        self._redo_history: list[dict] = []
+        self._history_paused = False
         self._dirty_poll_after_id: str | None = None
         self._poll_dirty_state()
+        bind_common_shortcuts(
+            self.master,
+            new=self.new_project,
+            open_=self.open_project,
+            save=self.save_project,
+            save_as=self.save_project_as,
+            undo=self.undo,
+            redo=self.redo,
+        )
+        self.project_lifecycle.start_autosave(self.master, self._restore_autosave)
+        self.after_idle(lambda: enable_visible_focus(self))
 
     def _build_layout(self) -> None:
         self.pack(fill="both", expand=True)
@@ -75,6 +91,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.recent_menu = tk.Menu(self.file_menu, tearoff=0)
         self.file_menu.add_cascade(label="Archivos recientes", menu=self.recent_menu)
         self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
+        self.file_menu.add_command(label="Guardar proyecto como", command=self.save_project_as)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
         self._refresh_recent_menu()
@@ -244,6 +261,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.directory_form.reset_form()
         self.current_project_path = None
         self.project_lifecycle.reset(mark_saved=True)
+        self._reset_history()
         self._update_window_title()
 
     def open_project(self) -> None:
@@ -271,6 +289,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.current_project_path = Path(source_path)
         self.directory_form.set_report_data(data)
         self.project_lifecycle.mark_saved(self.current_project_path)
+        self._reset_history()
         self._update_window_title()
 
     def save_project(self) -> bool:
@@ -319,8 +338,37 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.master.destroy()
 
     def _poll_dirty_state(self) -> None:
+        snapshot = asdict(self.directory_form.get_report_data())
+        if not self._history_paused and snapshot != self._history[-1]:
+            self._history.append(snapshot)
+            self._history = self._history[-100:]
+            self._redo_history.clear()
         self._update_window_title()
         self._dirty_poll_after_id = self.after(350, self._poll_dirty_state)
+
+    def undo(self) -> None:
+        if len(self._history) < 2:
+            return
+        self._redo_history.append(self._history.pop())
+        self._apply_history_snapshot(self._history[-1])
+
+    def redo(self) -> None:
+        if not self._redo_history:
+            return
+        snapshot = self._redo_history.pop()
+        self._history.append(snapshot)
+        self._apply_history_snapshot(snapshot)
+
+    def _apply_history_snapshot(self, snapshot: dict) -> None:
+        self._history_paused = True
+        try:
+            self.directory_form.set_report_data(self.persistence_manager.from_dict(snapshot))
+        finally:
+            self._history_paused = False
+
+    def _reset_history(self) -> None:
+        self._history = [asdict(self.directory_form.get_report_data())]
+        self._redo_history.clear()
 
     def _update_window_title(self) -> None:
         marker = " *" if self.project_lifecycle.is_dirty else ""
@@ -357,9 +405,19 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.current_project_path = Path(source_path)
         self.directory_form.set_report_data(data)
         self.project_lifecycle.mark_saved(self.current_project_path)
+        self._reset_history()
         self._update_window_title()
 
+    def _restore_autosave(self, snapshot: object, path: Path | None) -> None:
+        if not isinstance(snapshot, dict):
+            return
+        self.directory_form.set_report_data(self.persistence_manager.from_dict(snapshot))
+        self.current_project_path = path
+        self._history = [snapshot]
+        self._redo_history.clear()
+
     def destroy(self) -> None:
+        self.project_lifecycle.stop_autosave()
         if self._dirty_poll_after_id is not None:
             self.after_cancel(self._dirty_poll_after_id)
             self._dirty_poll_after_id = None

@@ -43,8 +43,21 @@ def bind_uppercase(variable: tk.StringVar) -> None:
         value = variable.get()
         uppercase = value.upper()
         if value != uppercase:
+            try:
+                focused = variable._root.focus_get()
+            except tk.TclError:
+                focused = None
+            cursor = None
+            if isinstance(focused, tk.Entry):
+                try:
+                    cursor = focused.index(tk.INSERT)
+                except tk.TclError:
+                    cursor = None
             variable.set(uppercase)
-            variable._root.after_idle(lambda: variable.set(variable.get()))
+            if focused is not None and cursor is not None:
+                variable._root.after_idle(
+                    lambda: focused.icursor(min(cursor, len(variable.get())))
+                )
 
     variable.trace_add("write", normalize)
 
@@ -112,6 +125,7 @@ class PersonnelRow:
                 command=self._handle_move_up,
                 width=30,
                 height=30,
+                tooltip_text="Subir persona",
             )
             up_button.grid(row=self.grid_row, column=5, padx=(10, 4), pady=(0, 8), sticky="e")
             self.widgets.append(up_button)
@@ -122,6 +136,7 @@ class PersonnelRow:
                 command=self._handle_move_down,
                 width=30,
                 height=30,
+                tooltip_text="Bajar persona",
             )
             down_button.grid(row=self.grid_row, column=6, padx=(0, 4), pady=(0, 8), sticky="e")
             self.widgets.append(down_button)
@@ -132,6 +147,7 @@ class PersonnelRow:
                 command=self._handle_remove,
                 width=30,
                 height=30,
+                tooltip_text="Eliminar persona",
             )
             remove_button.grid(row=self.grid_row, column=7, padx=(0, 0), pady=(0, 8), sticky="e")
             self.widgets.append(remove_button)
@@ -256,6 +272,7 @@ class AreaSection(ctk.CTkFrame):
                 command=self._handle_move_up,
                 width=32,
                 height=32,
+                tooltip_text="Subir área",
             ).grid(row=0, column=1, padx=(10, 0), sticky="e")
 
             HoverIconButton(
@@ -264,6 +281,7 @@ class AreaSection(ctk.CTkFrame):
                 command=self._handle_move_down,
                 width=32,
                 height=32,
+                tooltip_text="Bajar área",
             ).grid(row=0, column=2, padx=(6, 0), sticky="e")
 
             HoverIconButton(
@@ -272,6 +290,7 @@ class AreaSection(ctk.CTkFrame):
                 command=self._handle_remove,
                 width=32,
                 height=32,
+                tooltip_text="Eliminar área",
             ).grid(row=0, column=3, padx=(10, 0), sticky="e")
 
         self.detail_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -289,6 +308,7 @@ class AreaSection(ctk.CTkFrame):
             command=self.add_person_row,
             width=32,
             height=32,
+            tooltip_text="Agregar persona",
         )
 
         self.add_person_row()
@@ -423,12 +443,23 @@ class DirectoryFormFrame(ctk.CTkFrame):
         scrollable.grid(row=0, column=0, sticky="nsew")
         scrollable.grid_columnconfigure(0, weight=1)
 
+        ctk.CTkLabel(
+            scrollable,
+            text=(
+                "Completa los datos generales y agrega las personas del directorio. "
+                "Los campos se guardan automáticamente para recuperación."
+            ),
+            text_color=TEXT_MUTED,
+            font=make_font(12),
+            anchor="w",
+            justify="left",
+        ).grid(row=0, column=0, sticky="ew", padx=24, pady=(16, 0))
         self._build_metadata_section(scrollable)
         self._build_directory_section(scrollable)
 
     def _build_metadata_section(self, parent: ctk.CTkScrollableFrame) -> None:
         section = ctk.CTkFrame(parent, fg_color="transparent")
-        section.grid(row=0, column=0, sticky="ew", padx=24, pady=(22, 12))
+        section.grid(row=1, column=0, sticky="ew", padx=24, pady=(16, 12))
         section.grid_columnconfigure(0, weight=1)
         section.grid_columnconfigure(1, weight=1)
 
@@ -480,7 +511,7 @@ class DirectoryFormFrame(ctk.CTkFrame):
 
     def _build_directory_section(self, parent: ctk.CTkScrollableFrame) -> None:
         section = ctk.CTkFrame(parent, fg_color="transparent")
-        section.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 16))
+        section.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 16))
         section.grid_columnconfigure(0, weight=1)
 
         self.areas_container = ctk.CTkFrame(section, fg_color="transparent")

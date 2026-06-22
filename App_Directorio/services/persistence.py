@@ -48,7 +48,9 @@ class DirectoryPersistenceManager:
         raw_directory = payload.get("directory")
         if not isinstance(raw_directory, dict):
             raise ValueError("El archivo seleccionado no parece ser un proyecto de Directorio.")
+        return self.from_dict(raw_directory)
 
+    def from_dict(self, raw_directory: dict) -> DirectoryReportData:
         areas = []
         for raw_area in raw_directory.get("areas", []):
             personnel = [

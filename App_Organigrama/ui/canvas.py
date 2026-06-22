@@ -163,6 +163,20 @@ class OrgGridCanvas(
             self.route_cache = self.router.route_document(self.document)
             self._routes_dirty = False
         self._draw_grid()
+        if not self.document.nodes:
+            self.canvas.create_text(
+                self.canvas.winfo_width() / 2,
+                self.canvas.winfo_height() / 2,
+                text=(
+                    "Organigrama vacío\n"
+                    "Haz clic en una celda para crear el primer nodo.\n"
+                    "También puedes abrir un proyecto con Ctrl+O."
+                ),
+                fill="#64748B",
+                font=("Arial", 14),
+                justify="center",
+                tags=("empty-state",),
+            )
         self._draw_connections(self.route_cache)
         self._draw_manual_route_ghost()
         self._draw_connection_drag_preview()

@@ -36,7 +36,10 @@ from App_Organigrama.ui.theme import (
 )
 from components.shared.images import load_ctk_image
 from components.shared.entries import VariablePlaceholderEntry
+from components.shared.accessibility import enable_visible_focus
+from components.shared.confirmation import ask_save_discard_cancel
 from components.shared.project_lifecycle import ProjectLifecycle
+from components.shared.shortcuts import bind_common_shortcuts
 from components.shared.tooltip import Tooltip
 from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
@@ -62,8 +65,10 @@ class MainFrame(ctk.CTkFrame):
         self.current_project_path: Path | None = None
         self.is_dirty = False
         self._metadata_sync_paused = False
+        self._metadata_history_after_id: str | None = None
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="orgchart-worker")
         self._pending_task: Future[Path] | None = None
+        self._cancel_export_requested = False
         self.toolbar_logo_image: ctk.CTkImage | None = None
         self.undo_icon: ctk.CTkImage | None = None
         self.redo_icon: ctk.CTkImage | None = None
@@ -76,9 +81,19 @@ class MainFrame(ctk.CTkFrame):
         self._build_layout()
         self._build_menu()
         self._bind_metadata()
-        self._bind_history_shortcuts()
+        bind_common_shortcuts(
+            self.master,
+            new=self.new_project,
+            open_=self.open_project,
+            save=self.save_project,
+            save_as=self.save_project_as,
+            undo=self.undo,
+            redo=self.redo,
+        )
         self._update_history_buttons()
         self._update_window_title()
+        self.project_lifecycle.start_autosave(self.master, self._restore_autosave)
+        self.after_idle(lambda: enable_visible_focus(self))
 
     def _build_layout(self) -> None:
         self.pack(fill="both", expand=True)
@@ -108,6 +123,8 @@ class MainFrame(ctk.CTkFrame):
         self.recent_menu = tk.Menu(self.file_menu, tearoff=0)
         self.file_menu.add_cascade(label="Archivos recientes", menu=self.recent_menu)
         self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
+        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
+        self.file_menu.add_command(label="Guardar proyecto como", command=self.save_project_as)
         self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
@@ -206,7 +223,7 @@ class MainFrame(ctk.CTkFrame):
             column=column,
             sticky="w",
         )
-        VariablePlaceholderEntry(
+        entry = VariablePlaceholderEntry(
             parent,
             textvariable=variable,
             height=34,
@@ -216,7 +233,12 @@ class MainFrame(ctk.CTkFrame):
             text_color=TEXT_DARK,
             font=make_font(12),
             placeholder_text=placeholder,
-        ).grid(row=1, column=column, sticky="ew", pady=(6, 0), padx=padx)
+        )
+        entry.grid(row=1, column=column, sticky="ew", pady=(6, 0), padx=padx)
+        if variable is self.title_var:
+            self.title_entry = entry
+        elif variable is self.period_var:
+            self.period_entry = entry
 
     def _build_workspace(self) -> None:
         body = ctk.CTkFrame(self, fg_color=APP_BACKGROUND, corner_radius=0)
@@ -308,13 +330,15 @@ class MainFrame(ctk.CTkFrame):
         column: int,
         width: int,
     ) -> None:
-        ctk.CTkButton(
+        button = ctk.CTkButton(
             parent,
             text=text,
             width=width,
             command=lambda: self.grid_canvas.scroll_view(direction),
             corner_radius=0,
-        ).grid(row=row, column=column, padx=2, pady=(3, 0) if row else 0)
+        )
+        button.grid(row=row, column=column, padx=2, pady=(3, 0) if row else 0)
+        Tooltip(button, f"Desplazar vista hacia {direction}")
 
     def _build_footer(self) -> None:
         footer = ctk.CTkFrame(self, fg_color=DARK_BACKGROUND, corner_radius=0, height=34)
@@ -371,6 +395,17 @@ class MainFrame(ctk.CTkFrame):
         self.redo_button.pack(side="left", padx=(3, 0))
         Tooltip(self.redo_button, "Rehacer (Ctrl+Y)", show_when_disabled=True)
 
+        self.cancel_export_button = ctk.CTkButton(
+            footer_actions,
+            text="Cancelar exportación",
+            command=self._cancel_current_export,
+            height=25,
+            width=145,
+            fg_color=DANGER_BUTTON,
+            hover_color=DANGER_BUTTON_ACTIVE,
+            corner_radius=0,
+        )
+
         self.context_status_label = ctk.CTkLabel(
             footer,
             text="Clic para crear nodo",
@@ -384,7 +419,7 @@ class MainFrame(ctk.CTkFrame):
         zoom_frame.grid(row=0, column=2, padx=(12, 5), pady=5, sticky="e")
         ctk.CTkLabel(zoom_frame, text="Zoom", text_color=TEXT_LIGHT, font=make_font(12)).pack(side="left", padx=(0, 4))
 
-        ctk.CTkButton(
+        zoom_out_button = ctk.CTkButton(
             zoom_frame,
             text="-",
             command=lambda: self.grid_canvas.change_zoom("out"),
@@ -393,12 +428,14 @@ class MainFrame(ctk.CTkFrame):
             corner_radius=0,
             
             font=make_font(13, "bold"),
-        ).pack(side="left", padx=(0, 4))
+        )
+        zoom_out_button.pack(side="left", padx=(0, 4))
+        Tooltip(zoom_out_button, "Alejar")
 
         self.zoom_label = ctk.CTkLabel(zoom_frame, text="100%", width=48, text_color=TEXT_LIGHT, font=make_font(12))
         self.zoom_label.pack(side="left", padx=(0, 4))
 
-        ctk.CTkButton(
+        zoom_in_button = ctk.CTkButton(
             zoom_frame,
             text="+",
             command=lambda: self.grid_canvas.change_zoom("in"),
@@ -407,7 +444,9 @@ class MainFrame(ctk.CTkFrame):
             corner_radius=0,
             
             font=make_font(13, "bold"),
-        ).pack(side="left")
+        )
+        zoom_in_button.pack(side="left")
+        Tooltip(zoom_in_button, "Acercar")
 
     def _bind_metadata(self) -> None:
         self.title_var.trace_add("write", self._sync_metadata)
@@ -417,6 +456,16 @@ class MainFrame(ctk.CTkFrame):
         if self._metadata_sync_paused:
             return
 
+        active_entry = self.master.focus_get()
+        cursor_entry = next(
+            (
+                entry
+                for entry in (getattr(self, "title_entry", None), getattr(self, "period_entry", None))
+                if entry is not None and active_entry in {entry, entry._entry}
+            ),
+            None,
+        )
+        cursor_position = cursor_entry.index(tk.INSERT) if cursor_entry is not None else None
         title = self.title_var.get().upper()
         period = self.period_var.get().upper()
         if title != self.title_var.get() or period != self.period_var.get():
@@ -424,8 +473,16 @@ class MainFrame(ctk.CTkFrame):
             self.title_var.set(title)
             self.period_var.set(period)
             self._metadata_sync_paused = False
+            if cursor_entry is not None and cursor_position is not None:
+                cursor_entry.icursor(min(cursor_position, len(cursor_entry.get())))
         self.document.title = title
         self.document.period = period
+        if self._metadata_history_after_id is not None:
+            self.after_cancel(self._metadata_history_after_id)
+        self._metadata_history_after_id = self.after(500, self._commit_metadata_history)
+
+    def _commit_metadata_history(self) -> None:
+        self._metadata_history_after_id = None
         self._record_document_change()
 
     def _bind_history_shortcuts(self) -> None:
@@ -515,6 +572,7 @@ class MainFrame(ctk.CTkFrame):
         self.project_lifecycle.mark_saved(self.current_project_path)
 
     def save_project(self) -> bool:
+        self._commit_pending_metadata_history()
         if self.current_project_path is None:
             return self.save_project_as()
 
@@ -537,6 +595,7 @@ class MainFrame(ctk.CTkFrame):
         return True
 
     def save_project_as(self) -> bool:
+        self._commit_pending_metadata_history()
         self._sync_metadata()
         target_path = filedialog.asksaveasfilename(
             parent=self,
@@ -625,7 +684,10 @@ class MainFrame(ctk.CTkFrame):
         self._run_background_task(task, success_title="Imagen exportada")
 
     def _run_background_task(self, task: Callable[[], Path], success_title: str) -> None:
+        self._cancel_export_requested = False
         self._set_busy_state("disabled")
+        self.cancel_export_button.configure(state="normal", text="Cancelar exportación")
+        self.cancel_export_button.pack(side="left", padx=(8, 0))
         future = self._executor.submit(task)
         self._pending_task = future
         self.after(120, lambda: self._poll_task(future, success_title))
@@ -636,15 +698,30 @@ class MainFrame(ctk.CTkFrame):
             return
 
         try:
+            if future.cancelled():
+                messagebox.showinfo("Exportación cancelada", "La exportación fue cancelada.", parent=self)
+                return
             result_path = future.result()
-            messagebox.showinfo(success_title, f"Archivo generado correctamente en:\n{result_path}", parent=self)
+            if self._cancel_export_requested:
+                Path(result_path).unlink(missing_ok=True)
+                messagebox.showinfo("Exportación cancelada", "La exportación fue cancelada.", parent=self)
+            else:
+                messagebox.showinfo(success_title, f"Archivo generado correctamente en:\n{result_path}", parent=self)
         except Exception as error:  # noqa: BLE001
             LOGGER.exception("Unable to complete org chart background task")
             messagebox.showerror("Error", f"No se pudo completar la operación:\n{error}", parent=self)
         finally:
             if self._pending_task is future:
                 self._pending_task = None
+            self.cancel_export_button.pack_forget()
             self._set_busy_state("normal")
+
+    def _cancel_current_export(self) -> None:
+        if self._pending_task is None:
+            return
+        self._cancel_export_requested = True
+        self._pending_task.cancel()
+        self.cancel_export_button.configure(state="disabled", text="Cancelando...")
 
     def _is_operation_running(self) -> bool:
         return self._pending_task is not None and not self._pending_task.done()
@@ -662,18 +739,13 @@ class MainFrame(ctk.CTkFrame):
         if not self.is_dirty:
             return True
 
-        answer = messagebox.askyesnocancel(
-            "Guardar proyecto antes de exportar",
-            "Hay cambios sin guardar. ¿Deseas guardar el proyecto editable antes de exportar?",
-            parent=self,
-        )
-        if answer is None:
+        answer = ask_save_discard_cancel(self, "exportar")
+        if answer == "cancel":
             return False
-        if answer is False:
+        if answer == "discard":
             return True
 
-        self.save_project()
-        return not self.is_dirty
+        return self.save_project() and not self.is_dirty
 
     def _show_operation_warning(self) -> None:
         messagebox.showwarning(
@@ -694,6 +766,11 @@ class MainFrame(ctk.CTkFrame):
         if self.document_history.record(self.document):
             self._set_dirty(self.document_history.is_dirty)
             self._update_history_buttons()
+
+    def _commit_pending_metadata_history(self) -> None:
+        if self._metadata_history_after_id is not None:
+            self.after_cancel(self._metadata_history_after_id)
+            self._commit_metadata_history()
 
     def undo(self, _event: tk.Event | None = None) -> str | None:
         restored = self.document_history.undo()
@@ -793,6 +870,15 @@ class MainFrame(ctk.CTkFrame):
         self._reset_document_history(mark_saved=True)
         self.project_lifecycle.mark_saved(self.current_project_path)
 
+    def _restore_autosave(self, snapshot: object, path: Path | None) -> None:
+        if not isinstance(snapshot, dict):
+            return
+        self.document = self.persistence_manager.from_dict(snapshot)
+        self.current_project_path = path
+        self._load_document_into_ui(self.document)
+        self._reset_document_history(mark_saved=False)
+
     def destroy(self) -> None:
+        self.project_lifecycle.stop_autosave()
         self._executor.shutdown(wait=False, cancel_futures=True)
         super().destroy()

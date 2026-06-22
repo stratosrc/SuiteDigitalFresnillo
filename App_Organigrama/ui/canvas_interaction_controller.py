@@ -32,7 +32,29 @@ class CanvasInteractionController:
         self.canvas.bind("<Delete>", self._delete_selected)
         self.canvas.bind("<BackSpace>", self._delete_selected)
         self.canvas.bind("<Escape>", self._cancel_connection)
+        self.canvas.bind("<Menu>", self._show_keyboard_context_menu)
+        self.canvas.bind("<Shift-F10>", self._show_keyboard_context_menu)
+        self.canvas.bind("<Up>", lambda _event: self.scroll_view("up"))
+        self.canvas.bind("<Down>", lambda _event: self.scroll_view("down"))
+        self.canvas.bind("<Left>", lambda _event: self.scroll_view("left"))
+        self.canvas.bind("<Right>", lambda _event: self.scroll_view("right"))
+        self.canvas.bind("<Return>", lambda _event: self.edit_selected_node())
         self.canvas.focus_set()
+
+    def _show_keyboard_context_menu(self, _event=None) -> str:
+        event = type(
+            "ContextEvent",
+            (),
+            {
+                "x": self.canvas.winfo_width() // 2,
+                "y": self.canvas.winfo_height() // 2,
+                "x_root": self.canvas.winfo_rootx() + self.canvas.winfo_width() // 2,
+                "y_root": self.canvas.winfo_rooty() + self.canvas.winfo_height() // 2,
+                "keyboard": True,
+            },
+        )()
+        self._show_context_menu(event)
+        return "break"
 
     def _redraw_selection_overlay(self) -> None:
         self.canvas.delete("selection-overlay")

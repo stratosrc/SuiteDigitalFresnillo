@@ -56,6 +56,8 @@ from App_TestData.ui.dialogs.help_dialog import show_help_dialog
 from App_TestData.ui.layout.main_layout import build_main_layout
 from components.shared.windowing import center_window, prepare_window_for_open, reveal_window_maximized
 from components.shared.project_lifecycle import ProjectLifecycle
+from components.shared.accessibility import enable_visible_focus
+from components.shared.shortcuts import bind_common_shortcuts
 from components.styles.styles import apply_ctk_style, styles
 
 
@@ -95,8 +97,19 @@ class TestDataGeneratorApp(ctk.CTk):
             save=self.save_project,
         )
         self._configure_project_menu()
+        bind_common_shortcuts(
+            self,
+            new=self._start_new_job,
+            open_=self.open_project,
+            save=self.save_project,
+            save_as=self.save_project_as,
+            undo=lambda: self.rectangle_action_controller.handle_action("undo"),
+            redo=lambda: self.rectangle_action_controller.handle_action("redo"),
+        )
         self._dirty_poll_after_id: str | None = None
         self._poll_dirty_state()
+        self.project_lifecycle.start_autosave(self, self._restore_autosave)
+        self.after_idle(lambda: enable_visible_focus(self))
 
         setup_canvas_events(self)
         setup_mousewheel_scroll(
@@ -571,7 +584,7 @@ class TestDataGeneratorApp(ctk.CTk):
             for rectangle in self.censored_rectangles
         ]
         return {
-            "pdf": Path(self.current_pdf_path).name if self.current_pdf_path else None,
+            "pdf": str(Path(self.current_pdf_path).resolve()) if self.current_pdf_path else None,
             "current_page": self.current_page,
             "current_zoom": self.current_zoom,
             "rectangles": rectangles,
@@ -581,9 +594,42 @@ class TestDataGeneratorApp(ctk.CTk):
             "committee_data": deepcopy(self.document_state.committee_data),
         }
 
+    def _restore_autosave(self, snapshot: object, path: Path | None) -> None:
+        if not isinstance(snapshot, dict) or not snapshot.get("pdf"):
+            return
+        pdf_path = Path(str(snapshot["pdf"]))
+        if not pdf_path.is_file():
+            messagebox.showwarning(
+                "No se pudo recuperar",
+                f"El PDF original ya no existe:\n{pdf_path}",
+                parent=self,
+            )
+            return
+        self.pdf_manager.reset_current_job()
+        self.current_pdf_path = str(pdf_path)
+        self.pdf_document = fitz.open(pdf_path)
+        self.current_page = min(
+            max(int(snapshot.get("current_page", 0)), 0),
+            max(len(self.pdf_document) - 1, 0),
+        )
+        self.current_zoom = snapshot.get("current_zoom")
+        self.censored_rectangles = deserialize_rectangles(snapshot.get("rectangles", []))
+        self.reserved_history[:] = list(snapshot.get("reserved_history", []))
+        self.confidential_history[:] = list(snapshot.get("confidential_history", []))
+        self.other_law_history[:] = list(snapshot.get("other_law_history", []))
+        self.document_state.committee_data.clear()
+        self.document_state.committee_data.update(snapshot.get("committee_data", {}))
+        self.current_project_path = path
+        self.next_rectangle_id = self._next_rectangle_id_from_project()
+        self.pdf_manager.render_current_page()
+
     def _configure_project_menu(self) -> None:
         self.recent_menu = tk.Menu(self.file_menu, tearoff=0)
         self.file_menu.insert_cascade(2, label="Archivos recientes", menu=self.recent_menu)
+        self.file_menu.add_command(
+            label="Cancelar exportación",
+            command=self.export_controller.cancel,
+        )
         self._refresh_recent_menu()
 
     def _refresh_recent_menu(self) -> None:
@@ -609,6 +655,7 @@ class TestDataGeneratorApp(ctk.CTk):
         self._dirty_poll_after_id = self.after(350, self._poll_dirty_state)
 
     def destroy(self) -> None:
+        self.project_lifecycle.stop_autosave()
         if getattr(self, "_dirty_poll_after_id", None) is not None:
             self.after_cancel(self._dirty_poll_after_id)
             self._dirty_poll_after_id = None
