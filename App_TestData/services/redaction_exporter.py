@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from typing import Mapping
+from collections.abc import Callable
 
 import fitz
 
@@ -12,6 +13,7 @@ from App_TestData.domain.redaction_editing import iter_rectangles_in_order
 from App_TestData.services.committee_cover import CommitteeCoverWriter
 from App_TestData.services.pdf_fonts import fitz_font_kwargs, fitz_text_width
 from App_TestData.services.summary_pages import SummaryPagesWriter
+from components.shared.atomic_output import write_atomic_output
 
 
 class RedactionPdfExporter:
@@ -25,6 +27,29 @@ class RedactionPdfExporter:
         output_path: str,
         rectangles: list[RectangleData],
         committee_data: CommitteeData | None = None,
+        cancel_check: Callable[[], bool] | None = None,
+    ) -> None:
+        write_atomic_output(
+            output_path,
+            lambda temporary: self._write_pdf(
+                source,
+                str(temporary),
+                rectangles,
+                committee_data,
+            ),
+            should_commit=(
+                (lambda: not cancel_check())
+                if cancel_check is not None
+                else None
+            ),
+        )
+
+    def _write_pdf(
+        self,
+        source: bytes | str,
+        output_path: str,
+        rectangles: list[RectangleData],
+        committee_data: CommitteeData | None,
     ) -> None:
         output_document = (
             fitz.open(stream=source, filetype="pdf")

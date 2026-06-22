@@ -5,6 +5,9 @@ import tkinter as tk
 import customtkinter as ctk
 
 
+CONFIRM_BUTTON_COLOR = "#131C46"
+
+
 def ask_save_discard_cancel(parent, action: str) -> str:
     """Return ``save``, ``discard`` or ``cancel``."""
     result = tk.StringVar(master=parent, value="cancel")
@@ -38,6 +41,10 @@ def ask_save_discard_cancel(parent, action: str) -> str:
             text=text,
             command=lambda selected=value: choose(selected),
             width=92,
+            corner_radius=0,
+            border_width=0,
+            fg_color=CONFIRM_BUTTON_COLOR,
+            hover_color=CONFIRM_BUTTON_COLOR,
         )
         button.pack(side="left", padx=4)
         created_buttons.append(button)

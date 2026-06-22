@@ -40,6 +40,17 @@ HELP_SECTIONS: tuple[HelpSection, ...] = (
         ),
     ),
     (
+        "ATAJOS DE TECLADO",
+        (
+            "Ctrl+N: Crear un proyecto nuevo.",
+            "Ctrl+O: Abrir un proyecto existente.",
+            "Ctrl+S: Guardar el proyecto actual.",
+            "Ctrl+Z: Deshacer la última edición.",
+            "Ctrl+Y o Ctrl+Mayús+Z: Rehacer la edición deshecha.",
+            "Tab y Mayús+Tab: Recorrer los campos y botones del formulario.",
+        ),
+    ),
+    (
         "3. DATOS DEL COLABORADOR",
         (
             "En el campo de Código (Rango/Clave/Nivel) va el código correspondiente del colaborador.",

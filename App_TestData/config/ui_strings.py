@@ -50,6 +50,16 @@ HELP_DIALOG = {
             ],
         ),
         (
+            "ATAJOS DE TECLADO",
+            [
+                "Ctrl+N: Iniciar un proyecto nuevo.",
+                "Ctrl+O: Abrir un proyecto existente.",
+                "Ctrl+S: Guardar el proyecto actual.",
+                "Ctrl+Z: Deshacer la última edición de recuadros.",
+                "Ctrl+Y o Ctrl+Mayús+Z: Rehacer la edición deshecha.",
+            ],
+        ),
+        (
             "2. NAVEGACIÓN Y ZOOM DEL PDF",
             [
                 "Botón [<]: Retrocede una página en el documento.",

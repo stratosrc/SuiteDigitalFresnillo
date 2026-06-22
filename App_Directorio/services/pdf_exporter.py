@@ -12,6 +12,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from App_Directorio.config import DIRECTORY_ICON_PATH
 from App_Directorio.models import DirectoryReportData
 from components.shared.images import crop_transparent, load_pil_rgba
+from components.shared.atomic_output import write_atomic_output
 
 
 HEADER_BACKGROUND = colors.HexColor("#131C46")
@@ -33,6 +34,12 @@ HEADER_PERIOD_MIN_SIZE = 8
 class DirectoryPdfExporter:
     def export(self, data: DirectoryReportData, target_path: str | Path) -> Path:
         path = Path(target_path)
+        return write_atomic_output(
+            path,
+            lambda temporary: self._write_pdf(data, temporary),
+        )
+
+    def _write_pdf(self, data: DirectoryReportData, path: Path) -> None:
         document = SimpleDocTemplate(
             str(path),
             pagesize=PDF_PAGE_SIZE,
@@ -49,7 +56,6 @@ class DirectoryPdfExporter:
             self._build_directory_table(data, available_width),
         ]
         document.build(elements)
-        return path
 
     def _build_main_header(self, data: DirectoryReportData, available_width: float) -> Table:
         title = data.title or "Directorio"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import logging
+from collections.abc import Callable
 from typing import Mapping, Optional, Protocol, TypedDict
 
 import fitz
@@ -231,6 +232,7 @@ class PDFManager:
         pdf_bytes: bytes | None = None,
         source_path: str | None = None,
         rectangles: list[RectangleData] | None = None,
+        cancel_check: Callable[[], bool] | None = None,
     ) -> None:
         """Generate the exported PDF including redactions and summary pages."""
         if pdf_bytes is None and source_path is None and (not self._state.current_pdf_path or not self._state.pdf_document):
@@ -242,5 +244,6 @@ class PDFManager:
             output_path,
             rectangles or self._state.censored_rectangles,
             committee_data,
+            cancel_check,
         )
 

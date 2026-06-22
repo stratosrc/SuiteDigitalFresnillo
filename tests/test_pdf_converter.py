@@ -43,7 +43,9 @@ class PdfConverterTests(unittest.TestCase):
             source_path.write_bytes(b"spreadsheet")
             converter = PdfConverter()
             exporter = Mock()
-            exporter.export.return_value = target_path
+            exporter.export.side_effect = (
+                lambda _source, temporary, _selection: Path(temporary).write_bytes(b"%PDF")
+            )
             converter._spreadsheet_exporter = exporter
 
             saved_path = converter.convert(
@@ -55,11 +57,11 @@ class PdfConverterTests(unittest.TestCase):
             )
 
             self.assertEqual(saved_path, target_path)
-            exporter.export.assert_called_once_with(
-                source_path,
-                target_path,
-                "2-4",
-            )
+            exporter.export.assert_called_once()
+            call_source, temporary_path, selection = exporter.export.call_args.args
+            self.assertEqual(call_source, source_path)
+            self.assertEqual(selection, "2-4")
+            self.assertNotEqual(Path(temporary_path), target_path)
 
 
 if __name__ == "__main__":

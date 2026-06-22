@@ -44,3 +44,12 @@ Checklist minimo antes de entregar una version:
 - Modificar un proyecto y confirmar que el título de la ventana muestre `*`.
 - Intentar crear, abrir o cerrar con cambios pendientes y verificar Guardar/Descartar/Cancelar.
 - Guardar un proyecto, abrirlo desde `Archivos recientes` y confirmar su contenido.
+
+## Instalador en Windows limpio
+
+- Ejecutar el instalador en una VM de Windows 10/11 sin Python ni LibreOffice.
+- Confirmar que el ejecutable muestra icono y versión `1.0.0`.
+- Abrir los cuatro módulos desde el launcher.
+- Convertir DOCX, XLSX y PPTX usando únicamente LibreOffice incluido.
+- Cancelar una conversión y comprobar que no queden procesos `soffice.exe`.
+- Desinstalar y comprobar que se eliminen accesos directos y archivos instalados.

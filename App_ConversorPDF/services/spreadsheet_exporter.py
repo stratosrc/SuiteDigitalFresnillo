@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 import socket
 import subprocess
@@ -10,6 +9,7 @@ import tempfile
 import textwrap
 
 from App_ConversorPDF.services.libreoffice import require_soffice_path
+from App_ConversorPDF.services.process_control import run_cancellable_process
 
 
 SPREADSHEET_EXPORT_TIMEOUT_SECONDS = 180
@@ -182,6 +182,8 @@ class SpreadsheetPdfExporter:
         source_path: Path,
         target_path: Path,
         sheet_selection: str | None,
+        *,
+        cancel_check=None,
     ) -> Path:
         soffice_path = require_soffice_path()
         python_path = soffice_path.parent / "python.exe"
@@ -210,7 +212,7 @@ class SpreadsheetPdfExporter:
                 profile_dir.as_uri(),
                 str(port),
             ]
-            completed = _run_worker(command)
+            completed = _run_worker(command, cancel_check=cancel_check)
 
         if not target_path.is_file():
             details = _format_process_output(completed.stdout, completed.stderr)
@@ -227,16 +229,16 @@ def _find_available_port() -> int:
         return int(listener.getsockname()[1])
 
 
-def _run_worker(command: list[str]) -> subprocess.CompletedProcess[str]:
-    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+def _run_worker(
+    command: list[str],
+    *,
+    cancel_check=None,
+) -> subprocess.CompletedProcess[str]:
     try:
-        completed = subprocess.run(
+        completed = run_cancellable_process(
             command,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=SPREADSHEET_EXPORT_TIMEOUT_SECONDS,
-            creationflags=creationflags,
+            timeout_seconds=SPREADSHEET_EXPORT_TIMEOUT_SECONDS,
+            cancel_check=cancel_check,
         )
     except subprocess.TimeoutExpired as error:
         raise TimeoutError(

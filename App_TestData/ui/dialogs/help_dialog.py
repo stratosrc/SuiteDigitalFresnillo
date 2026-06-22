@@ -6,6 +6,7 @@ import customtkinter as ctk
 
 from App_TestData.config.ui_strings import HELP_DIALOG
 from App_TestData.ui.widgets.factory import build_font
+from components.shared.accessibility import enable_visible_focus
 from components.styles.styles import (
     APP_BG,
     BUTTON_BG,
@@ -24,6 +25,7 @@ def show_help_dialog(parent):
     help_window.minsize(500, 520)
     help_window.configure(fg_color=APP_BG)
     help_window.transient(parent)
+    help_window.after_idle(lambda: enable_visible_focus(help_window))
 
     _center_toplevel(parent, help_window, 550, 600)
 

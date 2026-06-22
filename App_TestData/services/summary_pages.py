@@ -35,11 +35,13 @@ class SummaryPagesWriter:
             summary_label = rect_data.get("final_number", rect_data.get("label", ""))
             line = self.build_summary_line(summary_label, rect_data)
             required_height = self._measure_line_height(page, line, margin_x, line_height)
-            if y_position + required_height > max_y:
+            paragraph_spacing = self._paragraph_spacing(rect_data, line_height)
+            if y_position + required_height + paragraph_spacing > max_y:
                 page = self._create_page(document, margin_x, 50, continuation=True)
                 y_position = 50 + title_height
 
             y_position = self._write_line(page, line, margin_x, y_position, required_height)
+            y_position += paragraph_spacing
 
     def build_summary_line(self, summary_label, rect_data):
         classification = rect_data.get("classification", "general")
@@ -56,8 +58,8 @@ class SummaryPagesWriter:
         article_reference = self._legal_reference_for_concept(rect_data.get("concept_id"))
 
         return (
-            f"{summary_label} {concept_name} eliminado por ser un dato personal de conformidad con "
-            f"el {article_reference} de la Ley de proteccion de datos personales en posesion de sujetos obligados "
+            f"{summary_label} {concept_name} testado por ser un dato personal de conformidad con "
+            f"{article_reference} de la Ley de proteccion de datos personales en posesion de sujetos obligados "
             f"del Estado de Zacatecas ({paragraphs} parrafo{'s' if paragraphs != 1 else ''} "
             f"{rows} renglon{'es' if rows != 1 else ''})."
         )
@@ -66,10 +68,10 @@ class SummaryPagesWriter:
         page = document.new_page()
         apply_watermark(page)
         title = (
-            "Fundamentos de la Ley de Transparencia y Acceso a la Informacion Publica \n"
+            "Fundamentos de la Ley de Transparencia y Acceso a la Información Publica \n"
             "del Estado de Zacatecas (continuacion)"
             if continuation
-            else "Fundamentos de la Ley de Transparencia y Acceso a la Informacion Publica \n"
+            else "Fundamentos de la Ley de Transparencia y Acceso a la Información Publica \n"
             "del Estado de Zacatecas"
         )
         page.insert_text(
@@ -104,13 +106,14 @@ class SummaryPagesWriter:
         return y_position + paragraph_height
 
     def _build_reserved_summary_line(self, summary_label, rect_data):
+        reason = self._without_leading_los(str(rect_data.get("reason", "")))
         return (
-            f"{summary_label}: El {rect_data.get('reason', '')}, {rect_data.get('paragraphs', 1)} parrafos y "
+            f"{summary_label}: {reason}, {rect_data.get('paragraphs', 1)} parrafos y "
             f"{rect_data.get('rows', 1)} renglones por ser considerado como informacion reservada "
             f"de conformidad con los articulos 99, 100 y 101 de la Ley de Transparencia y Acceso "
             f"a la Informacion Publica del Estado de Zacatecas y los lineamientos generales en "
             f"materia de clasificacion y desclasificacion de la informacion, asi como para la "
-            f"elaboracion de versiones publicas {rect_data.get('legal_basis', '')}."
+            f"elaboracion de versiones publicas {rect_data.get('legal_basis', '')}.\n"
         )
 
     def _build_confidential_summary_line(self, summary_label, rect_data):
@@ -118,7 +121,20 @@ class SummaryPagesWriter:
             f"{summary_label}: {rect_data.get('reason', '')}, {rect_data.get('paragraphs', 1)} parrafos y "
             f"{rect_data.get('rows', 1)} renglones por ser considerado como informacion confidencial "
             f"de conformidad con los articulos 102, 103, 104, 105 y 106 de la Ley de Transparencia "
-            f"y Acceso a la Informacion Publica del Estado de Zacatecas y con {rect_data.get('legal_basis', '')}."
+            f"y Acceso a la Informacion Publica del Estado de Zacatecas y con {rect_data.get('legal_basis', '')}.\n"
+        )
+
+    @staticmethod
+    def _without_leading_los(value: str) -> str:
+        stripped = value.strip()
+        return stripped[4:].lstrip() if stripped.casefold().startswith("los ") else stripped
+
+    @staticmethod
+    def _paragraph_spacing(rect_data, line_height: float) -> float:
+        return (
+            line_height
+            if rect_data.get("classification") in {"reserved", "confidential"}
+            else 0
         )
 
     def _build_other_law_summary_line(self, summary_label, rect_data):

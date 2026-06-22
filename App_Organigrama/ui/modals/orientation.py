@@ -14,6 +14,7 @@ from App_Organigrama.ui.theme import (
     make_font,
 )
 from components.shared.images import load_ctk_image
+from components.shared.accessibility import enable_visible_focus
 
 
 class OrientationDialog(ctk.CTkToplevel):
@@ -28,6 +29,7 @@ class OrientationDialog(ctk.CTkToplevel):
         self.icons: dict[str, ctk.CTkImage] = {}
 
         self._build()
+        self.after_idle(lambda: enable_visible_focus(self))
         self.after(30, self._center)
 
     def _build(self) -> None:

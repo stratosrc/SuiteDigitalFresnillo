@@ -39,4 +39,9 @@ def enable_visible_focus(root) -> None:
     apply(root)
 
 
-__all__ = ["enable_visible_focus"]
+def enable_visible_focus_for(widget) -> None:
+    """Apply visible focus to one newly-created widget subtree."""
+    enable_visible_focus(widget)
+
+
+__all__ = ["enable_visible_focus", "enable_visible_focus_for"]

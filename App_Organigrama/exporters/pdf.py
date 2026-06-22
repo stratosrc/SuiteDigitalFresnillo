@@ -20,6 +20,7 @@ from App_Organigrama.config.assets import (
     WATERMARK_LOGO_PATH,
 )
 from components.shared.images import crop_transparent, load_pil_rgba
+from components.shared.atomic_output import write_atomic_output
 
 
 LOGGER = logging.getLogger(__name__)
@@ -63,6 +64,12 @@ class PdfOrgChartExporter:
     def export(self, document: OrgGridDocument, target_path: str | Path) -> Path:
         self._register_fonts()
         path = Path(target_path)
+        return write_atomic_output(
+            path,
+            lambda temporary: self._write_pdf(document, temporary),
+        )
+
+    def _write_pdf(self, document: OrgGridDocument, path: Path) -> None:
         page_layout = self.rendering_engine.get_page_layout(document.page_orientation)
         canvas = Canvas(str(path), pagesize=(page_layout.width, page_layout.height))
 
@@ -76,7 +83,6 @@ class PdfOrgChartExporter:
             self._draw_nodes(canvas, transform, document)
 
         canvas.save()
-        return path
 
     def _register_fonts(self) -> None:
         global _FONTS_REGISTERED

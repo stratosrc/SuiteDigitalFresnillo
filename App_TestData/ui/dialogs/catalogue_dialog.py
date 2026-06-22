@@ -16,6 +16,7 @@ from App_TestData.config.settings import (
 )
 from App_TestData.ui.interactions.scroll import setup_mousewheel_scroll
 from App_TestData.ui.widgets.factory import build_font
+from components.shared.accessibility import enable_visible_focus
 from components.styles.styles import APP_BG, BUTTON_BG, BUTTON_BG_ACTIVE, TEXT_DARK, TEXT_LIGHT
 
 
@@ -28,6 +29,7 @@ def show_catalogue_dialog(parent, catalogue_sections, catalogue_items):
     catalogue_window.configure(fg_color=APP_BG)
     catalogue_window.transient(parent)
     catalogue_window.grab_set()
+    catalogue_window.after_idle(lambda: enable_visible_focus(catalogue_window))
 
     main_frame = ctk.CTkFrame(catalogue_window, fg_color=APP_BG, corner_radius=0)
     main_frame.pack(fill=tk.BOTH, expand=True, padx=CATALOGUE_MAIN_PADDING, pady=CATALOGUE_MAIN_PADDING)

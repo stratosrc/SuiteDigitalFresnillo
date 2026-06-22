@@ -5,11 +5,13 @@ from __future__ import annotations
 from copy import deepcopy
 import logging
 import os
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from App_TestData.config.ui_strings import EXPORT_MESSAGES, FILE_MENU_LABELS
 from App_TestData.ui.dialogs.export_dialog import ExportDialog
+from components.shared.atomic_output import OutputCancelled
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,6 +24,7 @@ class ExportController:
         self.executor = executor
         self.pending_future = None
         self.cancel_requested = False
+        self.cancel_event = threading.Event()
 
     def open_export_dialog(self) -> None:
         if not self.app.pdf_document or not self.app.current_pdf_path:
@@ -69,7 +72,9 @@ class ExportController:
 
         self.app.message_label.configure(text=EXPORT_MESSAGES["generating_status"])
         self.cancel_requested = False
+        self.cancel_event.clear()
         self.set_controls_state("disabled")
+        self.app.show_export_progress(EXPORT_MESSAGES["generating_status"])
         rectangles_snapshot = deepcopy(self.app.censored_rectangles)
         committee_snapshot = deepcopy(committee_data)
         future = self.executor.submit(
@@ -78,6 +83,7 @@ class ExportController:
             committee_snapshot,
             source_path=self.app.current_pdf_path,
             rectangles=rectangles_snapshot,
+            cancel_check=self.cancel_event.is_set,
         )
         self.pending_future = future
         self.app.after(100, lambda: self._poll_generate_pdf(future, output_path))
@@ -89,8 +95,9 @@ class ExportController:
         if self.pending_future is None:
             return
         self.cancel_requested = True
+        self.cancel_event.set()
         self.pending_future.cancel()
-        self.app.message_label.configure(text="Cancelando exportación...")
+        self.app.update_export_progress("Cancelando al terminar el paso actual...")
 
     def set_controls_state(self, state: str) -> None:
         for widget_name in ("file_button", "catalogue_button"):
@@ -115,10 +122,6 @@ class ExportController:
                 return
             future.result()
             if self.cancel_requested:
-                try:
-                    os.unlink(output_path)
-                except OSError:
-                    pass
                 self.app.message_label.configure(text="Exportación cancelada")
                 return
             self.app.message_label.configure(
@@ -129,6 +132,8 @@ class ExportController:
                 EXPORT_MESSAGES["generated_message"],
                 parent=self.app,
             )
+        except OutputCancelled:
+            self.app.message_label.configure(text="Exportación cancelada")
         except Exception as error:  # noqa: BLE001
             LOGGER.exception("Unable to generate redacted PDF")
             self.app.message_label.configure(text=EXPORT_MESSAGES["error_status"])
@@ -141,4 +146,6 @@ class ExportController:
             if self.pending_future is future:
                 self.pending_future = None
             self.cancel_requested = False
+            self.cancel_event.clear()
+            self.app.hide_export_progress()
             self.set_controls_state("normal")

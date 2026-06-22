@@ -127,6 +127,7 @@ def on_button_release(app, event):
     _select_rectangle(app, rectangle)
     app.current_rect = None
     _reset_drag_state(app)
+    app.notify_project_changed()
 
 
 def on_pointer_motion(app, event):
@@ -173,6 +174,7 @@ def on_double_click(app, event):
     app.redo_stack.clear()
     app.pdf_manager.render_current_page()
     _select_rectangle(app, rectangle)
+    app.notify_project_changed()
 
 
 def _build_rectangle_data(app, result, end_x, end_y):
@@ -364,6 +366,7 @@ def _record_update_if_changed(app):
         return
     app.undo_stack.append(make_history_action("update", before=before, after=after))
     app.redo_stack.clear()
+    app.notify_project_changed()
 
 
 def _select_rectangle(app, rectangle):

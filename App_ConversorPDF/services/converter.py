@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -13,7 +12,9 @@ from PIL import Image, ImageSequence
 
 from App_ConversorPDF.config import IMAGE_EXTENSIONS, PDF_EXTENSIONS, SHEET_EXTENSIONS
 from App_ConversorPDF.services.libreoffice import require_soffice_path
+from App_ConversorPDF.services.process_control import run_cancellable_process
 from App_ConversorPDF.services.spreadsheet_exporter import SpreadsheetPdfExporter
+from components.shared.atomic_output import write_atomic_output
 
 
 LIBREOFFICE_TIMEOUT_SECONDS = 180
@@ -30,33 +31,66 @@ class PdfConverter:
     def __init__(self) -> None:
         self._spreadsheet_exporter = SpreadsheetPdfExporter()
 
-    def convert(self, request: ConversionRequest) -> Path:
+    def convert(self, request: ConversionRequest, cancel_check=None) -> Path:
         self._validate_source(request.source_path)
         suffix = request.source_path.suffix.lower()
         target_path = self._prepare_target_path(request.target_path)
+        return write_atomic_output(
+            target_path,
+            lambda temporary: self._convert_to_path(
+                request,
+                suffix,
+                temporary,
+                cancel_check,
+            ),
+            should_commit=lambda: cancel_check is None or not cancel_check(),
+        )
+
+    def _convert_to_path(
+        self,
+        request: ConversionRequest,
+        suffix: str,
+        target_path: Path,
+        cancel_check=None,
+    ) -> None:
         if suffix in IMAGE_EXTENSIONS:
-            return self._convert_image(request.source_path, target_path)
-        if suffix in PDF_EXTENSIONS:
-            return self._convert_pdf(request.source_path, target_path, request.sheet_name)
-        if suffix in SHEET_EXTENSIONS:
-            return self._convert_spreadsheet(
+            self._convert_image(request.source_path, target_path)
+        elif suffix in PDF_EXTENSIONS:
+            self._convert_pdf(request.source_path, target_path, request.sheet_name)
+        elif suffix in SHEET_EXTENSIONS:
+            self._convert_spreadsheet(
                 request.source_path,
                 target_path,
                 request.sheet_name,
+                cancel_check,
             )
-        return self._convert_office_document(request.source_path, target_path, request.sheet_name)
+        else:
+            self._convert_office_document(
+                request.source_path,
+                target_path,
+                request.sheet_name,
+                cancel_check,
+            )
 
     def _convert_spreadsheet(
         self,
         source_path: Path,
         target_path: Path,
         sheet_selection: str | None,
+        cancel_check=None,
     ) -> Path:
         self._ensure_output_dir(target_path.parent)
+        if cancel_check is None:
+            return self._spreadsheet_exporter.export(
+                source_path,
+                target_path,
+                sheet_selection,
+            )
         return self._spreadsheet_exporter.export(
             source_path,
             target_path,
             sheet_selection,
+            cancel_check=cancel_check,
         )
 
     def _convert_image(self, source_path: Path, target_path: Path) -> Path:
@@ -101,7 +135,13 @@ class PdfConverter:
             raise PermissionError(f"No se pudo leer o guardar el PDF por permisos: {source_path}") from error
         return target_path
 
-    def _convert_office_document(self, source_path: Path, target_path: Path, page_range: str | None) -> Path:
+    def _convert_office_document(
+        self,
+        source_path: Path,
+        target_path: Path,
+        page_range: str | None,
+        cancel_check=None,
+    ) -> Path:
         soffice_path = require_soffice_path()
         self._ensure_output_dir(target_path.parent)
 
@@ -126,7 +166,7 @@ class PdfConverter:
                 str(temp_output_dir),
                 str(source_path),
             ]
-            completed = self._run_libreoffice(command)
+            completed = self._run_libreoffice(command, cancel_check)
 
             generated_path = temp_output_dir / f"{source_path.stem}.pdf"
             if not generated_path.exists():
@@ -196,24 +236,16 @@ class PdfConverter:
             raise ValueError(f"La pagina {page_number} esta fuera del rango 1-{total_pages}.")
         return page_number - 1
 
-    def _run_libreoffice(self, command: list[str]) -> subprocess.CompletedProcess[str]:
-        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
-        try:
-            completed = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=LIBREOFFICE_TIMEOUT_SECONDS,
-                creationflags=creationflags,
-            )
-        except subprocess.TimeoutExpired as error:
-            raise TimeoutError(
-                f"LibreOffice excedio el tiempo limite de {LIBREOFFICE_TIMEOUT_SECONDS} segundos."
-            ) from error
-        except PermissionError as error:
-            raise PermissionError("No se pudo ejecutar LibreOffice por permisos.") from error
-
+    def _run_libreoffice(
+        self,
+        command: list[str],
+        cancel_check=None,
+    ) -> subprocess.CompletedProcess[str]:
+        completed = run_cancellable_process(
+            command,
+            timeout_seconds=LIBREOFFICE_TIMEOUT_SECONDS,
+            cancel_check=cancel_check,
+        )
         if completed.returncode != 0:
             details = self._format_process_output(completed.stdout, completed.stderr)
             raise RuntimeError(f"LibreOffice fallo con codigo {completed.returncode}." + details)

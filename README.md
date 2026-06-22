@@ -184,6 +184,25 @@ Ejecutar el compilado:
 5. Convierte un archivo `docx`, `xlsx` o `pptx`.
 6. Confirma que el PDF se genera sin instalar LibreOffice manualmente.
 
+## Crear y validar el instalador
+
+Después de compilar con PyInstaller, instala Inno Setup 6 y ejecuta:
+
+```powershell
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\SuiteFresnillo.iss
+```
+
+El instalador se genera en `installer_output`. La prueba final debe hacerse en una
+máquina virtual limpia de Windows 10/11 que no tenga Python ni LibreOffice:
+
+1. Crear un punto de control de la VM limpia.
+2. Copiar únicamente el instalador generado.
+3. Instalar, abrir desde el menú Inicio y comprobar los cuatro módulos.
+4. Convertir DOCX, XLSX y PPTX para verificar el LibreOffice incluido.
+5. Guardar/recuperar proyectos `.td`, `.og` y `.dir`.
+6. Desinstalar y confirmar que no queden procesos ni accesos directos.
+7. Restaurar el punto de control antes de repetir la prueba.
+
 ## Notas de Uso
 
 - En Directorio, la fecha se considera valida si respeta el formato `dd/mm/aaaa`.

@@ -1,10 +1,20 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
 from pathlib import Path
 
+from PyInstaller.utils.win32.versioninfo import (
+    FixedFileInfo,
+    StringFileInfo,
+    StringStruct,
+    StringTable,
+    VSVersionInfo,
+    VarFileInfo,
+    VarStruct,
+)
 
 block_cipher = None
-project_root = Path.cwd()
+project_root = Path(SPECPATH).resolve()
 
 
 def collect_tree(source: Path, destination: str):
@@ -22,7 +32,8 @@ if not libreoffice_source.exists():
     libreoffice_source = project_root / "App_ConversorPDF" / "vendor" / "libreoffice"
 
 datas = []
-datas += collect_tree(libreoffice_source, "vendor/libreoffice")
+if os.environ.get("SUITE_SKIP_LIBREOFFICE") != "1":
+    datas += collect_tree(libreoffice_source, "vendor/libreoffice")
 datas += collect_tree(project_root / "App_ConversorPDF" / "assets", "App_ConversorPDF/assets")
 datas += collect_tree(project_root / "App_ConversorPDF" / "vendor" / "python", "App_ConversorPDF/vendor/python")
 datas += collect_tree(project_root / "App_Directorio" / "assets", "App_Directorio/assets")
@@ -41,8 +52,40 @@ hiddenimports = [
     "PIL.ImageTk",
 ]
 
+version_info = VSVersionInfo(
+    ffi=FixedFileInfo(
+        filevers=(1, 0, 0, 0),
+        prodvers=(1, 0, 0, 0),
+        mask=0x3F,
+        flags=0x0,
+        OS=0x40004,
+        fileType=0x1,
+        subtype=0x0,
+        date=(0, 0),
+    ),
+    kids=[
+        StringFileInfo(
+            [
+                StringTable(
+                    "040904B0",
+                    [
+                        StringStruct("CompanyName", "Municipio de Fresnillo"),
+                        StringStruct("FileDescription", "Suite Digital Fresnillo"),
+                        StringStruct("FileVersion", "1.0.0"),
+                        StringStruct("InternalName", "SuiteFresnillo"),
+                        StringStruct("OriginalFilename", "SuiteFresnillo.exe"),
+                        StringStruct("ProductName", "Suite Digital Fresnillo"),
+                        StringStruct("ProductVersion", "1.0.0"),
+                    ],
+                )
+            ]
+        ),
+        VarFileInfo([VarStruct("Translation", [1033, 1200])]),
+    ],
+)
+
 a = Analysis(
-    ["main.py"],
+    [str(project_root / "main.py")],
     pathex=[str(project_root)],
     binaries=[],
     datas=datas,
@@ -74,6 +117,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=str(project_root / "components" / "assets" / "SuiteIcon.ico"),
+    version=version_info,
 )
 
 coll = COLLECT(

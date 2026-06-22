@@ -1,5 +1,6 @@
 import tkinter as tk
 import logging
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
 from tkinter import filedialog, messagebox
@@ -31,6 +32,7 @@ from App_Directorio.ui.theme import (
 from components.shared.images import load_ctk_image
 from components.shared.accessibility import enable_visible_focus
 from components.shared.project_lifecycle import ProjectLifecycle
+from components.shared.progress_overlay import ProgressOverlay
 from components.shared.shortcuts import bind_common_shortcuts
 from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
@@ -44,7 +46,10 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.header_icon_image: ctk.CTkImage | None = None
         self.current_project_path: Path | None = None
         self.persistence_manager = DirectoryPersistenceManager()
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="directory-worker")
+        self._pending_export: Future[Path] | None = None
         self._build_layout()
+        self.export_progress_overlay = ProgressOverlay(self, color=PRIMARY_BUTTON)
         self.project_lifecycle = ProjectLifecycle(
             "directorio",
             snapshot=lambda: asdict(self.directory_form.get_report_data()),
@@ -54,14 +59,13 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self._history: list[dict] = [asdict(self.directory_form.get_report_data())]
         self._redo_history: list[dict] = []
         self._history_paused = False
-        self._dirty_poll_after_id: str | None = None
-        self._poll_dirty_state()
+        self._history_after_id: str | None = None
+        self.directory_form.bind("<<DirectoryChanged>>", self._on_directory_changed)
         bind_common_shortcuts(
             self.master,
             new=self.new_project,
             open_=self.open_project,
             save=self.save_project,
-            save_as=self.save_project_as,
             undo=self.undo,
             redo=self.redo,
         )
@@ -91,7 +95,6 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.recent_menu = tk.Menu(self.file_menu, tearoff=0)
         self.file_menu.add_cascade(label="Archivos recientes", menu=self.recent_menu)
         self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
-        self.file_menu.add_command(label="Guardar proyecto como", command=self.save_project_as)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
         self._refresh_recent_menu()
@@ -214,22 +217,43 @@ class DirectoryMainFrame(ctk.CTkFrame):
         if not target:
             return
 
+        self._set_export_busy("disabled")
+        self.export_progress_overlay.show("Generando PDF...")
+        future = self._executor.submit(DirectoryPdfExporter().export, data, Path(target))
+        self._pending_export = future
+        self.after(100, lambda: self._poll_pdf_export(future))
+
+    def _poll_pdf_export(self, future: Future[Path]) -> None:
+        if not future.done():
+            self.after(100, lambda: self._poll_pdf_export(future))
+            return
         try:
-            output_path = DirectoryPdfExporter().export(data, Path(target))
-        except Exception as error:
+            output_path = future.result()
+            messagebox.showinfo(
+                "PDF guardado",
+                f"El reporte se guardó correctamente en:\n{output_path}",
+                parent=self,
+            )
+        except Exception as error:  # noqa: BLE001
             LOGGER.exception("Unable to export directory PDF")
             messagebox.showerror(
                 "No se pudo guardar",
                 f"No fue posible generar el PDF.\n\n{error}",
                 parent=self,
             )
-            return
+        finally:
+            if self._pending_export is future:
+                self._pending_export = None
+            self.export_progress_overlay.hide()
+            self._set_export_busy("normal")
 
-        messagebox.showinfo(
-            "PDF guardado",
-            f"El reporte se guardó correctamente en:\n{output_path}",
-            parent=self,
-        )
+    def _set_export_busy(self, state: str) -> None:
+        self.file_button.configure(state=state)
+        self.help_button.configure(state=state)
+        try:
+            self.file_menu.entryconfig("Exportar PDF", state=state)
+        except tk.TclError:
+            pass
 
     def _confirm_export_preview(self) -> bool:
         summary = self.directory_form.get_preview_summary()
@@ -333,18 +357,32 @@ class DirectoryMainFrame(ctk.CTkFrame):
         return True
 
     def confirm_exit(self) -> None:
+        if self._pending_export is not None and not self._pending_export.done():
+            messagebox.showwarning(
+                "Exportación en curso",
+                "Espera a que termine la generación del PDF antes de cerrar.",
+                parent=self,
+            )
+            return
         if not self.project_lifecycle.confirm_discard(self, f"salir de {APP_TITLE}"):
             return
         self.master.destroy()
 
-    def _poll_dirty_state(self) -> None:
+    def _on_directory_changed(self, _event=None) -> None:
+        self._update_window_title()
+        if self._history_paused:
+            return
+        if self._history_after_id is not None:
+            self.after_cancel(self._history_after_id)
+        self._history_after_id = self.after(350, self._commit_history_change)
+
+    def _commit_history_change(self) -> None:
+        self._history_after_id = None
         snapshot = asdict(self.directory_form.get_report_data())
         if not self._history_paused and snapshot != self._history[-1]:
             self._history.append(snapshot)
             self._history = self._history[-100:]
             self._redo_history.clear()
-        self._update_window_title()
-        self._dirty_poll_after_id = self.after(350, self._poll_dirty_state)
 
     def undo(self) -> None:
         if len(self._history) < 2:
@@ -418,7 +456,8 @@ class DirectoryMainFrame(ctk.CTkFrame):
 
     def destroy(self) -> None:
         self.project_lifecycle.stop_autosave()
-        if self._dirty_poll_after_id is not None:
-            self.after_cancel(self._dirty_poll_after_id)
-            self._dirty_poll_after_id = None
+        self._executor.shutdown(wait=False, cancel_futures=True)
+        if self._history_after_id is not None:
+            self.after_cancel(self._history_after_id)
+            self._history_after_id = None
         super().destroy()

@@ -13,6 +13,7 @@ from App_Organigrama.ui.theme import (
     TEXT_DARK,
     make_font,
 )
+from components.shared.accessibility import enable_visible_focus
 
 
 class NodeEditorDialog(ctk.CTkToplevel):
@@ -39,6 +40,7 @@ class NodeEditorDialog(ctk.CTkToplevel):
         self.swatches: dict[str, tk.Canvas] = {}
 
         self._build()
+        self.after_idle(lambda: enable_visible_focus(self))
         self.after(60, self.name_entry.focus_set)
 
     def _build(self) -> None:

@@ -1,5 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch
+from pathlib import Path
+import tempfile
 
 from App_Organigrama.models.document import OrgGridDocument
 from App_Organigrama.ui.main_frame import MainFrame
@@ -29,6 +31,25 @@ class WorkflowRegressionTests(unittest.TestCase):
 
         self.assertEqual(frame.document.page_orientation, "horizontal")
         frame._run_background_task.assert_not_called()
+
+    def test_testdata_recovery_keeps_its_own_pdf_copy(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "temporary-source.pdf"
+            source.write_bytes(b"%PDF recovery")
+            recovery_dir = root / "recovery"
+            app = Mock()
+            app.current_pdf_path = str(source)
+
+            prepared = TestDataGeneratorApp._prepare_recovery_snapshot(
+                app,
+                {"pdf": str(source), "rectangles": []},
+                recovery_dir,
+            )
+
+            recovery_pdf = recovery_dir / "source.pdf"
+            self.assertEqual(prepared["pdf"], str(recovery_pdf))
+            self.assertEqual(recovery_pdf.read_bytes(), source.read_bytes())
 
 
 if __name__ == "__main__":

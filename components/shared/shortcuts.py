@@ -4,6 +4,12 @@ from collections.abc import Callable
 import tkinter as tk
 
 
+def _is_text_input(widget) -> bool:
+    if widget is None:
+        return False
+    return widget.winfo_class() in {"Entry", "Text", "TEntry", "TCombobox"}
+
+
 def bind_common_shortcuts(
     window: tk.Misc,
     *,
@@ -24,9 +30,6 @@ def bind_common_shortcuts(
         "<Control-o>": open_,
         "<Control-s>": save,
         "<Control-Shift-S>": save_as,
-        "<Control-z>": undo or (lambda: focused_edit("<<Undo>>")),
-        "<Control-y>": redo or (lambda: focused_edit("<<Redo>>")),
-        "<Control-Shift-Z>": redo or (lambda: focused_edit("<<Redo>>")),
     }
     for sequence, callback in bindings.items():
         if callback is None:
@@ -37,6 +40,30 @@ def bind_common_shortcuts(
             return "break"
 
         window.bind(sequence, invoke, add=True)
+
+    def invoke_edit(_event, project_command, native_action):
+        focused = window.focus_get()
+        if _is_text_input(focused):
+            focused_edit(native_action)
+        elif project_command is not None:
+            project_command()
+        return "break"
+
+    window.bind(
+        "<Control-z>",
+        lambda event: invoke_edit(event, undo, "<<Undo>>"),
+        add=True,
+    )
+    window.bind(
+        "<Control-y>",
+        lambda event: invoke_edit(event, redo, "<<Redo>>"),
+        add=True,
+    )
+    window.bind(
+        "<Control-Shift-Z>",
+        lambda event: invoke_edit(event, redo, "<<Redo>>"),
+        add=True,
+    )
 
 
 __all__ = ["bind_common_shortcuts"]
