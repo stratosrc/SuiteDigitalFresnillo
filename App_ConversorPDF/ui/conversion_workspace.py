@@ -63,6 +63,9 @@ from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
 SPLIT_TOGGLE_TOOLTIP = "Separar cada hoja o pagina seleccionada en PDFs individuales."
 LOGGER = logging.getLogger(__name__)
+LIST_PANEL_TOP_PADDING = 24
+LIST_PANEL_BOTTOM_PADDING = 24
+LIST_ACTION_HEIGHT = 62
 
 
 @dataclass(slots=True)
@@ -177,14 +180,14 @@ class PdfConverterMainFrame(ctk.CTkFrame):
         self.left_panel = ctk.CTkFrame(body, fg_color=LEFT_PANEL_BACKGROUND, corner_radius=0)
         self.left_panel.grid(row=0, column=0, sticky="nsew")
         self.left_panel.grid_columnconfigure(0, weight=1)
-        self.left_panel.grid_rowconfigure(0, weight=1)
         self.left_panel.grid_rowconfigure(1, weight=1)
+        self.left_panel.grid_rowconfigure(2, weight=0, minsize=LIST_ACTION_HEIGHT)
 
         self.right_panel = ctk.CTkFrame(body, fg_color=RIGHT_PANEL_BACKGROUND, corner_radius=0)
         self.right_panel.grid(row=0, column=1, sticky="nsew")
         self.right_panel.grid_columnconfigure(0, weight=1)
-        self.right_panel.grid_rowconfigure(0, weight=1)
         self.right_panel.grid_rowconfigure(1, weight=1)
+        self.right_panel.grid_rowconfigure(2, weight=0, minsize=LIST_ACTION_HEIGHT)
 
         self._build_upload_panel()
         self._build_download_panel()
@@ -252,7 +255,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             text_color=TEXT_LIGHT,
             font=make_font(14, "bold"),
         )
-        self.upload_icon_button.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        self.upload_icon_button.grid(row=1, column=0, sticky="nsew", padx=22, pady=(LIST_PANEL_TOP_PADDING, LIST_PANEL_BOTTOM_PADDING))
         Tooltip(self.upload_icon_button, "Agregar archivos")
         self.upload_icon_button.bind("<Enter>", lambda _event: self._set_icon_hover(self.upload_icon_button, self.upload_icon_hover_image), add=True)
         self.upload_icon_button.bind("<Leave>", lambda _event: self._set_icon_hover(self.upload_icon_button, self.upload_icon_image), add=True)
@@ -264,8 +267,9 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             corner_radius=0,
             scrollbar_button_color=PRIMARY_BUTTON,
             scrollbar_button_hover_color=PRIMARY_BUTTON_ACTIVE,
+            height=1,
         )
-        self.files_frame.grid(row=1, column=0, sticky="nsew", padx=22, pady=(24, 24))
+        self.files_frame.grid(row=1, column=0, sticky="nsew", padx=22, pady=(LIST_PANEL_TOP_PADDING, LIST_PANEL_BOTTOM_PADDING))
         self.files_frame.grid_columnconfigure(0, weight=1)
         self.files_frame.grid_remove()
         self._enable_file_drop(self.files_frame)
@@ -305,7 +309,7 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             text_color=TEXT_DARK,
             font=make_font(14, "bold"),
         )
-        self.download_icon_button.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        self.download_icon_button.grid(row=1, column=0, sticky="nsew", padx=22, pady=(LIST_PANEL_TOP_PADDING, LIST_PANEL_BOTTOM_PADDING))
         Tooltip(self.download_icon_button, "Convertir y guardar")
         self.download_icon_button.bind("<Enter>", lambda _event: self._set_icon_hover(self.download_icon_button, self.download_icon_hover_image), add=True)
         self.download_icon_button.bind("<Leave>", lambda _event: self._set_icon_hover(self.download_icon_button, self.download_icon_image), add=True)
@@ -316,8 +320,9 @@ class PdfConverterMainFrame(ctk.CTkFrame):
             corner_radius=0,
             scrollbar_button_color=PRIMARY_BUTTON,
             scrollbar_button_hover_color=PRIMARY_BUTTON_ACTIVE,
+            height=1,
         )
-        self.outputs_frame.grid(row=1, column=0, sticky="nsew", padx=22, pady=(24, 24))
+        self.outputs_frame.grid(row=1, column=0, sticky="nsew", padx=22, pady=(LIST_PANEL_TOP_PADDING, LIST_PANEL_BOTTOM_PADDING))
         self.outputs_frame.grid_columnconfigure(0, weight=1)
         self.outputs_frame.grid_remove()
 

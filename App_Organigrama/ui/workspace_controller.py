@@ -46,6 +46,7 @@ from components.shared.tooltip import Tooltip
 from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
 LOGGER = logging.getLogger(__name__)
+INVALID_FILENAME_CHARS = '<>:"/\\|?*'
 
 
 class MainFrame(ctk.CTkFrame):
@@ -590,7 +591,7 @@ class MainFrame(ctk.CTkFrame):
             title="Guardar proyecto como",
             defaultextension=".og",
             filetypes=[("Proyecto Organigrama", "*.og"), ("Todos los archivos", "*.*")],
-            initialfile="organigrama.og",
+            initialfile=self._default_export_filename(".og"),
         )
         if not target_path:
             return False
@@ -625,7 +626,7 @@ class MainFrame(ctk.CTkFrame):
             title="Exportar organigrama como PDF",
             defaultextension=".pdf",
             filetypes=[("Archivo PDF", "*.pdf"), ("Todos los archivos", "*.*")],
-            initialfile="organigrama.pdf",
+            initialfile=self._default_export_filename(".pdf"),
         )
         if not target_path:
             return
@@ -645,7 +646,7 @@ class MainFrame(ctk.CTkFrame):
             title="Exportar organigrama como imagen",
             defaultextension=".png",
             filetypes=[("Imagen PNG", "*.png"), ("Imagen JPG", "*.jpg"), ("Imagen JPEG", "*.jpeg")],
-            initialfile="organigrama.png",
+            initialfile=self._default_export_filename(".png"),
         )
         if not target_path:
             return
@@ -774,6 +775,16 @@ class MainFrame(ctk.CTkFrame):
     def _update_window_title(self) -> None:
         marker = " *" if self.project_lifecycle.is_dirty else ""
         self.master.title(f"Organigramas{marker}")
+
+    def _default_export_filename(self, extension: str) -> str:
+        title = self.document.title.strip()
+        if not title:
+            base_name = "organigrama"
+        else:
+            sanitized = "".join("_" if char in INVALID_FILENAME_CHARS else char for char in title)
+            base_name = " ".join(sanitized.split()).strip(" .") or "organigrama"
+        normalized_extension = extension if extension.startswith(".") else f".{extension}"
+        return f"{base_name}{normalized_extension}"
 
     def _load_document_into_ui(self, document: OrgGridDocument) -> None:
         document.title = document.title.upper()

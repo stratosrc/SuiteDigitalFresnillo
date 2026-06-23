@@ -4,6 +4,10 @@ from App_Organigrama.models.document import OrgGridDocument
 
 
 class OrgGridDocumentTests(unittest.TestCase):
+    def test_new_document_uses_empty_title_for_placeholder(self):
+        document = OrgGridDocument()
+        self.assertEqual(document.title, "")
+
     def test_prevents_duplicate_node_cell_and_removes_connections(self):
         document = OrgGridDocument()
         first = document.add_node("A", "Directora", 0, 0, "#09519F")

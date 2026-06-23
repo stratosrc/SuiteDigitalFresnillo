@@ -10,6 +10,8 @@ from App_TestData.services.summary_pages import apply_watermark
 
 
 class CommitteeCoverWriter:
+    COMPACT_MULTILINE_LINEHEIGHT = 6
+
     def append(
         self,
         document: fitz.Document,
@@ -65,7 +67,10 @@ class CommitteeCoverWriter:
 
     def _write_table_cell(self, page, rect, text):
         inner_rect = fitz.Rect(rect.x0 + 5, rect.y0 + 6, rect.x1 - 5, rect.y1 - 5)
-        page.insert_textbox(inner_rect, text, fontsize=9, color=(0, 0, 0), align=0, **fitz_font_kwargs())
+        insert_kwargs = fitz_font_kwargs()
+        if "\n" in text:
+            insert_kwargs["lineheight"] = self.COMPACT_MULTILINE_LINEHEIGHT
+        page.insert_textbox(inner_rect, text, fontsize=9, color=(0, 0, 0), align=0, **insert_kwargs)
 
     def _joined_reason_items(self, ordered_rectangles, classification):
         items = [

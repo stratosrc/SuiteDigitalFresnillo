@@ -48,9 +48,15 @@ class PersistenceManager:
             (float(point[0]), float(point[1]))
             for point in raw_document.get("blocked_points", [])
         ]
+        raw_title = str(raw_document.get("title", "") or "")
+        normalized_title = (
+            ""
+            if raw_title.strip() in {DEFAULT_DOCUMENT_TITLE, "Título del organigrama"}
+            else raw_title
+        )
 
         return OrgGridDocument(
-            title=raw_document.get("title", DEFAULT_DOCUMENT_TITLE),
+            title=normalized_title,
             period=raw_document.get("period", ""),
             page_orientation=raw_document.get("page_orientation", "horizontal"),
             show_logos=bool(raw_document.get("show_logos", True)),

@@ -28,7 +28,7 @@ class Connection:
 
 @dataclass(slots=True)
 class OrgGridDocument:
-    title: str = "Título del organigrama"
+    title: str = ""
     period: str = ""
     page_orientation: str = "horizontal"
     show_logos: bool = True

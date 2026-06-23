@@ -438,11 +438,23 @@ class CanvasInteractionController:
         self._draw_custom_cursor()
 
     def _draw_custom_cursor(self) -> None:
+        if self.interaction.mode in {InteractionMode.PANNING, InteractionMode.MOVING_NODE}:
+            if self.custom_cursor_canvas_id is not None:
+                self.canvas.delete(self.custom_cursor_canvas_id)
+                self.custom_cursor_canvas_id = None
+            self.canvas.configure(cursor="fleur")
+            return
+        if self.block_mode:
+            if self.custom_cursor_canvas_id is not None:
+                self.canvas.delete(self.custom_cursor_canvas_id)
+                self.custom_cursor_canvas_id = None
+            self.canvas.configure(cursor="no")
+            return
         if not self.custom_cursor_visible or self.custom_cursor_position is None:
             if self.custom_cursor_canvas_id is not None:
                 self.canvas.delete(self.custom_cursor_canvas_id)
                 self.custom_cursor_canvas_id = None
-            self.canvas.configure(cursor="")
+            self.canvas.configure(cursor="hand2")
             return
         cursor_image = self._get_cross_cursor_image(CUSTOM_CURSOR_SIZE)
         if cursor_image is None:

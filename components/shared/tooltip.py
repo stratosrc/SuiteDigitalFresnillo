@@ -4,6 +4,8 @@ from components.styles.styles import CTK_FONT_FAMILY, SURFACE_BG, TEXT_DARK
 
 
 class Tooltip:
+    _active_tooltip: "Tooltip | None" = None
+
     def __init__(self, widget, text: str, delay_ms: int = 450, show_when_disabled: bool = False):
         self.widget = widget
         self.text = text
@@ -54,6 +56,9 @@ class Tooltip:
     def _show(self):
         if self._window is not None or not self.text or not self._can_show():
             return
+        active_tooltip = Tooltip._active_tooltip
+        if active_tooltip is not None and active_tooltip is not self:
+            active_tooltip._hide()
 
         x = self.widget.winfo_rootx() + self.widget.winfo_width() // 2
         y = self.widget.winfo_rooty() + self.widget.winfo_height() + 6
@@ -80,6 +85,7 @@ class Tooltip:
             font=(CTK_FONT_FAMILY, 9),
         )
         label.pack()
+        Tooltip._active_tooltip = self
 
     def _release_topmost(self):
         if self._window is None:
@@ -114,6 +120,8 @@ class Tooltip:
             except tk.TclError:
                 pass
             self._window = None
+        if Tooltip._active_tooltip is self:
+            Tooltip._active_tooltip = None
 
     def _cancel(self):
         if self._after_id is not None:

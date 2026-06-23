@@ -60,6 +60,25 @@ class ProjectFileTypeTests(unittest.TestCase):
         self.assertEqual(node.name, "Persona")
         self.assertEqual(node.role, "Cargo")
 
+    def test_organigrama_legacy_default_title_is_converted_to_placeholder_state(self):
+        payload = {
+            "app": "organigrama",
+            "schema_version": 1,
+            "document": {
+                "title": "Título del organigrama",
+                "nodes": {},
+                "connections": [],
+                "blocked_points": [],
+            },
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "legacy-title.og"
+            source.write_text(json.dumps(payload), encoding="utf-8")
+
+            document = PersistenceManager().load(source)
+
+        self.assertEqual(document.title, "")
+
     def test_organigrama_roundtrip_preserves_manual_route_points(self):
         document = OrgGridDocument()
         source = document.add_node("Origen", "Cargo", 0, 0, "#123456")
