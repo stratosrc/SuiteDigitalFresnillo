@@ -75,7 +75,14 @@ class CommitteeCoverWriter:
         insert_kwargs = fitz_font_kwargs()
         if "\n" in text:
             insert_kwargs["lineheight"] = self.COMPACT_MULTILINE_LINEHEIGHT
-        page.insert_textbox(inner_rect, text, fontsize=9, color=(0, 0, 0), align=0, **insert_kwargs)
+        page.insert_textbox(
+            inner_rect,
+            text,
+            fontsize=9,
+            color=(0, 0, 0),
+            align=fitz.TEXT_ALIGN_JUSTIFY,
+            **insert_kwargs,
+        )
 
     def _joined_reason_items(self, ordered_rectangles, classification):
         items = [

@@ -36,6 +36,41 @@ class SummaryPagesWriterTests(unittest.TestCase):
             0,
         )
 
+    def test_reserved_summary_introduces_legal_basis_cohesively(self):
+        line = self.writer.build_summary_line(
+            "Reservada.1",
+            {
+                "classification": "reserved",
+                "reason": "Documentos protegidos",
+                "paragraphs": 1,
+                "rows": 1,
+                "legal_basis": "Artículo aplicable.",
+            },
+        )
+
+        self.assertIn(
+            "elaboracion de versiones publicas; lo anterior, con fundamento en: Artículo aplicable.",
+            line,
+        )
+        self.assertNotIn("aplicable..", line)
+
+    def test_confidential_summary_introduces_legal_basis_cohesively(self):
+        line = self.writer.build_summary_line(
+            "Confidencial.1",
+            {
+                "classification": "confidential",
+                "reason": "Datos personales",
+                "paragraphs": 1,
+                "rows": 1,
+                "legal_basis": "Artículo aplicable",
+            },
+        )
+
+        self.assertIn(
+            "Estado de Zacatecas; lo anterior, con fundamento en: Artículo aplicable.",
+            line,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,7 @@ from App_TestData.domain.document_state import CommitteeData, RectangleData
 from App_TestData.domain.redaction_editing import iter_rectangles_in_order
 from App_TestData.services.committee_cover import CommitteeCoverWriter
 from App_TestData.services.pdf_fonts import fitz_font_kwargs, fitz_text_width
+from App_TestData.services.pdf_footer import add_institutional_footer
 from App_TestData.services.summary_pages import SummaryPagesWriter
 from components.shared.atomic_output import write_atomic_output
 
@@ -59,12 +60,14 @@ class RedactionPdfExporter:
         ordered_rectangles = deepcopy(iter_rectangles_in_order(rectangles))
 
         try:
+            original_page_count = output_document.page_count
             self._assign_final_numbers(ordered_rectangles)
             self._apply_redactions(output_document, ordered_rectangles)
             self._draw_rectangle_labels(output_document, ordered_rectangles)
             self.summary_writer.append(output_document, ordered_rectangles)
             if committee_data:
                 self.committee_writer.append(output_document, committee_data, ordered_rectangles)
+            add_institutional_footer(output_document, start_page=original_page_count)
             output_document.save(output_path, garbage=4, deflate=True)
         finally:
             output_document.close()

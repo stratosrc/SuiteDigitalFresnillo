@@ -49,6 +49,7 @@ HELP_SECTIONS: tuple[HelpSection, ...] = (
             "Restaurar ruta automática: Selecciona una conexión editada y pulsa este botón para descartar sus puntos manuales y volver al enrutado automático.\n",
             "Eliminar Seleccion: Remueve del lienzo cualquier nodo, conector o elemento seleccionado.\n",
             "Atajos de Teclado: Tambien puedes eliminar la seleccion con [Supr] (Delete) o [Backspace].\n",
+            "Varias personas por nodo: En Nombre(s), usa [Ctrl]+[Enter] para agregar otra persona con el mismo cargo. Al guardar, dos o mas nombres se muestran con viñetas.\n",
         ),
     ),
     (

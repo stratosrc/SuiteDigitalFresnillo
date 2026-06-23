@@ -187,7 +187,12 @@ class RenderingEngine:
     def layout_node(self, node: OrgNode, include_logo: bool = True) -> NodeLayout:
         style = self.get_node_style(node.color)
         center_x, center_y = self.grid_to_world(node.grid_x, node.grid_y)
-        name_lines = self.wrap_text(node.name or "ASIGNAR NOMBRE", style.name_font_size, style.width, style.text_padding_x)
+        name_lines = self.wrap_person_names(
+            node.name or "ASIGNAR NOMBRE",
+            style.name_font_size,
+            style.width,
+            style.text_padding_x,
+        )
         role_lines = self.wrap_text(node.role, style.role_font_size, style.width, style.text_padding_x)
 
         cursor_y = style.text_padding_top
@@ -314,6 +319,38 @@ class RenderingEngine:
                 replace_whitespace=False,
             )
             wrapped_lines.extend(paragraph_lines or [paragraph])
+        return wrapped_lines
+
+    def wrap_person_names(
+        self,
+        text: str,
+        font_size: float,
+        node_width: float,
+        horizontal_padding: float,
+    ) -> list[str]:
+        names = [line.strip() for line in (text or "").splitlines() if line.strip()]
+        if len(names) <= 1:
+            return self.wrap_text(
+                names[0] if names else "",
+                font_size,
+                node_width,
+                horizontal_padding,
+            )
+
+        usable_width = max(20.0, node_width - (horizontal_padding * 2))
+        estimated_char_width = max(4.5, font_size * 0.56)
+        characters_per_line = max(8, int(usable_width / estimated_char_width))
+        wrapped_lines: list[str] = []
+        for name in names:
+            wrapped_lines.extend(
+                textwrap.wrap(
+                    f"\u2022 {name}",
+                    width=characters_per_line,
+                    break_long_words=True,
+                    replace_whitespace=False,
+                    subsequent_indent="  ",
+                )
+            )
         return wrapped_lines
 
     def compute_document_bounds(
