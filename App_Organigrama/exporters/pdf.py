@@ -251,15 +251,24 @@ class PdfOrgChartExporter:
             self._draw_node_logo(pdf, transform, layout, node.color)
 
         pdf.setFillColor(HexColor("#FFFFFF"))
+        pdf.setStrokeColor(HexColor("#FFFFFF"))
         for line in layout.lines:
             font_name = PDF_FONT_BOLD if line.is_bold else PDF_FONT_REGULAR
-            pdf.setFont(font_name, line.font_size * transform.scale)
+            scaled_font_size = line.font_size * transform.scale
+            pdf.setFont(font_name, scaled_font_size)
             baseline_world_y = layout.box.top + line.top + line.font_size 
-            pdf.drawCentredString(
-                transform.world_to_pdf_x(layout.center_x),
-                transform.world_to_pdf_center_y(baseline_world_y),
-                line.text,
-            )
+            baseline_pdf_y = transform.world_to_pdf_center_y(baseline_world_y)
+            text_width = pdf.stringWidth(line.text, font_name, scaled_font_size)
+            if line.align == "left":
+                text_x = transform.world_to_pdf_x(layout.box.left + layout.style.text_padding_x)
+                pdf.drawString(text_x, baseline_pdf_y, line.text)
+            else:
+                text_x = transform.world_to_pdf_x(layout.center_x) - (text_width / 2)
+                pdf.drawCentredString(transform.world_to_pdf_x(layout.center_x), baseline_pdf_y, line.text)
+            if line.is_underlined:
+                underline_y = baseline_pdf_y - max(0.8, transform.scale * 1.2)
+                pdf.setLineWidth(max(0.6, transform.scale * 0.9))
+                pdf.line(text_x, underline_y, text_x + text_width, underline_y)
 
     def _draw_node_logo(self, pdf: Canvas, transform: PdfTransform, layout: NodeLayout, color: str) -> None:
         center_x = transform.world_to_pdf_x(layout.logo_center_x)

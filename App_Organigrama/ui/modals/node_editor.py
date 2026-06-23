@@ -17,6 +17,8 @@ from components.shared.accessibility import enable_visible_focus
 
 
 class NodeEditorDialog(ctk.CTkToplevel):
+    PERSON_BULLET_PREFIX = "• "
+
     def __init__(
         self,
         master: tk.Misc,
@@ -28,7 +30,7 @@ class NodeEditorDialog(ctk.CTkToplevel):
     ) -> None:
         super().__init__(master)
         self.title(title)
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.configure(fg_color=SURFACE_BACKGROUND)
         self.transient(master.winfo_toplevel())
         self.grab_set()
@@ -40,6 +42,8 @@ class NodeEditorDialog(ctk.CTkToplevel):
         self.swatches: dict[str, tk.Canvas] = {}
 
         self._build()
+        self.update_idletasks()
+        self.minsize(self.winfo_width(), self.winfo_height())
         self.after_idle(lambda: enable_visible_focus(self))
         self.after(60, self.name_entry.focus_set)
 
@@ -51,14 +55,14 @@ class NodeEditorDialog(ctk.CTkToplevel):
         self._build_label(frame, "Nombre(s)", row=0)
         self.name_entry = ctk.CTkTextbox(frame, width=340, height=120, corner_radius=0)
         self.name_entry.grid(row=1, column=0, sticky="ew", pady=(4, 4))
-        self.name_entry.insert("1.0", self.initial_name)
+        self._populate_name_entry()
         self.name_entry.bind("<Return>", self._ignore_enter)
         self.name_entry.bind("<KP_Enter>", self._ignore_enter)
         self.name_entry.bind("<Control-Return>", self._insert_name_line)
         self.name_entry.bind("<Control-KP_Enter>", self._insert_name_line)
         ctk.CTkLabel(
             frame,
-            text="Ctrl + Enter agrega otra persona",
+            text="Ctrl + Enter agrega otra persona con viñeta nueva",
             text_color=TEXT_DARK,
             font=make_font(10),
         ).grid(row=2, column=0, sticky="w", pady=(0, 12))
@@ -129,9 +133,9 @@ class NodeEditorDialog(ctk.CTkToplevel):
 
     def _save(self) -> None:
         name = "\n".join(
-            line.strip()
+            self._normalize_person_line(line)
             for line in self.name_entry.get("1.0", "end-1c").splitlines()
-            if line.strip()
+            if self._normalize_person_line(line)
         )
         role = self.role_var.get().strip()
         if not name:
@@ -145,9 +149,33 @@ class NodeEditorDialog(ctk.CTkToplevel):
         return "break"
 
     def _insert_name_line(self, _event: tk.Event[tk.Text]) -> str:
-        self.name_entry.insert("insert", "\n")
+        self.name_entry.insert("insert", f"\n{self.PERSON_BULLET_PREFIX}")
         self.name_entry.see("insert")
         return "break"
+
+    def _populate_name_entry(self) -> None:
+        people = [
+            self._normalize_person_line(line)
+            for line in self.initial_name.splitlines()
+        ]
+        people = [person for person in people if person]
+        if not people:
+            self.name_entry.insert("1.0", self.PERSON_BULLET_PREFIX)
+            return
+        self.name_entry.insert(
+            "1.0",
+            "\n".join(f"{self.PERSON_BULLET_PREFIX}{person}" for person in people),
+        )
+
+    def _normalize_person_line(self, line: str) -> str:
+        cleaned = line.strip()
+        if not cleaned:
+            return ""
+        if cleaned.startswith(self.PERSON_BULLET_PREFIX):
+            return cleaned[len(self.PERSON_BULLET_PREFIX):].strip()
+        if cleaned.startswith("- "):
+            return cleaned[2:].strip()
+        return cleaned.lstrip("•").strip()
 
     def _select_color(self, color: str) -> None:
         self.selected_color = color

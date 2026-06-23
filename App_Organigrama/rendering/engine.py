@@ -44,6 +44,8 @@ class NodeTextLine:
     font_size: float
     line_height: float
     is_bold: bool
+    align: str = "center"
+    is_underlined: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +130,7 @@ class RenderingEngine:
     base_name_font_size: float = 14.0
     base_role_font_size: float = 12.0
     min_node_text_font_size: float = 6.0
+    multi_person_line_gap_factor: float = 0.45
 
     def normalize_orientation(self, orientation: str) -> str:
         return VERTICAL_ORIENTATION if orientation == VERTICAL_ORIENTATION else HORIZONTAL_ORIENTATION
@@ -187,7 +190,7 @@ class RenderingEngine:
     def layout_node(self, node: OrgNode, include_logo: bool = True) -> NodeLayout:
         style = self.get_node_style(node.color)
         center_x, center_y = self.grid_to_world(node.grid_x, node.grid_y)
-        name_lines = self.wrap_person_names(
+        name_lines, has_multiple_people = self.wrap_person_names(
             node.name or "ASIGNAR NOMBRE",
             style.name_font_size,
             style.width,
@@ -197,18 +200,23 @@ class RenderingEngine:
 
         cursor_y = style.text_padding_top
         lines: list[NodeTextLine] = []
-        for line in name_lines:
+        for index, (line, ends_person_block) in enumerate(name_lines):
             font_size = self._fit_node_text_size(line, style.name_font_size, style.width, style.text_padding_x)
+            line_height = font_size * 1.15
             lines.append(
                 NodeTextLine(
                     text=line,
                     top=cursor_y,
                     font_size=font_size,
-                    line_height=font_size * 1.15,
+                    line_height=line_height,
                     is_bold=True,
+                    align="left" if has_multiple_people else "center",
+                    is_underlined=False,
                 )
             )
-            cursor_y += font_size * 1.15
+            cursor_y += line_height
+            if has_multiple_people and ends_person_block and index < len(name_lines) - 1:
+                cursor_y += font_size * self.multi_person_line_gap_factor
 
         if name_lines and role_lines:
             cursor_y += style.text_gap
@@ -222,6 +230,8 @@ class RenderingEngine:
                     font_size=font_size,
                     line_height=font_size * 1.22,
                     is_bold=False,
+                    align="center",
+                    is_underlined=True,
                 )
             )
             cursor_y += font_size * 1.22
@@ -327,31 +337,39 @@ class RenderingEngine:
         font_size: float,
         node_width: float,
         horizontal_padding: float,
-    ) -> list[str]:
+    ) -> tuple[list[tuple[str, bool]], bool]:
         names = [line.strip() for line in (text or "").splitlines() if line.strip()]
         if len(names) <= 1:
-            return self.wrap_text(
-                names[0] if names else "",
-                font_size,
-                node_width,
-                horizontal_padding,
+            return (
+                [
+                    (line, True)
+                    for line in self.wrap_text(
+                        names[0] if names else "",
+                        font_size,
+                        node_width,
+                        horizontal_padding,
+                    )
+                ],
+                False,
             )
 
         usable_width = max(20.0, node_width - (horizontal_padding * 2))
         estimated_char_width = max(4.5, font_size * 0.56)
         characters_per_line = max(8, int(usable_width / estimated_char_width))
-        wrapped_lines: list[str] = []
+        wrapped_lines: list[tuple[str, bool]] = []
         for name in names:
-            wrapped_lines.extend(
-                textwrap.wrap(
-                    f"\u2022 {name}",
-                    width=characters_per_line,
-                    break_long_words=True,
-                    replace_whitespace=False,
-                    subsequent_indent="  ",
-                )
+            person_lines = textwrap.wrap(
+                f"\u2022 {name}",
+                width=characters_per_line,
+                break_long_words=True,
+                replace_whitespace=False,
+                subsequent_indent="  ",
             )
-        return wrapped_lines
+            wrapped_lines.extend(
+                (line, index == len(person_lines) - 1)
+                for index, line in enumerate(person_lines)
+            )
+        return wrapped_lines, True
 
     def compute_document_bounds(
         self,

@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 import tempfile
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
@@ -400,9 +401,13 @@ class MainFrame(ctk.CTkFrame):
             text="Clic para crear nodo",
             text_color=TEXT_LIGHT,
             font=make_font(12),
-            anchor="center",
+            anchor="w",
         )
         self.context_status_label.grid(row=0, column=1, padx=(14, 12), pady=5, sticky="ew")
+        self._context_status_message = "Clic para crear nodo"
+        self._context_status_tooltip = Tooltip(self.context_status_label, "")
+        self._context_status_refresh_after_id: str | None = None
+        footer.bind("<Configure>", self._refresh_context_status_label, add=True)
 
         zoom_frame = ctk.CTkFrame(footer, fg_color="transparent")
         zoom_frame.grid(row=0, column=2, padx=(12, 5), pady=5, sticky="e")
@@ -436,6 +441,7 @@ class MainFrame(ctk.CTkFrame):
         )
         zoom_in_button.pack(side="left")
         Tooltip(zoom_in_button, "Acercar")
+        self._schedule_context_status_refresh()
 
     def _bind_metadata(self) -> None:
         self.title_var.trace_add("write", self._sync_metadata)
@@ -516,7 +522,52 @@ class MainFrame(ctk.CTkFrame):
 
     def _update_context_status(self, message: str) -> None:
         if hasattr(self, "context_status_label"):
-            self.context_status_label.configure(text=message)
+            self._context_status_message = message
+            self._refresh_context_status_label()
+
+    def _schedule_context_status_refresh(self) -> None:
+        if self._context_status_refresh_after_id is not None:
+            return
+        self._context_status_refresh_after_id = self.after_idle(self._run_scheduled_context_status_refresh)
+
+    def _run_scheduled_context_status_refresh(self) -> None:
+        self._context_status_refresh_after_id = None
+        self._refresh_context_status_label()
+
+    def _refresh_context_status_label(self, _event: tk.Event[tk.Misc] | None = None) -> None:
+        if not hasattr(self, "context_status_label"):
+            return
+
+        full_message = getattr(self, "_context_status_message", "") or ""
+        label_width = self.context_status_label.winfo_width()
+        if label_width <= 1:
+            return
+
+        font = tkfont.Font(font=self.context_status_label.cget("font"))
+        available_width = max(24, label_width - 10)
+        display_message = self._truncate_text_to_width(full_message, font, available_width)
+        self.context_status_label.configure(text=display_message)
+        self._context_status_tooltip.text = full_message if display_message != full_message else ""
+
+    @staticmethod
+    def _truncate_text_to_width(text: str, font: tkfont.Font, max_width: int) -> str:
+        if not text or font.measure(text) <= max_width:
+            return text
+
+        ellipsis = "..."
+        if font.measure(ellipsis) >= max_width:
+            return ellipsis
+
+        low = 0
+        high = len(text)
+        while low < high:
+            middle = (low + high + 1) // 2
+            candidate = text[:middle].rstrip() + ellipsis
+            if font.measure(candidate) <= max_width:
+                low = middle
+            else:
+                high = middle - 1
+        return text[:low].rstrip() + ellipsis
 
     def new_project(self) -> None:
         if not self._confirm_discard_changes():

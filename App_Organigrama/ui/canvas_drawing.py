@@ -218,8 +218,13 @@ class CanvasDrawingMixin:
                     )
 
             for line in screen_layout.lines:
-                self.canvas.create_text(
-                    screen_layout.center_x,
+                text_x = (
+                    screen_layout.box.left + screen_layout.style.text_padding_x
+                    if line.align == "left"
+                    else screen_layout.center_x
+                )
+                text_item = self.canvas.create_text(
+                    text_x,
                     line.top,
                     text=line.text,
                     fill=TEXT_LIGHT,
@@ -228,9 +233,23 @@ class CanvasDrawingMixin:
                         max(6, int(line.font_size)),
                         "bold" if line.is_bold else "normal",
                     ),
-                    anchor="n",
+                    anchor="nw" if line.align == "left" else "n",
                     tags=tag,
                 )
+                if line.is_underlined:
+                    bbox = self.canvas.bbox(text_item)
+                    if bbox is not None:
+                        left, _top, right, bottom = bbox
+                        underline_y = bottom + max(1, int(self.zoom))
+                        self.canvas.create_line(
+                            left,
+                            underline_y,
+                            right,
+                            underline_y,
+                            fill=TEXT_LIGHT,
+                            width=max(1, int(self.zoom)),
+                            tags=tag,
+                        )
 
     def _draw_blocked_points(self) -> None:
         size = max(5, int(7 * self.zoom))
