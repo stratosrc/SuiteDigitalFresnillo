@@ -125,10 +125,10 @@ class RedactionPdfExporter:
             classification = rect_data.get("classification", "general")
             if classification == "reserved":
                 reserved_counter += 1
-                rect_data["final_number"] = f"Reservada.{reserved_counter}"
+                rect_data["final_number"] = f"#Reservada.{reserved_counter}"
             elif classification == "confidential":
                 confidential_counter += 1
-                rect_data["final_number"] = f"Confidencial.{confidential_counter}"
+                rect_data["final_number"] = f"#Confidencial.{confidential_counter}"
             elif classification == "other_law":
                 other_law_counter += 1
                 rect_data["final_number"] = f"Otra.{other_law_counter}"

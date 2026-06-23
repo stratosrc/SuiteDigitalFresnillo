@@ -113,7 +113,7 @@ class SummaryPagesWriter:
             f"de conformidad con los articulos 99, 100 y 101 de la Ley de Transparencia y Acceso "
             f"a la Informacion Publica del Estado de Zacatecas y los lineamientos generales en "
             f"materia de clasificacion y desclasificacion de la informacion, asi como para la "
-            f"elaboracion de versiones publicas {rect_data.get('legal_basis', '')}.\n"
+            f"elaboracion de versiones publicas {rect_data.get('legal_basis', '')}."
         )
 
     def _build_confidential_summary_line(self, summary_label, rect_data):
@@ -121,7 +121,7 @@ class SummaryPagesWriter:
             f"{summary_label}: {rect_data.get('reason', '')}, {rect_data.get('paragraphs', 1)} parrafos y "
             f"{rect_data.get('rows', 1)} renglones por ser considerado como informacion confidencial "
             f"de conformidad con los articulos 102, 103, 104, 105 y 106 de la Ley de Transparencia "
-            f"y Acceso a la Informacion Publica del Estado de Zacatecas y con {rect_data.get('legal_basis', '')}.\n"
+            f"y Acceso a la Informacion Publica del Estado de Zacatecas y con {rect_data.get('legal_basis', '')}."
         )
 
     @staticmethod
@@ -131,11 +131,7 @@ class SummaryPagesWriter:
 
     @staticmethod
     def _paragraph_spacing(rect_data, line_height: float) -> float:
-        return (
-            line_height
-            if rect_data.get("classification") in {"reserved", "confidential"}
-            else 0
-        )
+        return 0
 
     def _build_other_law_summary_line(self, summary_label, rect_data):
         return (

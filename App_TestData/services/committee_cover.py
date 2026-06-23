@@ -10,7 +10,8 @@ from App_TestData.services.summary_pages import apply_watermark
 
 
 class CommitteeCoverWriter:
-    COMPACT_MULTILINE_LINEHEIGHT = 6
+    COMPACT_MULTILINE_LINEHEIGHT = 4.2
+    SUPPRESSED_TEXT_ROW_HEIGHT = 62
 
     def append(
         self,
@@ -38,7 +39,11 @@ class CommitteeCoverWriter:
             ("Fecha de clasificacion", committee_data.get("date", ""), 34),
             ("Area", committee_data.get("department", ""), 34),
             ("Documentos", committee_data.get("document", ""), 44),
-            ("Partes o secciones que se suprimen. Confidencial y/o reservada", suppressed_text, 86),
+            (
+                "Partes o secciones que se suprimen. Confidencial y/o reservada",
+                suppressed_text,
+                self.SUPPRESSED_TEXT_ROW_HEIGHT,
+            ),
             ("Fundamento Legal confidencial", committee_data.get("confidential_legal_basis", ""), 58),
             ("Fundamento legal reservada", committee_data.get("reserved_legal_basis", ""), 58),
             ("Periodo de reserva", committee_data.get("reservation_period", ""), 38),

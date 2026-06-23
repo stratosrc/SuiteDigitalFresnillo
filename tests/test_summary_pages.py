@@ -22,12 +22,12 @@ class SummaryPagesWriterTests(unittest.TestCase):
         self.assertTrue(line.startswith("Reservada.1: documentos contienen"))
         self.assertNotIn(": Los ", line)
 
-    def test_reserved_and_confidential_add_blank_line_spacing(self):
-        self.assertGreater(
+    def test_all_summary_classifications_use_uniform_paragraph_spacing(self):
+        self.assertEqual(
             self.writer._paragraph_spacing({"classification": "reserved"}, 13),
             0,
         )
-        self.assertGreater(
+        self.assertEqual(
             self.writer._paragraph_spacing({"classification": "confidential"}, 13),
             0,
         )
