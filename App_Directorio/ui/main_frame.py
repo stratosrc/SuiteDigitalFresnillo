@@ -30,7 +30,7 @@ from App_Directorio.ui.theme import (
     make_font,
 )
 from components.shared.images import load_ctk_image
-from components.shared.accessibility import enable_visible_focus
+from App_Directorio.ui.accessibility import enable_visible_focus
 from components.shared.project_lifecycle import ProjectLifecycle
 from components.shared.progress_overlay import ProgressOverlay
 from components.shared.shortcuts import bind_common_shortcuts

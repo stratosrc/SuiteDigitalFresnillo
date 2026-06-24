@@ -23,7 +23,15 @@ from components.shared.help_dialog import (
 
 HELP_SECTIONS: tuple[HelpSection, ...] = (
     (
-        "1. SUBIR ARCHIVOS",
+        "1. MENÚ DE HERRAMIENTAS",
+        (
+            "Debajo del banner encontrarás las opciones Convertir a PDF y Unir PDFs.",
+            "Convertir a PDF abre la herramienta original para transformar imágenes y documentos.",
+            "Unir PDFs abre una lista ordenable para combinar varios archivos PDF en uno solo.",
+        ),
+    ),
+    (
+        "2. CONVERTIR: SUBIR ARCHIVOS",
         (
             "Usa el area izquierda para cargar archivos con clic en el icono de carga.",
             "Tambien puedes arrastrar archivos soportados al area de carga.",
@@ -32,7 +40,7 @@ HELP_SECTIONS: tuple[HelpSection, ...] = (
         ),
     ),
     (
-        "2. ELEGIR HOJAS O PAGINAS",
+        "3. CONVERTIR: ELEGIR HOJAS O PAGINAS",
         (
             "En hojas de calculo, los numeros seleccionan las pestañas del libro, no las paginas del PDF.",
             "Cada pestaña se exporta completa aunque ocupe varias paginas en el PDF.",
@@ -43,7 +51,7 @@ HELP_SECTIONS: tuple[HelpSection, ...] = (
         ),
     ),
     (
-        "3. DESCARGAR PDF",
+        "4. CONVERTIR: DESCARGAR PDF",
         (
             "El boton Descargar todos guarda todos los PDFs listados en una carpeta seleccionada.",
             "El icono de descarga al lado de cada archivo permite guardar solo ese PDF.",
@@ -51,9 +59,18 @@ HELP_SECTIONS: tuple[HelpSection, ...] = (
         ),
     ),
     (
-        "4. NUEVO",
+        "5. UNIR PDFS",
         (
-            "El boton Nuevo limpia todos los archivos cargados y reinicia la lista de conversiones.",
+            "Carga al menos dos archivos PDF mediante el selector o arrastrándolos a la aplicación.",
+            "La lista muestra el orden en que se agregarán las páginas al PDF final.",
+            "Arrastra cualquier elemento hacia arriba o abajo; una línea azul indica dónde será colocado.",
+            "Usa Unir y guardar para elegir el nombre y la ubicación del archivo resultante.",
+        ),
+    ),
+    (
+        "6. NUEVO",
+        (
+            "El boton Nuevo limpia los archivos de la herramienta que tengas abierta.",
             "Usalo para comenzar otro trabajo sin cerrar la aplicacion.",
         ),
     ),

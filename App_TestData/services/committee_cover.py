@@ -80,7 +80,7 @@ class CommitteeCoverWriter:
             text,
             fontsize=9,
             color=(0, 0, 0),
-            align=fitz.TEXT_ALIGN_JUSTIFY,
+            align=fitz.TEXT_ALIGN_LEFT,
             **insert_kwargs,
         )
 

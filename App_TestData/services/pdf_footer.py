@@ -12,8 +12,8 @@ FOOTER_TEXT = (
     "Todos los derechos reservados."
 )
 
-FOOTER_FONT_SIZE = 5
-FOOTER_HEIGHT = 24
+FOOTER_FONT_SIZE = 12
+FOOTER_HEIGHT = 44
 FOOTER_MARGIN_X = 18
 FOOTER_MARGIN_BOTTOM = 8
 FOOTER_PADDING = 2
@@ -40,7 +40,7 @@ def add_institutional_footer(document: fitz.Document, start_page: int = 0) -> No
             FOOTER_TEXT,
             fontsize=FOOTER_FONT_SIZE,
             color=(0, 0, 0),
-            align=fitz.TEXT_ALIGN_JUSTIFY,
+            align=fitz.TEXT_ALIGN_LEFT,
             lineheight=1.05,
             overlay=True,
             **fitz_font_kwargs(),
