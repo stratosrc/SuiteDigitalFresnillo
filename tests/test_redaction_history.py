@@ -1,6 +1,8 @@
 import unittest
 
+from App_TestData.domain.redaction_editing import get_classification_display_name
 from App_TestData.domain.redaction_history import make_history_action, redo_last_action, undo_last_action
+from App_TestData.ui.interactions.canvas_redactions import _apply_dialog_result_to_rectangle
 
 
 def rectangle(rectangle_id=1, x1=10, x2=20):
@@ -18,6 +20,33 @@ def rectangle(rectangle_id=1, x1=10, x2=20):
 
 
 class RedactionHistoryTests(unittest.TestCase):
+    def test_classification_display_names_preserve_accents(self):
+        self.assertEqual(
+            get_classification_display_name("reserved"),
+            "Información Reservada",
+        )
+        self.assertEqual(
+            get_classification_display_name("confidential"),
+            "Información Confidencial",
+        )
+
+    def test_editing_reserved_rectangle_keeps_correct_encoding(self):
+        rectangle_data = rectangle()
+        _apply_dialog_result_to_rectangle(
+            None,
+            rectangle_data,
+            {
+                "classification": "reserved",
+                "rows": 1,
+                "paragraphs": 1,
+                "legal_basis": "",
+                "reason": "",
+            },
+        )
+
+        self.assertEqual(rectangle_data["concept_name"], "Información Reservada")
+        self.assertEqual(rectangle_data["display_text"], "Información Reservada")
+
     def test_undo_and_redo_create(self):
         created = rectangle()
         action = make_history_action("create", rectangle=created)

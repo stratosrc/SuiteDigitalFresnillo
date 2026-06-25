@@ -4,6 +4,17 @@ from App_TestData.domain.legal_text import build_censorship_text
 from App_TestData.domain.redaction_history import make_history_action, redo_last_action, undo_last_action
 
 
+CLASSIFICATION_DISPLAY_NAMES = {
+    "reserved": "Información Reservada",
+    "confidential": "Información Confidencial",
+}
+
+
+def get_classification_display_name(classification: str) -> str:
+    """Return the stable user-facing name for a classified redaction."""
+    return CLASSIFICATION_DISPLAY_NAMES.get(classification, classification)
+
+
 def delete_selected_rectangle(rectangles, selected_rect_id):
     """Remove the selected rectangle from the collection."""
     if not selected_rect_id:

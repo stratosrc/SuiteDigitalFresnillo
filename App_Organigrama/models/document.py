@@ -7,8 +7,8 @@ GridPoint = tuple[float, float]
 
 @dataclass(slots=True)
 class OrgNode:
-    nombre: str
-    cargo: str
+    name: str
+    role: str
     grid_x: int
     grid_y: int
     color: str
@@ -22,12 +22,13 @@ class Connection:
     source_port: str = "bottom"
     target_port: str = "top"
     kind: str = "direct"
+    manual_points: tuple[GridPoint, ...] = ()
     id: str = field(default_factory=lambda: uuid4().hex)
 
 
 @dataclass(slots=True)
 class OrgGridDocument:
-    title: str = "Título del organigrama"
+    title: str = ""
     period: str = ""
     page_orientation: str = "horizontal"
     show_logos: bool = True
@@ -59,8 +60,8 @@ class OrgGridDocument:
             "show_logos": self.show_logos,
             "nodes": {
                 node_id: {
-                    "nombre": node.nombre,
-                    "cargo": node.cargo,
+                    "name": node.name,
+                    "role": node.role,
                     "grid_x": node.grid_x,
                     "grid_y": node.grid_y,
                     "color": node.color,
@@ -75,6 +76,7 @@ class OrgGridDocument:
                     "source_port": connection.source_port,
                     "target_port": connection.target_port,
                     "kind": connection.kind,
+                    "manual_points": list(connection.manual_points),
                     "id": connection.id,
                 }
                 for connection in self.connections
@@ -84,8 +86,8 @@ class OrgGridDocument:
 
     def add_node(
         self,
-        nombre: str,
-        cargo: str,
+        name: str,
+        role: str,
         grid_x: int,
         grid_y: int,
         color: str,
@@ -94,8 +96,8 @@ class OrgGridDocument:
             raise ValueError("La celda seleccionada ya contiene un nodo.")
 
         node = OrgNode(
-            nombre=nombre,
-            cargo=cargo,
+            name=name,
+            role=role,
             grid_x=grid_x,
             grid_y=grid_y,
             color=color,
@@ -104,10 +106,10 @@ class OrgGridDocument:
         self._node_ids_by_position[(grid_x, grid_y)] = node.id
         return node
 
-    def update_node(self, node_id: str, nombre: str, cargo: str, color: str) -> OrgNode:
+    def update_node(self, node_id: str, name: str, role: str, color: str) -> OrgNode:
         node = self.nodes[node_id]
-        node.nombre = nombre
-        node.cargo = cargo
+        node.name = name
+        node.role = role
         node.color = color
         return node
 
@@ -180,6 +182,37 @@ class OrgGridDocument:
         before_count = len(self.connections)
         self.connections = [connection for connection in self.connections if connection.id != connection_id]
         return len(self.connections) != before_count
+
+    def set_connection_manual_points(
+        self,
+        connection_id: str,
+        points: list[GridPoint] | tuple[GridPoint, ...],
+    ) -> bool:
+        connection = self.get_connection(connection_id)
+        if connection is None:
+            return False
+        connection.manual_points = tuple(
+            (float(point[0]), float(point[1]))
+            for point in points
+        )
+        return True
+
+    def reset_connection_route(self, connection_id: str) -> bool:
+        connection = self.get_connection(connection_id)
+        if connection is None or not connection.manual_points:
+            return False
+        connection.manual_points = ()
+        return True
+
+    def get_connection(self, connection_id: str) -> Connection | None:
+        return next(
+            (
+                connection
+                for connection in self.connections
+                if connection.id == connection_id
+            ),
+            None,
+        )
 
     def has_blocked_point(self, point: GridPoint) -> bool:
         return self._normalize_blocked_point(point) in self._blocked_points_index

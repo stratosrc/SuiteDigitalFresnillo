@@ -20,6 +20,7 @@ from App_TestData.config.settings import (
 )
 from App_TestData.utils.validation import is_within_range, parse_int
 from App_TestData.ui.widgets.factory import build_font, create_entry
+from components.shared.accessibility import enable_visible_focus
 from components.styles.styles import (
     APP_BG,
     BORDER_BG,
@@ -65,6 +66,7 @@ class ConceptDialog(ctk.CTkToplevel):
         self._build_ui()
         self._filter_list()
         self._apply_initial_data()
+        self.after_idle(lambda: enable_visible_focus(self))
         self.bind("<Return>", lambda _event: self._on_accept())
         self.geometry(f"+{parent.winfo_rootx() + 50}+{parent.winfo_rooty() + 50}")
 

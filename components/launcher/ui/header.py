@@ -67,7 +67,10 @@ class LauncherHeader(ctk.CTkFrame):
 
         resized_width = max(1, int(original_width * ratio))
         resized_height = max(1, int(original_height * ratio))
-        resized = self.banner_original.resize((resized_width, resized_height), Image.LANCZOS)
+        resized = self.banner_original.resize(
+            (resized_width, resized_height),
+            Image.Resampling.LANCZOS,
+        )
 
         self.banner_photo = ctk.CTkImage(
             light_image=resized,

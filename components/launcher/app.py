@@ -7,13 +7,14 @@ from components.launcher.ui.footer import LauncherFooter
 from components.launcher.ui.header import LauncherHeader
 from components.launcher.ui.image_loader import ImageLoader
 from components.launcher.ui.styles import configure_launcher_styles
-from components.shared.windowing import center_window
+from components.shared.windowing import center_window, prepare_window_for_open, reveal_window_maximized
 from components.styles.styles import APP_BG, apply_ctk_style
 
 
 class SuiteLauncher(ctk.CTk):
     def __init__(self):
         super().__init__()
+        prepare_window_for_open(self)
         apply_ctk_style(ctk)
 
         width, height = WINDOW_SIZE
@@ -30,6 +31,7 @@ class SuiteLauncher(ctk.CTk):
         center_window(self, width, height)
         configure_launcher_styles(self)
         self._build_layout()
+        reveal_window_maximized(self)
 
     def _build_layout(self):
         self.columnconfigure(0, weight=1)

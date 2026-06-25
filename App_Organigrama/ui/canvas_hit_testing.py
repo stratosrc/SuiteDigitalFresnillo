@@ -78,6 +78,52 @@ def find_connection_at_screen(
     return best_route
 
 
+def find_movable_segment_at_screen(
+    route: ConnectionRoute,
+    screen_x: int,
+    screen_y: int,
+    rendering_engine: RenderingEngine,
+    world_to_screen,
+    max_distance: float = 10.0,
+) -> int | None:
+    """Find a movable intermediate segment, excluding both node-adjacent ends."""
+    if len(route.points) < 4:
+        return None
+
+    points = [
+        world_to_screen(*rendering_engine.grid_to_world(point[0], point[1]))
+        for point in route.points
+    ]
+    best_index: int | None = None
+    best_distance = max_distance
+    for index in range(1, len(points) - 2):
+        distance = distance_to_segment(screen_x, screen_y, points[index], points[index + 1])
+        if distance < best_distance:
+            best_distance = distance
+            best_index = index
+    return best_index
+
+
+def find_bend_point_at_screen(
+    route: ConnectionRoute,
+    screen_x: int,
+    screen_y: int,
+    rendering_engine: RenderingEngine,
+    world_to_screen,
+    max_distance: float = 10.0,
+) -> int | None:
+    """Find an internal route bend under the pointer."""
+    best_index: int | None = None
+    best_distance = max_distance
+    for index, point in enumerate(route.points[1:-1], start=1):
+        point_x, point_y = world_to_screen(*rendering_engine.grid_to_world(*point))
+        distance = math.hypot(screen_x - point_x, screen_y - point_y)
+        if distance <= best_distance:
+            best_distance = distance
+            best_index = index
+    return best_index
+
+
 def nearest_port(
     node: OrgNode,
     screen_x: int,

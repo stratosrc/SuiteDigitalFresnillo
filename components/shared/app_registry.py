@@ -54,6 +54,13 @@ APPLICATIONS: tuple[ApplicationDefinition, ...] = (
         icon_path="components/assets/directorio.png",
         description="Gestión y Diseño del\nDirectorio de Área",
     ),
+    ApplicationDefinition(
+        app_id="conversor_pdf",
+        name="Conversor a PDF",
+        package_name="App_ConversorPDF",
+        icon_path="components/assets/convert.png",
+        description="Conversión de archivos \ne imágenes a PDF",
+    ),
 )
 
 

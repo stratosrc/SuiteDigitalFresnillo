@@ -1,14 +1,13 @@
-﻿"""Centralized Spanish strings used by the user-facing interface."""
+"""Centralized Spanish strings used by the user-facing interface."""
 
 APP_WINDOW_TITLE = "Test Data"
 
 FILE_MENU_LABELS = {
     "button": "Archivo",
-    "new_job": "Nuevo",
-    "open_project": "Abrir",
-    "save_project": "Guardar",
-    "save_project_as": "Guardar como",
-    "save_pdf": "Exportar PDF",
+    "new_job": "Nuevo Proyecto",
+    "open_project": "Abrir Proyecto",
+    "save_project": "Guardar proyecto",
+    "export_pdf": "Exportar PDF",
 }
 
 TOPBAR_LABELS = {
@@ -26,7 +25,7 @@ ACTION_LABELS = {
 }
 
 CONTENT_LABELS = {
-    "empty_state": "Inicia un nuevo trabajo.",
+    "empty_state": "Sin PDF cargado. Usa Nuevo (Ctrl+N) para elegir un documento o abre un proyecto con Ctrl+O.",
 }
 
 NAVIGATION_LABELS = {
@@ -48,6 +47,16 @@ HELP_DIALOG = {
                 "Rehacer: Se utiliza para rehacer una acción antes deshecha.",
                 "Eliminar recuadro: Elimina el cuadro de testado seleccionado actual.",
                 "Salir: Cierra de forma segura la aplicación.",
+            ],
+        ),
+        (
+            "ATAJOS DE TECLADO",
+            [
+                "Ctrl+N: Iniciar un proyecto nuevo.",
+                "Ctrl+O: Abrir un proyecto existente.",
+                "Ctrl+S: Guardar el proyecto actual.",
+                "Ctrl+Z: Deshacer la última edición de recuadros.",
+                "Ctrl+Y o Ctrl+Mayús+Z: Rehacer la edición deshecha.",
             ],
         ),
         (

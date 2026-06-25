@@ -27,7 +27,11 @@ class NavigationZoomValidationTests(unittest.TestCase):
             parse_bounded_pair("0", "5", 1, 10)
         self.assertTrue(is_date_input_prefix("15/06/2026"))
         self.assertTrue(is_valid_date("15/06/2026"))
+        self.assertTrue(is_valid_date("29/02/2024"))
+        self.assertFalse(is_valid_date("29/02/2026"))
         self.assertFalse(is_valid_date("31/02/2026"))
+        self.assertFalse(is_valid_date("99/99/9999"))
+        self.assertFalse(is_valid_date("31-02-2026"))
 
 
 if __name__ == "__main__":

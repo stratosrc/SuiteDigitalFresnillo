@@ -16,7 +16,10 @@ from App_TestData.config.settings import (
     RECTANGLE_TEXT_COLOR,
 )
 from App_TestData.domain.legal_text import build_censorship_text
-from App_TestData.domain.redaction_editing import build_rectangle_metadata
+from App_TestData.domain.redaction_editing import (
+    build_rectangle_metadata,
+    get_classification_display_name,
+)
 from App_TestData.domain.redaction_history import make_history_action
 from App_TestData.ui.dialogs.concept_dialog import ConceptDialog
 
@@ -124,6 +127,7 @@ def on_button_release(app, event):
     _select_rectangle(app, rectangle)
     app.current_rect = None
     _reset_drag_state(app)
+    app.notify_project_changed()
 
 
 def on_pointer_motion(app, event):
@@ -170,6 +174,7 @@ def on_double_click(app, event):
     app.redo_stack.clear()
     app.pdf_manager.render_current_page()
     _select_rectangle(app, rectangle)
+    app.notify_project_changed()
 
 
 def _build_rectangle_data(app, result, end_x, end_y):
@@ -193,11 +198,7 @@ def _build_rectangle_data(app, result, end_x, end_y):
         description = ""
     else:
         concept_id = None
-        concept_name = (
-            "Información Reservada"
-            if classification == "reserved"
-            else "Información Confidencial"
-        )
+        concept_name = get_classification_display_name(classification)
         description = ""
 
     rectangle = {
@@ -247,11 +248,7 @@ def _apply_dialog_result_to_rectangle(app, rectangle, result):
         description = ""
     else:
         concept_id = None
-        concept_name = (
-            "InformaciÃ³n Reservada"
-            if classification == "reserved"
-            else "InformaciÃ³n Confidencial"
-        )
+        concept_name = get_classification_display_name(classification)
         category = classification
         description = ""
 
@@ -369,6 +366,7 @@ def _record_update_if_changed(app):
         return
     app.undo_stack.append(make_history_action("update", before=before, after=after))
     app.redo_stack.clear()
+    app.notify_project_changed()
 
 
 def _select_rectangle(app, rectangle):

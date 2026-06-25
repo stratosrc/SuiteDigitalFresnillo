@@ -6,15 +6,12 @@ from pathlib import Path
 
 from PIL import Image, ImageOps, ImageTk
 
+from components.shared.images import crop_transparent, load_pil_rgba
+
 
 def load_rgba_image(path: Path) -> Image.Image | None:
     """Load an image as RGBA, returning None if it cannot be read."""
-    if not path.exists():
-        return None
-    try:
-        return Image.open(path).convert("RGBA")
-    except OSError:
-        return None
+    return load_pil_rgba(path)
 
 
 def get_resized_photo(
@@ -30,10 +27,7 @@ def get_resized_photo(
     if size in cache:
         return cache[size]
 
-    image = source_image.copy()
-    active_box = image.getchannel("A").getbbox() if crop_alpha else image.getbbox()
-    if active_box:
-        image = image.crop(active_box)
+    image = crop_transparent(source_image) if crop_alpha else source_image.copy()
     resized = ImageOps.contain(image, (size, size), Image.Resampling.LANCZOS)
     tk_image = ImageTk.PhotoImage(resized)
     cache[size] = tk_image

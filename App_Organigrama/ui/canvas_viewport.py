@@ -51,6 +51,8 @@ def to_screen_layout(layout: NodeLayout, pan_x: float, pan_y: float, zoom: float
                 font_size=line.font_size * zoom,
                 line_height=line.line_height * zoom,
                 is_bold=line.is_bold,
+                align=line.align,
+                is_underlined=line.is_underlined,
             )
         )
     scaled_style = type(layout.style)(
@@ -104,6 +106,8 @@ def offset_screen_layout(layout: NodeLayout, delta_x: float, delta_y: float) -> 
             font_size=line.font_size,
             line_height=line.line_height,
             is_bold=line.is_bold,
+            align=line.align,
+            is_underlined=line.is_underlined,
         )
         for line in layout.lines
     )

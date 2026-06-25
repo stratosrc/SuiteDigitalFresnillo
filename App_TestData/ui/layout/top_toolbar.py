@@ -31,9 +31,7 @@ def build_menu_toolbar(parent, callbacks: dict):
     file_menu.add_command(label=FILE_MENU_LABELS["new_job"], command=callbacks["on_new_job"])
     file_menu.add_command(label=FILE_MENU_LABELS["open_project"], command=callbacks["on_open_project"])
     file_menu.add_command(label=FILE_MENU_LABELS["save_project"], command=callbacks["on_save_project"])
-    file_menu.add_command(label=FILE_MENU_LABELS["save_project_as"], command=callbacks["on_save_project_as"])
-    file_menu.add_separator()
-    file_menu.add_command(label=FILE_MENU_LABELS["save_pdf"], command=callbacks["on_open_export_dialog"])
+    file_menu.add_command(label=FILE_MENU_LABELS["export_pdf"], command=callbacks["on_open_export_dialog"])
 
     file_button = create_toolbar_button(
         toolbar,
@@ -55,7 +53,7 @@ def build_menu_toolbar(parent, callbacks: dict):
         toolbar,
         TOPBAR_LABELS["help"],
         callbacks["on_show_help"],
-        width=86,
+        width=72,
     )
     help_button.pack(side=tk.LEFT, padx=(0, 4), pady=0)
 

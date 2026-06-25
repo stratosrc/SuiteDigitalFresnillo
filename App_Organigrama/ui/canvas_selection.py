@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from App_Organigrama.rendering.connection_arrows import build_arrow_triangle, flatten_points
 from App_Organigrama.ui.canvas_shapes import create_rounded_rectangle
 from App_Organigrama.ui.theme import SELECTION_COLOR
 
@@ -36,17 +37,16 @@ def draw_selection_overlay(view) -> None:
 
 
 def draw_selected_connection_overlay(view) -> None:
-    route = next(
-        (route for route in view.route_cache if route.connection.id == view.selected_connection_id),
-        None,
-    )
+    route = view._selected_connection_route()
     if route is None:
         return
 
     points: list[float] = []
+    screen_points: list[tuple[float, float]] = []
     for grid_x, grid_y in route.points:
         world_x, world_y = view.rendering_engine.grid_to_world(grid_x, grid_y)
         screen_x, screen_y = view._world_to_screen(world_x, world_y)
+        screen_points.append((screen_x, screen_y))
         points.extend((screen_x, screen_y))
     view.canvas.create_line(
         *points,
@@ -54,8 +54,21 @@ def draw_selected_connection_overlay(view) -> None:
         width=max(4, int(view.rendering_engine.base_line_width * view.zoom * 2.0)),
         capstyle="butt",
         joinstyle="miter",
-        tags="selection-overlay",
+        tags=("selection-overlay", "connection-selection-overlay"),
     )
+    arrow = build_arrow_triangle(
+        screen_points,
+        length=max(9.0, 14.0 * view.zoom),
+        width=max(9.0, 13.0 * view.zoom),
+        target_gap=max(7.0, 10.0 * view.zoom),
+    )
+    if arrow is not None:
+        view.canvas.create_polygon(
+            *flatten_points(arrow),
+            fill=SELECTION_COLOR,
+            outline=SELECTION_COLOR,
+            tags=("selection-overlay", "connection-selection-overlay"),
+        )
 
 
 def draw_selected_node_overlay(view) -> None:
@@ -80,7 +93,7 @@ def draw_selected_node_overlay(view) -> None:
         fill="",
         outline=SELECTION_COLOR,
         width=max(3, int(3 * view.zoom)),
-        tags="selection-overlay",
+        tags=("selection-overlay", "node-selection-overlay"),
     )
 
 
@@ -96,5 +109,5 @@ def draw_selected_blocked_point_overlay(view) -> None:
         center_y + size,
         outline=SELECTION_COLOR,
         width=max(3, int(3 * view.zoom)),
-        tags="selection-overlay",
+        tags=("selection-overlay", "node-selection-overlay"),
     )

@@ -2,7 +2,6 @@ from io import BytesIO
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from PIL import Image
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.styles import ParagraphStyle
@@ -12,7 +11,8 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from App_Directorio.config import DIRECTORY_ICON_PATH
 from App_Directorio.models import DirectoryReportData
-from App_Directorio.utils import crop_transparent_padding
+from components.shared.images import crop_transparent, load_pil_rgba
+from components.shared.atomic_output import write_atomic_output
 
 
 HEADER_BACKGROUND = colors.HexColor("#131C46")
@@ -34,6 +34,12 @@ HEADER_PERIOD_MIN_SIZE = 8
 class DirectoryPdfExporter:
     def export(self, data: DirectoryReportData, target_path: str | Path) -> Path:
         path = Path(target_path)
+        return write_atomic_output(
+            path,
+            lambda temporary: self._write_pdf(data, temporary),
+        )
+
+    def _write_pdf(self, data: DirectoryReportData, path: Path) -> None:
         document = SimpleDocTemplate(
             str(path),
             pagesize=PDF_PAGE_SIZE,
@@ -50,7 +56,6 @@ class DirectoryPdfExporter:
             self._build_directory_table(data, available_width),
         ]
         document.build(elements)
-        return path
 
     def _build_main_header(self, data: DirectoryReportData, available_width: float) -> Table:
         title = data.title or "Directorio"
@@ -128,6 +133,7 @@ class DirectoryPdfExporter:
                 Paragraph("Rango/Clave/Nivel", header_style),
                 Paragraph("Nombre", header_style),
                 Paragraph("Cargo", header_style),
+                Paragraph("Correo electronico", header_style),
                 Paragraph("Fecha de Alta", header_style),
             ]
         ]
@@ -145,6 +151,7 @@ class DirectoryPdfExporter:
         for area in data.areas:
             area_row_index = len(rows)
             rows.append([Paragraph(self._pdf_text(area.name or "Área sin nombre"), area_style), "", "", ""])
+            rows[-1].append("")
             styles.extend(
                 [
                     ("SPAN", (0, area_row_index), (-1, area_row_index)),
@@ -158,6 +165,7 @@ class DirectoryPdfExporter:
                         Paragraph(self._pdf_text(person.rank), body_style),
                         Paragraph(self._pdf_text(person.name), body_style),
                         Paragraph(self._pdf_text(person.position), body_style),
+                        Paragraph(self._pdf_text(person.email), body_style),
                         Paragraph(self._pdf_text(person.start_date), body_style),
                     ]
                 )
@@ -165,10 +173,11 @@ class DirectoryPdfExporter:
         table = Table(
             rows,
             colWidths=[
-                available_width * 0.22,
-                available_width * 0.30,
-                available_width * 0.32,
                 available_width * 0.16,
+                available_width * 0.24,
+                available_width * 0.25,
+                available_width * 0.22,
+                available_width * 0.13,
             ],
             repeatRows=1,
         )
@@ -190,7 +199,10 @@ class DirectoryPdfExporter:
         if not DIRECTORY_ICON_PATH.exists():
             return ""
         try:
-            image = crop_transparent_padding(Image.open(DIRECTORY_ICON_PATH))
+            source_image = load_pil_rgba(DIRECTORY_ICON_PATH)
+            if source_image is None:
+                return
+            image = crop_transparent(source_image)
             image_buffer = BytesIO()
             image.save(image_buffer, format="PNG")
             image_buffer.seek(0)

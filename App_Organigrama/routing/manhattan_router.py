@@ -4,6 +4,12 @@ import math
 from typing import TYPE_CHECKING
 
 from App_Organigrama.models.document import Connection, OrgGridDocument, OrgNode
+from App_Organigrama.routing.manual_routes import (
+    GridBox,
+    build_manual_route,
+    route_crosses_boxes,
+    simplify_orthogonal_route,
+)
 
 if TYPE_CHECKING:
     from App_Organigrama.rendering.engine import RenderingEngine
@@ -43,19 +49,75 @@ class ManhattanRouter:
                 if source_id != connection.source_id:
                     blocked_paths.update(traffic_points)
 
-            points = self.route(
-                source=source,
-                target=target,
-                occupied=occupied,
-                source_port=connection.source_port,
-                target_port=connection.target_port,
-                blocked_paths=blocked_paths,
-                custom_obstacles=set(document.blocked_points),
-            )
+            if connection.manual_points:
+                manual_route = build_manual_route(
+                    self.rendering_engine.get_node_port_grid_position(
+                        source,
+                        connection.source_port,
+                    ),
+                    self.rendering_engine.get_node_port_grid_position(
+                        target,
+                        connection.target_port,
+                    ),
+                    connection.manual_points,
+                    connection.source_port,
+                    connection.target_port,
+                )
+                obstacle_boxes = self._node_obstacle_boxes(
+                    document,
+                    excluded_node_ids={source.id, target.id},
+                )
+                points = (
+                    self.route(
+                        source=source,
+                        target=target,
+                        occupied=occupied,
+                        source_port=connection.source_port,
+                        target_port=connection.target_port,
+                        blocked_paths=blocked_paths,
+                        custom_obstacles=set(document.blocked_points),
+                    )
+                    if route_crosses_boxes(manual_route, obstacle_boxes)
+                    else manual_route
+                )
+            else:
+                points = self.route(
+                    source=source,
+                    target=target,
+                    occupied=occupied,
+                    source_port=connection.source_port,
+                    target_port=connection.target_port,
+                    blocked_paths=blocked_paths,
+                    custom_obstacles=set(document.blocked_points),
+                )
             routes.append(ConnectionRoute(connection=connection, points=tuple(points)))
             traffic_by_source.setdefault(connection.source_id, set()).update(self.route_traffic_points(points))
 
         return routes
+
+    def _node_obstacle_boxes(
+        self,
+        document: OrgGridDocument,
+        *,
+        excluded_node_ids: set[str] | None = None,
+    ) -> list[GridBox]:
+        excluded = excluded_node_ids or set()
+        cell_width = self.rendering_engine.base_cell_width
+        cell_height = self.rendering_engine.base_cell_height
+        boxes: list[GridBox] = []
+        for node in document.nodes.values():
+            if node.id in excluded:
+                continue
+            box = self.rendering_engine.get_node_box(node, include_logo=False)
+            boxes.append(
+                GridBox(
+                    left=box.left / cell_width,
+                    top=box.top / cell_height,
+                    right=box.right / cell_width,
+                    bottom=box.bottom / cell_height,
+                )
+            )
+        return boxes
 
     def route(
         self,
@@ -102,7 +164,7 @@ class ManhattanRouter:
             route.insert(0, exact_start)
         if route[-1] != exact_goal:
             route.append(exact_goal)
-        return route
+        return simplify_orthogonal_route(route)
 
     def route_traffic_points(self, route: list[GridPoint]) -> set[GridPoint]:
         points: set[GridPoint] = set()

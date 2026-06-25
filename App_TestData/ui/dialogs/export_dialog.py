@@ -6,6 +6,7 @@ import customtkinter as ctk
 
 from App_TestData.config.ui_strings import EXPORT_DIALOG
 from App_TestData.ui.widgets.factory import build_font
+from components.shared.accessibility import enable_visible_focus
 from components.styles.styles import (
     APP_BG,
     BORDER_BG,
@@ -49,6 +50,7 @@ class ExportDialog(ctk.CTkToplevel):
 
         area_frame = tab_view.add(EXPORT_DIALOG["tabs"]["area"])
         committee_frame = tab_view.add(EXPORT_DIALOG["tabs"]["committee"])
+        self.after_idle(lambda: enable_visible_focus(self))
 
         ctk.CTkButton(
             area_frame,

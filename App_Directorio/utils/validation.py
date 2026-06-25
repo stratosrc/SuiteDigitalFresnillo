@@ -21,13 +21,13 @@ def is_date_input_prefix(value: str) -> bool:
 
 
 def is_valid_date(value: str) -> bool:
-    if len(value) != DATE_INPUT_LENGTH:
+    if len(value) != DATE_INPUT_LENGTH or not is_date_input_prefix(value):
         return False
     try:
-        parsed_date = datetime.strptime(value, DATE_FORMAT)
+        parsed = datetime.strptime(value, DATE_FORMAT)
     except ValueError:
         return False
-    return parsed_date.strftime(DATE_FORMAT) == value
+    return parsed.strftime(DATE_FORMAT) == value
 
 
 __all__ = [
