@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import typing
+
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Deque, Optional, TypedDict
@@ -43,12 +45,12 @@ class RectangleData(TypedDict, total=False):
     rect: fitz.Rect
 
 
-CommitteeData = dict[str, str]
-HistoryItem = str | dict[str, Any]
-RedactionHistoryAction = dict[str, Any]
+CommitteeData = typing.Dict[str, str]
+HistoryItem = typing.Union[str, typing.Dict[str, Any]]
+RedactionHistoryAction = typing.Dict[str, Any]
 
 
-@dataclass(slots=True)
+@dataclass
 class DocumentState:
     """Own all mutable document data independently from UI widgets."""
 

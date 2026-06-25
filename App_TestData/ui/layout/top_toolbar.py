@@ -1,5 +1,8 @@
 """Top toolbar components for the main window."""
 
+from __future__ import annotations
+
+
 import tkinter as tk
 
 import customtkinter as ctk

@@ -1,4 +1,6 @@
-from collections.abc import Callable
+from __future__ import annotations
+
+from typing import Callable
 import tkinter as tk
 
 import customtkinter as ctk

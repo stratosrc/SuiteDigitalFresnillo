@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from App_Organigrama.ui import OrgChartApplication
 
 __all__ = ["AppOrganigrama", "main"]

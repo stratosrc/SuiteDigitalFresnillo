@@ -1,5 +1,8 @@
 """Keyboard focus helpers for CustomTkinter interfaces."""
 
+from __future__ import annotations
+
+
 import customtkinter as ctk
 
 

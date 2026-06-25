@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from typing import Callable, Sequence
 from dataclasses import dataclass
 
 import customtkinter as ctk
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class TopbarStyle:
     """Colors and font used by a suite top bar."""
 
@@ -21,7 +21,7 @@ class TopbarStyle:
     font: ctk.CTkFont
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class TopbarButton:
     """Declarative definition of one top bar command."""
 

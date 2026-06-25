@@ -1,4 +1,8 @@
-from collections.abc import Callable
+from __future__ import annotations
+
+import typing
+
+from typing import Callable
 from pathlib import Path
 import tkinter as tk
 
@@ -8,7 +12,7 @@ from components.shared.images import load_ctk_image
 from components.shared.tooltip import Tooltip
 
 
-IconPair = tuple[ctk.CTkImage | None, ctk.CTkImage | None]
+IconPair = typing.Tuple[typing.Optional[ctk.CTkImage], typing.Optional[ctk.CTkImage]]
 
 
 def load_action_icon(path: Path, size: tuple[int, int]) -> ctk.CTkImage | None:

@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.8"
           cache: pip
 
       - name: Install project and quality tools
@@ -25,7 +25,7 @@ jobs:
         run: python -m ruff check .
 
       - name: Compile modules
-        run: python -m compileall -q App_TestData App_Organigrama App_Directorio App_ConversorPDF components
+        run: python -m compileall -q App_TestData App_Organigrama App_Directorio components
 
       - name: Run tests
         run: python -m unittest discover -s tests -v
@@ -40,16 +40,15 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.8"
           cache: pip
 
       - name: Install project and PyInstaller
         run: python -m pip install --upgrade pip && python -m pip install ".[dev]"
 
-      - name: Build executable without bundled LibreOffice
+      - name: Build executable
         shell: pwsh
         run: |
-          $env:SUITE_SKIP_LIBREOFFICE = "1"
           python -m PyInstaller --clean --noconfirm convertidor.spec
           if (-not (Test-Path "dist/SuiteFresnillo/SuiteFresnillo.exe")) {
             throw "PyInstaller did not create SuiteFresnillo.exe"

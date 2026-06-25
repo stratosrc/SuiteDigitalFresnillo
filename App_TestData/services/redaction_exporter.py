@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from typing import Mapping
-from collections.abc import Callable
+from typing import Callable
 
 import fitz
 

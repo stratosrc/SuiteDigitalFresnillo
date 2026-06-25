@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 
@@ -14,7 +16,7 @@ NODE_COLOR_CHOICES: tuple[tuple[str, str], ...] = (
 )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class HierarchyStyle:
     width_scale: float
     min_height_scale: float

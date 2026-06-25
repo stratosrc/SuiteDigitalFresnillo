@@ -1,5 +1,8 @@
 """Shared UI widget factories and font helpers."""
 
+from __future__ import annotations
+
+
 import customtkinter as ctk
 
 from components.shared.images import load_ctk_image as load_shared_ctk_image

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import typing
+
 from dataclasses import dataclass
 from heapq import heappop, heappush
 import math
@@ -15,11 +19,11 @@ if TYPE_CHECKING:
     from App_Organigrama.rendering.engine import RenderingEngine
 
 
-GridPoint = tuple[float, float]
-SubGridPoint = tuple[int, int]
+GridPoint = typing.Tuple[float, float]
+SubGridPoint = typing.Tuple[int, int]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class ConnectionRoute:
     connection: Connection
     points: tuple[GridPoint, ...]

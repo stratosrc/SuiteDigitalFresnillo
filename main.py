@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 
 from components.shared.app_registry import get_application, run_application

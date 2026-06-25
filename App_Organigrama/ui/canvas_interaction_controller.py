@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import typing
+
 import tkinter as tk
 
 from App_Organigrama.ui.canvas_selection import (
@@ -11,7 +13,7 @@ from App_Organigrama.ui.canvas_selection import (
 from App_Organigrama.ui.canvas_state import InteractionMode
 
 
-GridPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
 SELECTION_BLINK_INTERVAL_MS = 420
 CUSTOM_CURSOR_SIZE = 32
 

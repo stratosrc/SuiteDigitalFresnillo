@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import typing
+
 import tkinter as tk
 
 from App_Organigrama.rendering.engine import NodeLayout
@@ -16,7 +18,7 @@ from App_Organigrama.ui.canvas_viewport import (
 )
 
 
-GridPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
 
 
 class CanvasViewportController:

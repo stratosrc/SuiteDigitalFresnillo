@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from App_TestData.ui import TestDataGeneratorApp
 
 __all__ = ["TestDataGeneratorApp", "main"]

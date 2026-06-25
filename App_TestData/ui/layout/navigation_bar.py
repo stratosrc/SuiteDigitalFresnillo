@@ -1,5 +1,8 @@
 """Bottom navigation bar for page and zoom controls."""
 
+from __future__ import annotations
+
+
 import tkinter as tk
 
 import customtkinter as ctk

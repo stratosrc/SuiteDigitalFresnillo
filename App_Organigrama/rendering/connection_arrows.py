@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import typing
+
 import math
-from collections.abc import Sequence
+from typing import Sequence
 
 
-Point = tuple[float, float]
+Point = typing.Tuple[float, float]
 
 
 def build_arrow_triangle(

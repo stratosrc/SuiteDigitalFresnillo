@@ -47,9 +47,7 @@ Checklist minimo antes de entregar una version:
 
 ## Instalador en Windows limpio
 
-- Ejecutar el instalador en una VM de Windows 10/11 sin Python ni LibreOffice.
-- Confirmar que el ejecutable muestra icono y versión `1.0.0`.
-- Abrir los cuatro módulos desde el launcher.
-- Convertir DOCX, XLSX y PPTX usando únicamente LibreOffice incluido.
-- Cancelar una conversión y comprobar que no queden procesos `soffice.exe`.
+- Ejecutar el instalador en una VM limpia sin Python.
+- Confirmar que el ejecutable muestra icono y versión `1.1.0`.
+- Abrir los tres módulos desde el launcher.
 - Desinstalar y comprobar que se eliminen accesos directos y archivos instalados.

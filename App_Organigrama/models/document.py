@@ -1,11 +1,15 @@
+from __future__ import annotations
+
+import typing
+
 from dataclasses import dataclass, field
 from uuid import uuid4
 
-GridCell = tuple[int, int]
-GridPoint = tuple[float, float]
+GridCell = typing.Tuple[int, int]
+GridPoint = typing.Tuple[float, float]
 
 
-@dataclass(slots=True)
+@dataclass
 class OrgNode:
     name: str
     role: str
@@ -15,7 +19,7 @@ class OrgNode:
     id: str = field(default_factory=lambda: uuid4().hex)
 
 
-@dataclass(slots=True)
+@dataclass
 class Connection:
     source_id: str
     target_id: str
@@ -26,7 +30,7 @@ class Connection:
     id: str = field(default_factory=lambda: uuid4().hex)
 
 
-@dataclass(slots=True)
+@dataclass
 class OrgGridDocument:
     title: str = ""
     period: str = ""

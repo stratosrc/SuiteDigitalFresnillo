@@ -7,8 +7,11 @@ from components.launcher.ui.footer import LauncherFooter
 from components.launcher.ui.header import LauncherHeader
 from components.launcher.ui.image_loader import ImageLoader
 from components.launcher.ui.styles import configure_launcher_styles
+from components.shared.windows_compat import configure_customtkinter_dpi
 from components.shared.windowing import center_window, prepare_window_for_open, reveal_window_maximized
 from components.styles.styles import APP_BG, apply_ctk_style
+
+configure_customtkinter_dpi(ctk)
 
 
 class SuiteLauncher(ctk.CTk):

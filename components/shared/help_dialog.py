@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+import typing
+
+from typing import Callable, Sequence
 from dataclasses import dataclass
 import tkinter as tk
 
 import customtkinter as ctk
 
 
-HelpSection = tuple[str, Sequence[str]]
-FontFactory = Callable[[int, str | None], ctk.CTkFont]
+HelpSection = typing.Tuple[str, Sequence[str]]
+FontFactory = Callable[[int, typing.Optional[str]], ctk.CTkFont]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class HelpDialogStyle:
     """Visual tokens required by the shared help dialog."""
 
@@ -26,7 +28,7 @@ class HelpDialogStyle:
     make_font: FontFactory
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class HelpDialogDimensions:
     """Size constraints for a help window."""
 
@@ -37,7 +39,7 @@ class HelpDialogDimensions:
     bullet_wrap_length: int = 470
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class HelpDialogConfig:
     """Content and presentation for one application's help window."""
 

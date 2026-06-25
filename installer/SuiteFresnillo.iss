@@ -2,6 +2,7 @@
 #define AppVersion "1.1.0"
 #define AppPublisher "Municipio de Fresnillo"
 #define AppExeName "SuiteFresnillo.exe"
+#define UCRTUpdateName "Windows8-RT-KB2999226-x64.msu"
 
 [Setup]
 AppId={{C9AB84CA-BC2A-4551-9222-7D99C5106787}
@@ -12,7 +13,7 @@ DefaultDirName={autopf}\Suite Digital Fresnillo
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir=..\installer_output
-OutputBaseFilename=SuiteDigitalFresnillo-Setup-{#AppVersion}
+OutputBaseFilename=SuiteDigitalFresnillo-Windows8-Setup-{#AppVersion}
 SetupIconFile=..\components\assets\SuiteIcon.ico
 UninstallDisplayIcon={app}\{#AppExeName}
 Compression=lzma2
@@ -21,6 +22,7 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
+MinVersion=6.2
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -30,42 +32,93 @@ Name: "desktopicon"; Description: "Crear un acceso directo en el escritorio"; Gr
 
 [Files]
 Source: "..\dist\SuiteFresnillo\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "vendor\{#UCRTUpdateName}"; Flags: dontcopy
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Description: "Abrir {#AppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExeName}"; Description: "Abrir {#AppName}"; Flags: nowait postinstall skipifsilent; Check: CanLaunchApplication
 
 [Code]
 var
-  RequirementsPage: TOutputMsgMemoWizardPage;
+  UCRTNeedsRestart: Boolean;
+  UCRTWasInstalledBySetup: Boolean;
+
+function IsWindows80: Boolean;
+var
+  Version: TWindowsVersion;
+begin
+  GetWindowsVersionEx(Version);
+  Result := (Version.Major = 6) and (Version.Minor = 2);
+end;
+
+function UCRTIsInstalled: Boolean;
+begin
+  Result :=
+    FileExists(ExpandConstant('{sys}\ucrtbase.dll')) and
+    FileExists(ExpandConstant('{sys}\api-ms-win-crt-stdio-l1-1-0.dll'));
+end;
+
+procedure InstallWindows8UCRT;
+var
+  ResultCode: Integer;
+begin
+  if (not IsWindows80) or UCRTIsInstalled then
+    Exit;
+
+  UCRTWasInstalledBySetup := True;
+  WizardForm.StatusLabel.Caption :=
+    'Instalando Universal C Runtime para Windows 8...';
+  ExtractTemporaryFile('{#UCRTUpdateName}');
+
+  if not Exec(
+    ExpandConstant('{sys}\wusa.exe'),
+    '"' + ExpandConstant('{tmp}\{#UCRTUpdateName}') + '" /quiet /norestart',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  ) then
+    RaiseException('No fue posible iniciar la actualizacion KB2999226.');
+
+  if (ResultCode <> 0) and (ResultCode <> 3010) and
+     (ResultCode <> 2359302) then
+    RaiseException(
+      'No se pudo instalar Universal C Runtime KB2999226. Codigo: ' +
+      IntToStr(ResultCode) + '.'
+    );
+
+  UCRTNeedsRestart := True;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssInstall then
+    InstallWindows8UCRT;
+end;
+
+function CanLaunchApplication: Boolean;
+begin
+  Result := not UCRTNeedsRestart;
+end;
+
+function NeedRestart(): Boolean;
+begin
+  Result := UCRTNeedsRestart;
+end;
 
 procedure InitializeWizard;
-var
-  RequirementsText: String;
 begin
-  RequirementsText :=
-    'Sistema operativo:' + #13#10 +
-    '  - Windows 10 o Windows 11 de 64 bits' + #13#10 +
-    '  - En Windows XP, Vista, 7, 8 y 8.1 la aplicacion no esta soportada y podria no funcionar correctamente' + #13#10 + #13#10 +
-    'Hardware minimo:' + #13#10 +
-    '  - Procesador compatible con x64' + #13#10 +
-    '  - 4 GB de memoria RAM' + #13#10 +
-    '  - 2.5 GB de espacio libre durante la instalacion' + #13#10 +
-    '  - Pantalla con resolucion de 1280 x 720 o superior' + #13#10 + #13#10 +
-    'Dependencias:' + #13#10 +
-    '  - No es necesario instalar Python' + #13#10 +
-    '  - No es necesario instalar LibreOffice' + #13#10 +
-    '  - Todos los componentes requeridos vienen incluidos' + #13#10 + #13#10 +
-    'Se requieren permisos de administrador para instalar la aplicacion.';
+  UCRTNeedsRestart := False;
+  UCRTWasInstalledBySetup := False;
+end;
 
-  RequirementsPage := CreateOutputMsgMemoPage(
-    wpWelcome,
-    'Requerimientos minimos',
-    'Antes de instalar {#AppName}',
-    'Comprueba que este equipo cumpla con los siguientes requisitos:',
-    RequirementsText
-  );
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if (CurPageID = wpFinished) and UCRTWasInstalledBySetup then
+    WizardForm.FinishedLabel.Caption :=
+      'La instalacion termino correctamente.' + #13#10 + #13#10 +
+      'Debes reiniciar Windows antes de abrir Suite Digital Fresnillo.';
 end;

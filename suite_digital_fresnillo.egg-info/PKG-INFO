@@ -1,3 +1,21 @@
+Metadata-Version: 2.1
+Name: suite-digital-fresnillo
+Version: 1.1.0
+Summary: Suite de escritorio para flujos administrativos del Municipio de Fresnillo
+Requires-Python: <3.9,>=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: customtkinter==5.2.2
+Requires-Dist: Pillow==9.5.0
+Requires-Dist: PyMuPDF==1.21.1
+Requires-Dist: reportlab==3.6.13
+Requires-Dist: typing_extensions==4.13.2
+Requires-Dist: packaging==23.2
+Provides-Extra: dev
+Requires-Dist: pyinstaller==5.13.2; extra == "dev"
+Requires-Dist: pyinstaller-hooks-contrib==2023.8; extra == "dev"
+Requires-Dist: pytest==7.4.4; extra == "dev"
+Requires-Dist: ruff==0.9.10; extra == "dev"
+
 # Suite Digital Fresnillo
 
 Suite de escritorio en Python para apoyar flujos administrativos de la Presidencia Municipal de Fresnillo. La aplicacion principal abre un launcher con modulos independientes para testado de documentos, organigramas y directorios institucionales.

@@ -1,5 +1,8 @@
 """Help dialog shown from the main toolbar."""
 
+from __future__ import annotations
+
+
 import tkinter as tk
 
 import customtkinter as ctk

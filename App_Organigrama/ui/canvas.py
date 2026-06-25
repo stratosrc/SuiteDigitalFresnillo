@@ -1,4 +1,8 @@
-from collections.abc import Callable
+from __future__ import annotations
+
+import typing
+
+from typing import Callable
 import tkinter as tk
 
 import customtkinter as ctk
@@ -20,7 +24,7 @@ from App_Organigrama.ui.theme import (
 )
 
 
-GridPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
 
 
 class OrgGridCanvas(

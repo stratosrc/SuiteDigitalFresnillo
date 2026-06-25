@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import typing
+
 import math
 
 from App_Organigrama.models.document import OrgNode
 from App_Organigrama.rendering.engine import RenderingEngine
 from App_Organigrama.routing.manhattan_router import ConnectionRoute
 
-GridPoint = tuple[float, float]
-ScreenPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
+ScreenPoint = typing.Tuple[float, float]
 
 
 def distance_to_segment(

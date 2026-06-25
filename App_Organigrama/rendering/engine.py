@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import textwrap
 from dataclasses import dataclass
 
@@ -9,7 +11,7 @@ HORIZONTAL_ORIENTATION = "horizontal"
 VERTICAL_ORIENTATION = "vertical"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class PageLayout:
     width: float
     height: float
@@ -20,7 +22,7 @@ class PageLayout:
     header_height: float
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class NodeStyle:
     width: float
     min_height: float
@@ -37,7 +39,7 @@ class NodeStyle:
     connection_line_width: float
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class NodeTextLine:
     text: str
     top: float
@@ -48,7 +50,7 @@ class NodeTextLine:
     is_underlined: bool = False
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class Box:
     left: float
     top: float
@@ -64,7 +66,7 @@ class Box:
         return self.bottom - self.top
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class NodeLayout:
     center_x: float
     center_y: float
@@ -77,7 +79,7 @@ class NodeLayout:
     logo_image_size: float
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class DocumentBounds:
     left: float
     top: float

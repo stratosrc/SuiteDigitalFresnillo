@@ -22,7 +22,7 @@ EMBEDDED_PDF_NAME = "source.pdf"
 _TRANSIENT_RECTANGLE_FIELDS = {"canvas_rect_id", "canvas_text_id", "rect"}
 
 
-@dataclass(slots=True)
+@dataclass
 class LoadedProject:
     """Loaded metadata and its ready-to-open PDF source."""
 

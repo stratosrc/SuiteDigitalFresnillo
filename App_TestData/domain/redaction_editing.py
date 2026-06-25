@@ -1,5 +1,8 @@
 """Pure rectangle editing helpers."""
 
+from __future__ import annotations
+
+
 from App_TestData.domain.legal_text import build_censorship_text
 from App_TestData.domain.redaction_history import make_history_action, redo_last_action, undo_last_action
 

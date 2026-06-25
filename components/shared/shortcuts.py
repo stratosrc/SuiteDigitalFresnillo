@@ -1,6 +1,9 @@
 """Common keyboard shortcuts for suite applications."""
 
-from collections.abc import Callable
+from __future__ import annotations
+
+
+from typing import Callable
 import tkinter as tk
 
 

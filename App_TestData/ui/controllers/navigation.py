@@ -1,5 +1,8 @@
 """Page navigation and zoom coordination for Test Data."""
 
+from __future__ import annotations
+
+
 from tkinter import messagebox
 import tkinter as tk
 

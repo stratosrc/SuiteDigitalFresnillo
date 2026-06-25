@@ -1,5 +1,8 @@
 """Main layout composition for the application window."""
 
+from __future__ import annotations
+
+
 from App_TestData.ui.layout.content_view import build_content_view
 from App_TestData.ui.layout.header_bar import build_header
 from App_TestData.ui.layout.navigation_bar import build_navigation_bar

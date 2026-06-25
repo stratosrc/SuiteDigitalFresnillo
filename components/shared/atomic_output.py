@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from typing import Callable
 from pathlib import Path
 import tempfile
 from typing import TypeVar

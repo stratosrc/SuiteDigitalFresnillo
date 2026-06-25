@@ -1,5 +1,8 @@
 """Pure page navigation helpers."""
 
+from __future__ import annotations
+
+
 
 def get_adjacent_page_index(current_page: int, total_pages: int, action: str) -> int:
     """Return the next valid page index for the requested direction."""

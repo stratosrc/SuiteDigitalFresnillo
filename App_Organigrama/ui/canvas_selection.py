@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import typing
+
 from App_Organigrama.rendering.connection_arrows import build_arrow_triangle, flatten_points
 from App_Organigrama.ui.canvas_shapes import create_rounded_rectangle
 from App_Organigrama.ui.theme import SELECTION_COLOR
 
-GridPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
 
 
 def draw_connection_selection_overlay(view) -> None:

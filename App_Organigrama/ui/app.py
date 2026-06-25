@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 import customtkinter as ctk
 
 from App_Organigrama.ui.main_frame import MainFrame
 from App_Organigrama.ui.theme import APP_BACKGROUND, WINDOW_HEIGHT, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH, WINDOW_WIDTH, apply_theme
+from components.shared.windows_compat import configure_customtkinter_dpi
 from components.shared.windowing import center_window, prepare_window_for_open, reveal_window_maximized
+
+configure_customtkinter_dpi(ctk)
 
 
 class OrgChartApplication(ctk.CTk):

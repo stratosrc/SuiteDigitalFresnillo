@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class PersonReportRow:
     rank: str
     name: str
@@ -10,13 +12,13 @@ class PersonReportRow:
     start_date: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class AreaReportData:
     name: str
     personnel: list[PersonReportRow]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class DirectoryReportData:
     title: str
     period: str

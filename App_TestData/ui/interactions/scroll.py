@@ -1,5 +1,8 @@
 """Mouse wheel helpers for scrolling and zooming."""
 
+from __future__ import annotations
+
+
 CTRL_MASK = 0x0004
 
 

@@ -6,7 +6,11 @@ from App_Directorio.ui.forms.directory_form import bind_uppercase
 
 class UppercaseFieldTests(unittest.TestCase):
     def test_bound_string_variable_converts_text_to_uppercase(self):
-        interpreter = tk.Tcl()
+        try:
+            interpreter = tk.Tcl()
+        except tk.TclError as error:
+            self.skipTest(f"Tcl is not available: {error}")
+
         variable = tk.StringVar(master=interpreter)
         bind_uppercase(variable)
 

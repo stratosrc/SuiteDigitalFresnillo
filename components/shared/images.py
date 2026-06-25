@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import typing
+
 from pathlib import Path
 
 import customtkinter as ctk
 from PIL import Image, ImageOps
 
 
-ImageSize = tuple[int, int]
+ImageSize = typing.Tuple[int, int]
 _CTK_IMAGE_CACHE: dict[tuple[Path, ImageSize, bool], ctk.CTkImage] = {}
 
 

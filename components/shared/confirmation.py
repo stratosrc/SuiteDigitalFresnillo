@@ -1,5 +1,8 @@
 """Consistent three-way confirmation dialogs."""
 
+from __future__ import annotations
+
+
 import tkinter as tk
 
 import customtkinter as ctk

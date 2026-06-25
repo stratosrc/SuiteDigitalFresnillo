@@ -1,5 +1,8 @@
 """Pure zoom helpers for the PDF viewer."""
 
+from __future__ import annotations
+
+
 from App_TestData.config.settings import ZOOM_MAX, ZOOM_MIN, ZOOM_STEP
 
 

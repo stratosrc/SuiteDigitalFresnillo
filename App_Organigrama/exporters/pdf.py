@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 import logging
 from pathlib import Path
@@ -29,7 +31,7 @@ PDF_FONT_BOLD = "SegoeUI-Bold"
 _FONTS_REGISTERED = False
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class PdfTransform:
     scale: float
     offset_x: float

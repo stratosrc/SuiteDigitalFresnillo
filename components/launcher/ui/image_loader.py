@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import typing
+
 from pathlib import Path
 
 import customtkinter as ctk
@@ -9,7 +11,7 @@ from components.shared.images import load_pil_rgba
 from components.shared.paths import build_path
 from components.styles.styles import DARK_BG_ACTIVE
 
-IconSize = tuple[int, int]
+IconSize = typing.Tuple[int, int]
 
 
 class ImageLoader:

@@ -1,6 +1,9 @@
 """Organigrama workspace controller implementation."""
 
-from collections.abc import Callable
+from __future__ import annotations
+
+
+from typing import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from copy import deepcopy
 import logging
@@ -906,5 +909,5 @@ class MainFrame(ctk.CTkFrame):
 
     def destroy(self) -> None:
         self.project_lifecycle.stop_autosave()
-        self._executor.shutdown(wait=False, cancel_futures=True)
+        self._executor.shutdown(wait=False)
         super().destroy()

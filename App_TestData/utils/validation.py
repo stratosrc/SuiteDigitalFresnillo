@@ -1,5 +1,8 @@
 """Pure válidation helpers used by the UI layer."""
 
+from __future__ import annotations
+
+
 
 def parse_int(value: str) -> int:
     """Convert a text value into an integer."""

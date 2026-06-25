@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import tkinter as tk
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -456,7 +458,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
 
     def destroy(self) -> None:
         self.project_lifecycle.stop_autosave()
-        self._executor.shutdown(wait=False, cancel_futures=True)
+        self._executor.shutdown(wait=False)
         if self._history_after_id is not None:
             self.after_cancel(self._history_after_id)
             self._history_after_id = None

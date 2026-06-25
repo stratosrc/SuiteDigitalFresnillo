@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import typing
+
 from dataclasses import dataclass
 from enum import Enum, auto
 
 
-GridPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
 
 
 class InteractionMode(Enum):
@@ -18,7 +20,7 @@ class InteractionMode(Enum):
     MOVING_NODE = auto()
 
 
-@dataclass(slots=True)
+@dataclass
 class CanvasInteractionState:
     mode: InteractionMode = InteractionMode.IDLE
     drag_press: tuple[int, int, float, float] | None = None

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from App_Directorio.ui import DirectoryApplication
 
 __all__ = ["AppDirectorio", "main"]

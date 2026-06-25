@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import typing
+
 from App_Organigrama.rendering.engine import Box, NodeLayout
 
-GridPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
 
 
 def world_to_screen(world_x: float, world_y: float, pan_x: float, pan_y: float, zoom: float) -> tuple[float, float]:

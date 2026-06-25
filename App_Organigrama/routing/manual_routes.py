@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import typing
+
+from typing import Sequence
 from dataclasses import dataclass
 
 
-GridPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class GridBox:
     left: float
     top: float

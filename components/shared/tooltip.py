@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import tkinter as tk
 
 from components.styles.styles import CTK_FONT_FAMILY, SURFACE_BG, TEXT_DARK

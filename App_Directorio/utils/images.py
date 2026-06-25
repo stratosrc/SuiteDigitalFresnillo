@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from PIL import Image
 
 from components.shared.images import crop_transparent

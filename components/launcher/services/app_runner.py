@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+import typing
+
+from typing import Mapping
 import os
 import subprocess
 import sys
@@ -9,7 +11,7 @@ from tkinter import messagebox
 from components.shared.paths import base_path, is_frozen
 from components.shared.windowing import prepare_window_for_open, reveal_window_maximized
 
-LauncherAppConfig = Mapping[str, str | bool]
+LauncherAppConfig = Mapping[str, typing.Union[str, bool]]
 PROCESS_POLL_INTERVAL_MS = 500
 
 

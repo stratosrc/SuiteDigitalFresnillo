@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import typing
+
 from App_Organigrama.models.document import OrgNode
 from App_Organigrama.routing.manhattan_router import ConnectionRoute
 from App_Organigrama.routing.manual_routes import (
@@ -19,7 +21,7 @@ from App_Organigrama.ui.canvas_hit_testing import (
 from App_Organigrama.ui.canvas_state import InteractionMode
 
 
-GridPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
 
 
 class CanvasConnectionController:

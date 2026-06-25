@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .venv/
+.venv-win8/
 .ruff_cache/
 build/
 dist/

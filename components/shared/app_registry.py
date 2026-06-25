@@ -1,11 +1,14 @@
 """Canonical application registry shared by the launcher and CLI entry points."""
 
+from __future__ import annotations
+
+
 from dataclasses import dataclass
 from importlib import import_module
 from importlib.util import find_spec
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class ApplicationDefinition:
     app_id: str
     name: str
@@ -53,13 +56,6 @@ APPLICATIONS: tuple[ApplicationDefinition, ...] = (
         package_name="App_Directorio",
         icon_path="components/assets/directorio.png",
         description="Gestión y Diseño del\nDirectorio de Área",
-    ),
-    ApplicationDefinition(
-        app_id="conversor_pdf",
-        name="Conversor a PDF",
-        package_name="App_ConversorPDF",
-        icon_path="components/assets/convert.png",
-        description="Conversión de archivos \ne imágenes a PDF",
     ),
 )
 

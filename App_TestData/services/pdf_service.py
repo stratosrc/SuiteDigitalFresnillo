@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import logging
-from collections.abc import Callable
+from typing import Callable
 from typing import Mapping, Optional, Protocol, TypedDict
 
 import fitz

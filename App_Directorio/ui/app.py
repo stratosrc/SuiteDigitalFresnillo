@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import customtkinter as ctk
 
 from App_Directorio.config import APP_TITLE
@@ -10,7 +12,10 @@ from App_Directorio.ui.theme import (
     WINDOW_WIDTH,
     apply_theme,
 )
+from components.shared.windows_compat import configure_customtkinter_dpi
 from components.shared.windowing import center_window, prepare_window_for_open, reveal_window_maximized
+
+configure_customtkinter_dpi(ctk)
 
 
 class DirectoryApplication(ctk.CTk):

@@ -1,5 +1,8 @@
 """Rectangle action coordination for Test Data."""
 
+from __future__ import annotations
+
+
 import tkinter as tk
 
 from App_TestData.domain.redaction_editing import (

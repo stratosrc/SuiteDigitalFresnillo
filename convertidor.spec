@@ -1,6 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-import os
 from pathlib import Path
 
 from PyInstaller.utils.win32.versioninfo import (
@@ -27,15 +26,7 @@ def collect_tree(source: Path, destination: str):
     return files
 
 
-libreoffice_source = project_root / "App_ConversorPDF" / "vendor" / "LibreOffice"
-if not libreoffice_source.exists():
-    libreoffice_source = project_root / "App_ConversorPDF" / "vendor" / "libreoffice"
-
 datas = []
-if os.environ.get("SUITE_SKIP_LIBREOFFICE") != "1":
-    datas += collect_tree(libreoffice_source, "vendor/libreoffice")
-datas += collect_tree(project_root / "App_ConversorPDF" / "assets", "App_ConversorPDF/assets")
-datas += collect_tree(project_root / "App_ConversorPDF" / "vendor" / "python", "App_ConversorPDF/vendor/python")
 datas += collect_tree(project_root / "App_Directorio" / "assets", "App_Directorio/assets")
 datas += collect_tree(project_root / "App_Organigrama" / "assets", "App_Organigrama/assets")
 datas += collect_tree(project_root / "App_TestData" / "assets", "App_TestData/assets")
@@ -45,8 +36,6 @@ hiddenimports = [
     "App_TestData",
     "App_Organigrama",
     "App_Directorio",
-    "App_ConversorPDF",
-    "tkinterdnd2",
     "fitz",
     "PIL.Image",
     "PIL.ImageTk",
@@ -90,7 +79,7 @@ a = Analysis(
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
-    hookspath=[],
+    hookspath=[str(project_root / "hooks")],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],

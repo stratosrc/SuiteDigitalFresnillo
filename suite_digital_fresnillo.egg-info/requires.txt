@@ -1,0 +1,12 @@
+customtkinter==5.2.2
+Pillow==9.5.0
+PyMuPDF==1.21.1
+reportlab==3.6.13
+typing_extensions==4.13.2
+packaging==23.2
+
+[dev]
+pyinstaller==5.13.2
+pyinstaller-hooks-contrib==2023.8
+pytest==7.4.4
+ruff==0.9.10

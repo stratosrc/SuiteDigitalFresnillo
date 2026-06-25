@@ -1,5 +1,8 @@
 """Focus styling used by the directory module."""
 
+from __future__ import annotations
+
+
 import customtkinter as ctk
 
 

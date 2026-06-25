@@ -1,5 +1,8 @@
 """TestData application controller implementation."""
 
+from __future__ import annotations
+
+
 import os
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -14,9 +17,12 @@ import customtkinter as ctk
 import fitz
 from PIL import ImageTk
 
+from components.shared.windows_compat import configure_customtkinter_dpi
 
 if __package__ in {None, ""}:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+configure_customtkinter_dpi(ctk)
 
 from App_TestData.config.ui_strings import (
     APP_WINDOW_TITLE,
@@ -647,7 +653,7 @@ class TestDataGeneratorApp(ctk.CTk):
         if self.pdf_document:
             self.pdf_document.close()
         self._release_loaded_project()
-        self._executor.shutdown(wait=False, cancel_futures=True)
+        self._executor.shutdown(wait=False)
         self.destroy()
 
     def _project_snapshot(self) -> dict[str, object]:

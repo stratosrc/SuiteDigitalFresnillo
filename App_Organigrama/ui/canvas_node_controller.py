@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import typing
+
 import math
 import tkinter as tk
 
@@ -15,7 +17,7 @@ from App_Organigrama.ui.canvas_image_cache import get_resized_photo, load_rgba_i
 from App_Organigrama.ui.modals import NodeEditorDialog
 
 
-GridPoint = tuple[float, float]
+GridPoint = typing.Tuple[float, float]
 NODE_PROXIMITY_RADIUS = 34.0
 
 
