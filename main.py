@@ -9,7 +9,7 @@ def main() -> None:
     host = os.getenv("SUITE_HOST", "0.0.0.0")
     port = int(os.getenv("SUITE_PORT", "8000"))
     reload = os.getenv("SUITE_RELOAD", "").lower() in {"1", "true", "yes"}
-    uvicorn.run("web_app.main:app", host=host, port=port, reload=reload)
+    uvicorn.run("Main_View.main:app", host=host, port=port, reload=reload)
 
 
 if __name__ == "__main__":

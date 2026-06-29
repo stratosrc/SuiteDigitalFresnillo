@@ -7,8 +7,7 @@ there without rewriting the backend.
 
 from a2wsgi import ASGIMiddleware
 
-from web_app.main import app
+from Main_View.main import app
 
 
 application = ASGIMiddleware(app)
-

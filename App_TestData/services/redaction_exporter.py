@@ -10,6 +10,7 @@ import fitz
 
 from App_TestData.domain.document_state import CommitteeData, RectangleData
 from App_TestData.domain.redaction_editing import iter_rectangles_in_order
+from App_TestData.domain.redaction_numbering import assign_redaction_numbers
 from App_TestData.services.committee_cover import CommitteeCoverWriter
 from App_TestData.services.pdf_fonts import fitz_font_kwargs, fitz_text_width
 from App_TestData.services.pdf_footer import add_institutional_footer
@@ -61,7 +62,7 @@ class RedactionPdfExporter:
 
         try:
             original_page_count = output_document.page_count
-            self._assign_final_numbers(ordered_rectangles)
+            ordered_rectangles = assign_redaction_numbers(ordered_rectangles)
             self._apply_redactions(output_document, ordered_rectangles)
             self._draw_rectangle_labels(output_document, ordered_rectangles)
             self.summary_writer.append(output_document, ordered_rectangles)
@@ -118,24 +119,3 @@ class RedactionPdfExporter:
                 **fitz_font_kwargs(),
             )
 
-    def _assign_final_numbers(self, ordered_rectangles):
-        concept_counters = {}
-        reserved_counter = 0
-        confidential_counter = 0
-        other_law_counter = 0
-
-        for rect_data in ordered_rectangles:
-            classification = rect_data.get("classification", "general")
-            if classification == "reserved":
-                reserved_counter += 1
-                rect_data["final_number"] = f"#Reservada.{reserved_counter}"
-            elif classification == "confidential":
-                confidential_counter += 1
-                rect_data["final_number"] = f"#Confidencial.{confidential_counter}"
-            elif classification == "other_law":
-                other_law_counter += 1
-                rect_data["final_number"] = f"Otra.{other_law_counter}"
-            else:
-                concept_id = rect_data["concept_id"]
-                concept_counters[concept_id] = concept_counters.get(concept_id, 0) + 1
-                rect_data["final_number"] = f"#{concept_id}.{concept_counters[concept_id]}"

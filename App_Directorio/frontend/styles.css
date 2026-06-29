@@ -1,0 +1,34 @@
+﻿.directory-sheet {
+  background: var(--app-bg);
+  display: grid;
+  gap: 14px;
+  overflow: auto;
+  padding: 18px;
+}
+
+.desktop-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.section-title-row {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 1fr) auto;
+}
+
+.section-title-row .field {
+  color: var(--text-muted);
+}
+
+.person-grid {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(120px, 1fr)) auto;
+  padding-top: 12px;
+}

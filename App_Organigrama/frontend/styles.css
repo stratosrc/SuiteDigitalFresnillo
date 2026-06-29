@@ -1,0 +1,9 @@
+﻿.org-canvas {
+  background:
+    linear-gradient(#edf2f6 1px, transparent 1px),
+    linear-gradient(90deg, #edf2f6 1px, transparent 1px),
+    var(--surface);
+  background-size: 30px 30px;
+  min-height: calc(100vh - 120px);
+  width: 100%;
+}

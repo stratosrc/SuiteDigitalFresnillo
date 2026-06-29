@@ -30,13 +30,17 @@ include = [
     "App_Directorio*",
     "App_Organigrama*",
     "App_TestData*",
+    "Main_View*",
     "components*",
-    "web_app*",
 ]
 exclude = ["App_ConversorPDF.vendor*"]
 
 [tool.setuptools.package-data]
-web_app = ["static/*", "static/js/**/*.js"]
+Main_View = ["frontend/*", "frontend/js/**/*.js"]
+App_TestData = ["frontend/*.js", "frontend/*.css"]
+App_Organigrama = ["frontend/*.js", "frontend/*.css"]
+App_Directorio = ["frontend/*.js", "frontend/*.css"]
+App_ConversorPDF = ["frontend/*.js", "frontend/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

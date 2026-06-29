@@ -69,7 +69,7 @@ http://IP-DEL-SERVIDOR:8000
 
 El proyecto incluye dos archivos de entrada:
 
-- `web_app/static/index.html`: index React servido por FastAPI en `/`.
+- `Main_View/frontend/index.html`: index React servido por FastAPI en `/`.
 - `index.html`: index React en la raiz para hosts que piden un archivo de entrada.
 
 Importante: la suite no puede funcionar completa en hosting estatico puro. El `index.html`
@@ -79,13 +79,13 @@ renderizar PDFs, convertir documentos y generar descargas.
 El frontend usa React desde import maps y carga la aplicacion modular en:
 
 ```text
-web_app/static/js/app.js
+Main_View/frontend/js/app.js
 ```
 
 Para publicarlo en nube, usa un host que ejecute Python/ASGI y apunte a:
 
 ```text
-web_app.main:app
+Main_View.main:app
 ```
 
 Variables de entorno disponibles:
@@ -102,13 +102,13 @@ python main.py
 La app ya expone un objeto ASGI en:
 
 ```text
-web_app.main:app
+Main_View.main:app
 ```
 
 Comando compatible con servidores o contenedores:
 
 ```powershell
-uvicorn web_app.main:app --host 0.0.0.0 --port 8000
+uvicorn Main_View.main:app --host 0.0.0.0 --port 8000
 ```
 
 Para acceso externo se recomienda:
@@ -144,15 +144,14 @@ SuiteDigitalFresnilloWeb/
 |-- main.py
 |-- passenger_wsgi.py
 |-- index.html
-|-- web_app/
+|-- Main_View/
 |   |-- main.py
 |   |-- backend/
 |   |   |-- app.py
 |   |   |-- config.py
 |   |   |-- runtime.py
-|   |   |-- schemas.py
 |   |   `-- routers/
-|   `-- static/
+|   `-- frontend/
 |       |-- index.html
 |       |-- styles.css
 |       `-- js/
@@ -162,23 +161,50 @@ SuiteDigitalFresnilloWeb/
 |-- deploy/
 |-- docs/
 |-- App_TestData/
+|   |-- backend/
+|   |-- frontend/
+|   |-- domain/
+|   |-- services/
+|   `-- ...
 |-- App_Organigrama/
+|   |-- backend/
+|   |-- frontend/
+|   |-- models/
+|   |-- services/
+|   |-- exporters/
+|   `-- ...
 |-- App_Directorio/
+|   |-- backend/
+|   |-- frontend/
+|   |-- models/
+|   |-- services/
+|   `-- ...
 |-- App_ConversorPDF/
+|   |-- backend/
+|   |-- frontend/
+|   |-- services/
+|   `-- ...
 |-- components/
 `-- tests/
 ```
 
-Las carpetas `App_*` y `components` permanecen porque el backend web reutiliza sus servicios,
-exportadores, catalogos y assets. No son flujo ejecutable de escritorio en la app web; son
-dependencias Python vivas hasta que esos servicios se migren por completo a `web_app/backend`.
+Cada `App_*` contiene lo especifico de su modulo: logica Python existente, backend web,
+frontend React del modulo, assets, servicios y exportadores. `Main_View` contiene solamente
+la pagina principal, layout global, rutas SPA, configuracion comun y montaje de modulos.
+
+## Criterio de Reutilizacion
+
+La regla del proyecto es mantener la logica de negocio en Python y reutilizarla desde la web.
+React debe encargarse de la interaccion visual: canvas, clics, modales, formularios y estado de pantalla.
+Las reglas compartidas, como numeracion de testados, eliminacion, exportacion, catalogos y generacion de PDF,
+deben vivir en `App_*` o en servicios backend del modulo correspondiente.
 
 ## Pruebas
 
 Compilar bytecode de la aplicacion web:
 
 ```powershell
-python -m compileall -q main.py web_app
+python -m compileall -q main.py Main_View App_TestData App_Organigrama App_Directorio App_ConversorPDF
 ```
 
 Ejecutar pruebas existentes:

@@ -1,0 +1,18 @@
+﻿.drop-illustration {
+  align-content: center;
+  background: var(--app-bg);
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+}
+
+.drop-illustration img {
+  height: 96px;
+  width: 96px;
+}
+
+.drop-illustration span {
+  color: var(--text-muted);
+  max-width: 360px;
+}
