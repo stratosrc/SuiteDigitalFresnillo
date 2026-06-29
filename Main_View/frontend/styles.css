@@ -5,7 +5,7 @@
   --surface: #ffffff;
   --surface-alt: #eef3f7;
   --dark: #131c46;
-  --dark-active: #202c66;
+  --dark-active: #4b4b4b;
   --left-panel: #3e4a56;
   --text-dark: #263238;
   --text-muted: #607d8b;
@@ -14,7 +14,7 @@
   --canvas: #999999;
   --selected: #22c55e;
   --danger: #aa2d2d;
-  --danger-active: #d32f2f;
+  --danger-active: #4b4b4b;
 }
 
 * {

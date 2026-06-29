@@ -37,7 +37,7 @@ exclude = ["App_ConversorPDF.vendor*"]
 
 [tool.setuptools.package-data]
 Main_View = ["frontend/*", "frontend/js/**/*.js"]
-App_TestData = ["frontend/*.js", "frontend/*.css"]
+App_TestData = ["frontend/**/*.js", "frontend/**/*.css"]
 App_Organigrama = ["frontend/*.js", "frontend/*.css"]
 App_Directorio = ["frontend/*.js", "frontend/*.css"]
 App_ConversorPDF = ["frontend/*.js", "frontend/*.css"]

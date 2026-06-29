@@ -1,21 +1,16 @@
-import { useEffect, useRef, useState } from "react";
-import { cloneRectangles, downloadBlob, fileToDataUrl, navigate, normalizeRect } from "/static/js/shared/helpers.js";
-import { Modal } from "/static/js/shared/layout.js";
+﻿import { useEffect, useRef, useState } from "react";
+import { cloneRectangles, fileToDataUrl, responseToBlob, saveBlob } from "/static/js/shared/helpers.js";
 import { h } from "/static/js/shared/react.js";
-
-const emptyHistory = () => ({ reserved: [], confidential: [], other_law: [] });
-
-const defaultRedactionForm = () => ({
-  concept_id: "1",
-  classification: "general",
-  legal_basis: "",
-  reason: "",
-  rows: "1",
-  paragraphs: "1",
-  object: "",
-  articles: "",
-  law: "",
-});
+import { deleteRedaction, loadCatalogue, loadHelpContent, normalizeRedactions, restorePdfFromProject } from "./api.js";
+import { CatalogueModal } from "./components/CatalogueModal.js";
+import { HelpModal } from "./components/HelpModal.js";
+import { PdfCanvas } from "./components/PdfCanvas.js";
+import { RedactionModal } from "./components/RedactionModal.js";
+import { TestDataBottomBar } from "./components/TestDataBottomBar.js";
+import { TestDataMenu } from "./components/TestDataMenu.js";
+import { TestDataToolbar } from "./components/TestDataToolbar.js";
+import { defaultRedactionForm, emptyHistory } from "./constants.js";
+import { useRedactionCanvas } from "./hooks/useRedactionCanvas.js";
 
 export default function TestData() {
   const [status, setStatus] = useState({
@@ -41,22 +36,15 @@ export default function TestData() {
   const [editingRectId, setEditingRectId] = useState(null);
   const fileInputRef = useRef(null);
   const projectInputRef = useRef(null);
-  const canvasRef = useRef(null);
-  const imageRef = useRef(null);
-  const drawingRef = useRef(null);
-  const interactionRef = useRef(null);
-  const scaleRef = useRef(1);
 
   useEffect(() => {
-    fetch("/api/catalogo")
-      .then((response) => response.json())
+    loadCatalogue()
       .then((payload) => {
         setConcepts(payload.items || []);
         setCatalogueSections(payload.sections || []);
       })
       .catch(() => setConcepts([{ id: 1, name: "Nombre" }]));
-    fetch("/api/testdata/help")
-      .then((response) => response.json())
+    loadHelpContent()
       .then((payload) => setHelpContent(payload))
       .catch(() => setHelpContent(null));
   }, []);
@@ -97,90 +85,30 @@ export default function TestData() {
   };
 
   const normalizeRectangles = async (items) => {
-    const response = await fetch("/api/testdata/rectangles/normalize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: session?.session_id || "draft", rectangles: items }),
-    });
-    if (!response.ok) return cloneRectangles(items);
-    const payload = await response.json();
-    return payload.rectangles || cloneRectangles(items);
+    return normalizeRedactions(session?.session_id, items);
   };
 
   const deleteSelectedRectangle = async () => {
     if (!selectedRectId) return;
-    const response = await fetch("/api/testdata/rectangles/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        session_id: session?.session_id || "draft",
-        rectangles,
-        selected_rect_id: selectedRectId,
-      }),
-    });
-    if (!response.ok) return;
-    const payload = await response.json();
+    const payload = await deleteRedaction(session?.session_id, rectangles, selectedRectId);
+    if (!payload) return;
     replaceRectangles(payload.rectangles || []);
     setSelectedRectId(null);
   };
 
-  const canvasRect = (rect) => {
-    const scale = scaleRef.current;
-    return {
-      x: rect.x1 * scale,
-      y: rect.y1 * scale,
-      width: (rect.x2 - rect.x1) * scale,
-      height: (rect.y2 - rect.y1) * scale,
-    };
-  };
-
-  const rectHandles = (rect) => {
-    const box = canvasRect(rect);
-    const size = 8;
-    return [
-      { name: "nw", x: box.x, y: box.y },
-      { name: "ne", x: box.x + box.width, y: box.y },
-      { name: "sw", x: box.x, y: box.y + box.height },
-      { name: "se", x: box.x + box.width, y: box.y + box.height },
-    ].map((handle) => ({ ...handle, left: handle.x - size / 2, top: handle.y - size / 2, size }));
-  };
-
-  const draw = (rectanglesToDraw = rectangles, pageToDraw = page) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (imageRef.current) ctx.drawImage(imageRef.current, 0, 0);
-    ctx.lineWidth = 2;
-    ctx.font = "13px Segoe UI, Arial";
-    rectanglesToDraw.filter((rect) => rect.page === pageToDraw - 1).forEach((rect, index) => {
-      const scale = scaleRef.current;
-      const x = rect.x1 * scale;
-      const y = rect.y1 * scale;
-      const w = (rect.x2 - rect.x1) * scale;
-      const hh = (rect.y2 - rect.y1) * scale;
-      ctx.fillStyle = "rgba(255,255,255,0.72)";
-      ctx.strokeStyle = rect.id === selectedRectId ? "#22C55E" : "#263238";
-      ctx.lineWidth = rect.id === selectedRectId ? 3 : 2;
-      ctx.fillRect(x, y, w, hh);
-      ctx.strokeRect(x, y, w, hh);
-      ctx.fillStyle = "#263238";
-      ctx.fillText(rect.label || `#${index + 1}`, x + 5, y + 17);
-      if (rect.id === selectedRectId) {
-        ctx.fillStyle = "#22C55E";
-        rectHandles(rect).forEach((handle) => ctx.fillRect(handle.left, handle.top, handle.size, handle.size));
-      }
-    });
-    if (drawingRef.current) {
-      const rect = drawingRef.current;
-      ctx.strokeStyle = "#22C55E";
-      ctx.setLineDash([6, 4]);
-      ctx.strokeRect(Math.min(rect.x1, rect.x2), Math.min(rect.y1, rect.y2), Math.abs(rect.x2 - rect.x1), Math.abs(rect.y2 - rect.y1));
-      ctx.setLineDash([]);
-    }
-  };
-
-  useEffect(draw, [rectangles, page, selectedRectId]);
+  const { canvasRef, canvasCursor, canvasHandlers, clearCanvas, draw, loadPage } = useRedactionCanvas({
+    session,
+    page,
+    rectangles,
+    setRectangles,
+    selectedRectId,
+    setSelectedRectId,
+    rememberRectangles,
+    setPendingRect,
+    setEditingRectId,
+    setForm,
+    setActiveModal,
+  });
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -201,20 +129,6 @@ export default function TestData() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeModal, selectedRectId, rectangles]);
-
-  const loadPage = (nextPage, currentSession = session, rectanglesToDraw = rectangles) => {
-    if (!currentSession) return;
-    const img = new Image();
-    img.onload = () => {
-      imageRef.current = img;
-      const canvas = canvasRef.current;
-      canvas.width = img.width;
-      canvas.height = img.height;
-      scaleRef.current = img.width / currentSession.width;
-      draw(rectanglesToDraw, nextPage);
-    };
-    img.src = `/api/testdata/${currentSession.session_id}/page/${nextPage}.png?ts=${Date.now()}`;
-  };
 
   const upload = async (event) => {
     event.preventDefault();
@@ -254,76 +168,9 @@ export default function TestData() {
     setSourcePdfName("");
     setPage(1);
     setZoom(100);
-    imageRef.current = null;
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    clearCanvas();
     if (fileInputRef.current) fileInputRef.current.value = "";
     fileInputRef.current?.click();
-  };
-
-  const pointer = (event) => {
-    const box = canvasRef.current.getBoundingClientRect();
-    const canvas = canvasRef.current;
-    return {
-      x: (event.clientX - box.left) * (canvas.width / box.width),
-      y: (event.clientY - box.top) * (canvas.height / box.height),
-    };
-  };
-
-  const hitTestRectangle = (point) => {
-    const pageRectangles = rectangles.filter((rect) => rect.page === page - 1);
-    for (let index = pageRectangles.length - 1; index >= 0; index -= 1) {
-      const rect = pageRectangles[index];
-      const handle = rectHandles(rect).find((item) => point.x >= item.left && point.x <= item.left + item.size && point.y >= item.top && point.y <= item.top + item.size);
-      if (handle) return { rect, mode: "resize", handle: handle.name };
-      const box = canvasRect(rect);
-      if (point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y && point.y <= box.y + box.height) {
-        return { rect, mode: "move" };
-      }
-    }
-    return null;
-  };
-
-  const finishRectangle = () => {
-    const draft = drawingRef.current;
-    drawingRef.current = null;
-    if (!draft || !session) return draw();
-    const scale = scaleRef.current;
-    const left = Math.min(draft.x1, draft.x2) / scale;
-    const top = Math.min(draft.y1, draft.y2) / scale;
-    const right = Math.max(draft.x1, draft.x2) / scale;
-    const bottom = Math.max(draft.y1, draft.y2) / scale;
-    if (right - left < 4 || bottom - top < 4) return draw();
-    setPendingRect({
-      page: page - 1,
-      x1: Math.max(0, left),
-      y1: Math.max(0, top),
-      x2: Math.min(session.width, right),
-      y2: Math.min(session.height, bottom),
-    });
-    setEditingRectId(null);
-    setActiveModal("redaction");
-  };
-
-  const openRectangleEditor = (rect) => {
-    setSelectedRectId(rect.id);
-    setPendingRect(null);
-    setEditingRectId(rect.id);
-    setForm({
-      concept_id: String(rect.concept_id || 1),
-      classification: rect.classification || "general",
-      legal_basis: rect.legal_basis || "",
-      reason: rect.reason || "",
-      rows: String(rect.rows || 1),
-      paragraphs: String(rect.paragraphs || 1),
-      object: rect.object || "",
-      articles: rect.articles || "",
-      law: rect.law || "",
-    });
-    setActiveModal("redaction");
   };
 
   const acceptPendingRedaction = async () => {
@@ -378,8 +225,14 @@ export default function TestData() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: session.session_id, rectangles }),
       });
-      await downloadBlob(response, "testado.pdf");
-      setStatus({ message: "PDF testado generado." });
+      const blob = await responseToBlob(response);
+      const result = await saveBlob(blob, "testado.pdf", [
+        {
+          description: "Archivo PDF",
+          accept: { "application/pdf": [".pdf"] },
+        },
+      ]);
+      setStatus({ message: result === "cancelled" ? "Exportacion cancelada." : "PDF testado generado." });
     } catch (error) {
       setStatus({ message: error.message, error: true });
     }
@@ -391,7 +244,7 @@ export default function TestData() {
     loadPage(nextPage);
   };
 
-  const saveProject = () => {
+  const saveProject = async () => {
     const payload = {
       app: "testdata-web",
       schema_version: 1,
@@ -403,12 +256,17 @@ export default function TestData() {
       pdf_data: sourcePdfData,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "testdata-web.tdweb";
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+      const result = await saveBlob(blob, "testdata-web.tdweb", [
+        {
+          description: "Proyecto TestData",
+          accept: { "application/json": [".tdweb"] },
+        },
+      ]);
+      setStatus({ message: result === "cancelled" ? "Guardado cancelado." : "Proyecto guardado." });
+    } catch (error) {
+      setStatus({ message: error.message, error: true });
+    }
   };
 
   const loadProject = async (event) => {
@@ -429,21 +287,13 @@ export default function TestData() {
       setSourcePdfData(payload.pdf_data || "");
       setSourcePdfName(payload.pdf_name || "");
       if (payload.pdf_data) {
-        const response = await fetch("/api/testdata/upload-base64", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: payload.pdf_name || "proyecto.pdf", data: payload.pdf_data }),
-        });
-        if (!response.ok) throw new Error((await response.json()).detail || "No se pudo restaurar el PDF del proyecto.");
-        const restoredSession = await response.json();
+        const restoredSession = await restorePdfFromProject(payload.pdf_name, payload.pdf_data);
         setSession(restoredSession);
         loadPage(nextPage, restoredSession, nextRectangles);
         setStatus({ message: "Proyecto cargado con su PDF." });
       } else {
         setSession(null);
-        imageRef.current = null;
-        const canvas = canvasRef.current;
-        if (canvas) canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+        clearCanvas();
         setStatus({ message: "Proyecto cargado sin PDF embebido. Carga el PDF original para renderizar y exportar." });
       }
     } catch (error) {
@@ -456,28 +306,16 @@ export default function TestData() {
   return h(
     "main",
     { className: "testdata-desktop" },
-    h(
-      "section",
-      { className: "testdata-menu" },
-      h(
-        "div",
-        { className: "file-menu-wrap" },
-        h("button", { onClick: () => setFileMenuOpen(!fileMenuOpen) }, "Archivo"),
-        fileMenuOpen
-          ? h(
-              "div",
-              { className: "file-dropdown" },
-              h("button", { onClick: () => (setFileMenuOpen(false), startNewProject()) }, "Nuevo"),
-              h("button", { onClick: () => (setFileMenuOpen(false), projectInputRef.current?.click()) }, "Cargar proyecto"),
-              h("button", { onClick: () => (setFileMenuOpen(false), saveProject()) }, "Guardar proyecto"),
-              h("button", { onClick: () => (setFileMenuOpen(false), exportPdf()) }, "Exportar PDF")
-            )
-          : null
-      ),
-      h("button", { onClick: () => setActiveModal("catalogue") }, "Catálogo"),
-      h("button", { onClick: () => setActiveModal("help") }, "Ayuda"),
-      h("button", { className: "exit-button", onClick: () => navigate("/") }, "Salir")
-    ),
+    h(TestDataMenu, {
+      fileMenuOpen,
+      setFileMenuOpen,
+      onNew: startNewProject,
+      onLoadProject: () => projectInputRef.current?.click(),
+      onSaveProject: saveProject,
+      onExportPdf: exportPdf,
+      onOpenCatalogue: () => setActiveModal("catalogue"),
+      onOpenHelp: () => setActiveModal("help"),
+    }),
     h(
       "form",
       { className: "hidden-upload", onSubmit: upload },
@@ -490,251 +328,35 @@ export default function TestData() {
       })
     ),
     h("input", { ref: projectInputRef, className: "hidden-upload", type: "file", accept: ".tdweb,application/json", onChange: loadProject }),
-    h(
-      "section",
-      { className: "testdata-toolbar" },
-      h("button", { className: "icon-button", title: "Deshacer", onClick: undo, disabled: undoStack.length === 0 }, h("img", { src: "/testdata-assets/undo.png", alt: "" })),
-      h("button", { className: "icon-button", title: "Rehacer", onClick: redo, disabled: redoStack.length === 0 }, h("img", { src: "/testdata-assets/redo.png", alt: "" })),
-      h("button", { className: "icon-button danger", title: "Eliminar", onClick: deleteSelectedRectangle, disabled: !selectedRectId }, h("img", { src: "/testdata-assets/eliminar.png", alt: "" }))
-    ),
+    h(TestDataToolbar, {
+      onUndo: undo,
+      onRedo: redo,
+      onDelete: deleteSelectedRectangle,
+      canUndo: undoStack.length > 0,
+      canRedo: redoStack.length > 0,
+      selectedRectId,
+    }),
     h("p", { className: status.error ? "testdata-status error" : "testdata-status" }, status.message),
-    h(
-      "div",
-      { className: "testdata-canvas-frame" },
-      h("canvas", {
-        ref: canvasRef,
-        className: session ? "testdata-pdf-canvas" : "testdata-pdf-canvas empty",
-        style: session ? { width: `${zoom}%` } : null,
-        onMouseDown: (event) => {
-          if (!session) return;
-          const point = pointer(event);
-          const hit = hitTestRectangle(point);
-          if (event.detail > 1 && hit?.rect) {
-            openRectangleEditor(hit.rect);
-            return;
-          }
-          if (hit) {
-            setSelectedRectId(hit.rect.id);
-            rememberRectangles();
-            interactionRef.current = {
-              mode: hit.mode,
-              handle: hit.handle,
-              rectId: hit.rect.id,
-              start: point,
-              original: { ...hit.rect },
-            };
-            return;
-          }
-          setSelectedRectId(null);
-          drawingRef.current = { x1: point.x, y1: point.y, x2: point.x, y2: point.y };
-        },
-        onMouseMove: (event) => {
-          const point = pointer(event);
-          if (interactionRef.current) {
-            const interaction = interactionRef.current;
-            const scale = scaleRef.current;
-            const dx = (point.x - interaction.start.x) / scale;
-            const dy = (point.y - interaction.start.y) / scale;
-            setRectangles((items) =>
-              items.map((rect) => {
-                if (rect.id !== interaction.rectId) return rect;
-                const original = interaction.original;
-                if (interaction.mode === "move") {
-                  const width = original.x2 - original.x1;
-                  const height = original.y2 - original.y1;
-                  const x1 = Math.max(0, Math.min(session.width - width, original.x1 + dx));
-                  const y1 = Math.max(0, Math.min(session.height - height, original.y1 + dy));
-                  return { ...rect, x1, y1, x2: x1 + width, y2: y1 + height };
-                }
-                const next = { ...rect };
-                if (interaction.handle.includes("n")) next.y1 = Math.max(0, original.y1 + dy);
-                if (interaction.handle.includes("s")) next.y2 = Math.min(session.height, original.y2 + dy);
-                if (interaction.handle.includes("w")) next.x1 = Math.max(0, original.x1 + dx);
-                if (interaction.handle.includes("e")) next.x2 = Math.min(session.width, original.x2 + dx);
-                return normalizeRect(next);
-              })
-            );
-            return;
-          }
-          if (!drawingRef.current) return;
-          drawingRef.current.x2 = point.x;
-          drawingRef.current.y2 = point.y;
-          draw();
-        },
-        onMouseUp: () => {
-          if (interactionRef.current) {
-            interactionRef.current = null;
-            return;
-          }
-          finishRectangle();
-        },
-        onDoubleClick: (event) => {
-          if (!session) return;
-          const hit = hitTestRectangle(pointer(event));
-          if (hit?.rect) openRectangleEditor(hit.rect);
-        },
-      })
-    ),
-    h(
-      "section",
-      { className: "testdata-bottom-bar" },
-      h("button", { onClick: () => goToPage(page - 1) }, "<"),
-      h("button", { onClick: () => goToPage(page + 1) }, ">"),
-      h("span", null, "Página"),
-      h("input", {
-        value: page,
-        onChange: (event) => {
-          const value = Number(event.target.value);
-          if (Number.isInteger(value)) setPage(value);
-        },
-        onBlur: () => goToPage(page),
-      }),
-      h("span", null, `de ${session?.page_count || 0}`),
-      h("button", { onClick: () => goToPage(page) }, "Ir"),
-      h("div", { className: "zoom-controls" }, h("span", null, "Zoom"), h("button", { onClick: () => setZoom(Math.max(30, zoom - 10)) }, "-"), h("span", null, `${zoom}%`), h("button", { onClick: () => setZoom(Math.min(300, zoom + 10)) }, "+"))
-    ),
+    h(PdfCanvas, { canvasRef, session, zoom, cursor: canvasCursor, handlers: canvasHandlers }),
+    h(TestDataBottomBar, {
+      page,
+      pageCount: session?.page_count || 0,
+      zoom,
+      onPageInput: setPage,
+      onGoToPage: goToPage,
+      onZoom: setZoom,
+    }),
     activeModal === "catalogue" ? h(CatalogueModal, { sections: catalogueSections, onClose: () => setActiveModal(null) }) : null,
     activeModal === "help" ? h(HelpModal, { content: helpContent, onClose: () => setActiveModal(null) }) : null,
-    activeModal === "redaction" ? h(RedactionModal, { concepts, form, setForm, histories: classificationHistory, onAccept: acceptPendingRedaction, onCancel: () => (setPendingRect(null), setEditingRectId(null), setActiveModal(null), draw()) }) : null
-  );
-}
-
-function CatalogueModal({ sections, onClose }) {
-  return h(
-    Modal,
-    { title: "Catálogo de Conceptos", onClose, wide: true },
-    h(
-      "div",
-      { className: "catalogue-columns" },
-      (sections || []).map((section) =>
-        h(
-          "section",
-          { key: section.title, className: "catalogue-column" },
-          h("h3", null, section.title),
-          h(
-            "div",
-            { className: "catalogue-list" },
-            section.items.map((item) => h("p", { key: item.id }, `${item.id}. ${item.name}`))
-          )
-        )
-      )
-    )
-  );
-}
-
-function HelpModal({ content, onClose }) {
-  return h(
-    Modal,
-    { title: content?.title || "Ayuda", onClose },
-    h("h3", { className: "modal-heading" }, content?.heading || "Guía de uso"),
-    h(
-      "div",
-      { className: "help-sections" },
-      (content?.sections || []).map(([title, bullets]) =>
-        h(
-          "section",
-          { key: title },
-          h("h4", null, title),
-          bullets.map((bullet) => h("p", { key: bullet }, `• ${bullet}`))
-        )
-      )
-    )
-  );
-}
-
-function RedactionModal({ concepts, form, setForm, histories, onAccept, onCancel }) {
-  const [tab, setTab] = useState(form.classification || "general");
-  const [query, setQuery] = useState("");
-  const filteredConcepts = concepts.filter((item) => `${item.id}. ${item.name}`.toLowerCase().includes(query.toLowerCase()));
-  const updateTab = (nextTab) => {
-    const shouldClearReservedFields =
-      (tab === "reserved" && nextTab === "confidential") || (tab === "confidential" && nextTab === "reserved");
-    setTab(nextTab);
-    setForm({
-      ...form,
-      classification: nextTab,
-      ...(shouldClearReservedFields ? { legal_basis: "", reason: "", rows: "1", paragraphs: "1" } : {}),
-    });
-  };
-  const update = (key, value) => setForm({ ...form, [key]: value });
-  const field = (label, key, props = {}) =>
-    h(
-      "label",
-      { className: "redaction-row" },
-      h("span", null, label),
-      h("input", { value: form[key] || "", onChange: (event) => update(key, event.target.value), ...props })
-    );
-  const historyBox = (kind) =>
-    h(
-      "div",
-      { className: "redaction-history" },
-      (histories?.[kind] || []).map((entry, index) =>
-        h(
-          "button",
-          {
-            key: index,
-            onClick: () => setForm({ ...form, ...entry, classification: kind }),
-          },
-          kind === "other_law"
-            ? `${entry.object || "Sin objeto"} | ${entry.law || "Sin ley"}`
-            : `${entry.legal_basis || "Sin fundamento"} | ${entry.reason || "Sin motivo"}`
-        )
-      )
-    );
-
-  return h(
-    Modal,
-    { title: "Configurar datos del rectángulo", onClose: onCancel },
-    h("h3", { className: "redaction-heading" }, "Configurar"),
-    h(
-      "div",
-      { className: "redaction-tabs" },
-      [
-        ["general", "General"],
-        ["reserved", "Información Reservada"],
-        ["confidential", "Información Confidencial"],
-        ["other_law", "Otra Ley"],
-      ].map(([id, label]) => h("button", { key: id, className: tab === id ? "active" : "", onClick: () => updateTab(id) }, label))
-    ),
-    tab === "general"
-      ? h(
-          "div",
-          { className: "redaction-form" },
-          h("label", { className: "redaction-stack" }, h("span", null, "Buscar Concepto:"), h("input", { value: query, onChange: (event) => setQuery(event.target.value) })),
-          h(
-            "div",
-            { className: "concept-list" },
-            filteredConcepts.map((item) =>
-              h("button", { key: item.id, className: String(item.id) === String(form.concept_id) ? "selected" : "", onClick: () => update("concept_id", String(item.id)) }, `${item.id}. ${item.name}`)
-            )
-          ),
-          field("Renglones:", "rows", { type: "number", min: "1" }),
-          field("Párrafos:", "paragraphs", { type: "number", min: "1" })
-        )
-      : null,
-    tab === "reserved" || tab === "confidential"
-      ? h(
-          "div",
-          { className: "redaction-form" },
-          field("Fundamento legal", "legal_basis"),
-          field("En virtud tratarse de", "reason"),
-          field("Cantidad de párrafos", "paragraphs", { type: "number", min: "1" }),
-          field("Cantidad de renglones", "rows", { type: "number", min: "1" }),
-          h("label", { className: "redaction-stack" }, h("span", null, "Historial"), historyBox(tab))
-        )
-      : null,
-    tab === "other_law"
-      ? h(
-          "div",
-          { className: "redaction-form" },
-          field("Objeto", "object", { placeholder: "Ej: Sueldo Neto, Fotografía, Convenio..." }),
-          field("Artículos", "articles", { placeholder: "Ej: Artículo 45 Fracción II, Art. 12..." }),
-          field("Ley", "law", { placeholder: "Ej: Ley de Disciplina Financiera..." }),
-          field("Cantidad de párrafos", "paragraphs", { type: "number", min: "1" }),
-          field("Cantidad de renglones", "rows", { type: "number", min: "1" }),
-          h("label", { className: "redaction-stack" }, h("span", null, "Historial"), historyBox("other_law"))
-        )
-      : null,
-    h("div", { className: "modal-actions" }, h("button", { onClick: onAccept }, "Aceptar"), h("button", { onClick: onCancel }, "Cancelar"))
+    activeModal === "redaction"
+      ? h(RedactionModal, {
+          concepts,
+          form,
+          setForm,
+          histories: classificationHistory,
+          onAccept: acceptPendingRedaction,
+          onCancel: () => (setPendingRect(null), setEditingRectId(null), setActiveModal(null), draw()),
+        })
+      : null
   );
 }

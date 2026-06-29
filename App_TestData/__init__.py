@@ -1,3 +1,1 @@
-from .application import TestDataGeneratorApp, main
-
-__all__ = ["TestDataGeneratorApp", "main"]
+"""Modulo web de TestData para Suite Digital Fresnillo."""

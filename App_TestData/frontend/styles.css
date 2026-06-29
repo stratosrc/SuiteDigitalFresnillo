@@ -14,15 +14,20 @@
 }
 
 .testdata-menu button {
+  align-items: center;
   background: var(--dark);
   border: 0;
   border-right: 5px solid #2c2c2c;
   color: #ffffff;
+  display: flex;
+  height: 28px;
+  justify-content: center;
   min-width: 118px;
   padding: 0 18px;
 }
 
 .file-menu-wrap {
+  height: 28px;
   position: relative;
 }
 
@@ -43,16 +48,17 @@
   border: 0;
   color: var(--text-dark);
   justify-content: start;
-  min-height: 34px;
+  height: 34px;
   text-align: left;
 }
 
 .testdata-menu .file-dropdown button:hover {
-  background: var(--surface-alt);
+  background: #4b4b4b;
+  color: #ffffff;
 }
 
 .testdata-menu button:hover {
-  background: var(--dark-active);
+  background: #4b4b4b;
 }
 
 .testdata-menu .exit-button {
@@ -84,7 +90,7 @@
 }
 
 .icon-button:hover {
-  background: var(--dark-active);
+  background: #4b4b4b;
 }
 
 .icon-button:disabled {
@@ -97,7 +103,7 @@
 }
 
 .icon-button.danger:hover {
-  background: #8f2323;
+  background: #4b4b4b;
 }
 
 .icon-button.danger:disabled {
@@ -159,6 +165,10 @@
   min-height: 30px;
   min-width: 44px;
   padding: 0 12px;
+}
+
+.testdata-bottom-bar button:hover {
+  background: #4b4b4b;
 }
 
 .testdata-bottom-bar input {
@@ -224,6 +234,11 @@
   color: #ffffff;
   min-height: 34px;
   padding: 0 14px;
+}
+
+.modal-header button:hover,
+.modal-actions button:hover {
+  background: #4b4b4b;
 }
 
 .modal-body {
@@ -310,6 +325,10 @@
   background: #4b4b4b;
 }
 
+.redaction-tabs button:hover {
+  background: #4b4b4b;
+}
+
 .redaction-form {
   display: grid;
   gap: 13px;
@@ -367,6 +386,11 @@
   color: #ffffff;
 }
 
+.concept-list button:hover {
+  background: #4b4b4b;
+  color: #ffffff;
+}
+
 .redaction-history {
   background: #ffffff;
   border: 1px solid #e6edf3;
@@ -388,7 +412,8 @@
 }
 
 .redaction-history button:hover {
-  background: var(--surface-alt);
+  background: #4b4b4b;
+  color: #ffffff;
 }
 
 .modal-actions {
