@@ -1,6 +1,6 @@
 CATALOGUE_SECTIONS = [
     (
-        "Artículo 3, Sección X \nDatos Personales",
+        "Artículo 3, Sección X Datos Personales",
         [
             "Nombre", "Domicilio", "Correo electrónico", "Teléfono particular", "Teléfono celular", "Firma", "RFC",
             "CURP", "Clave de elector", "Matrícula de servicio militar nacional", "Número de pasaporte", "Lugar de nacimiento",

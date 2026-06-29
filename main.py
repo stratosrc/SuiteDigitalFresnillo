@@ -1,28 +1,15 @@
-import sys
+from __future__ import annotations
 
-from components.shared.app_registry import get_application, run_application
+import os
 
-
-def _run_launcher() -> None:
-    from components.launcher.app import SuiteLauncher
-
-    app = SuiteLauncher()
-    app.mainloop()
+import uvicorn
 
 
 def main() -> None:
-    if len(sys.argv) >= 3 and sys.argv[1] == "--app":
-        app_id = sys.argv[2].strip().lower()
-        definition = get_application(app_id)
-        if definition is None:
-            raise SystemExit(f"Unknown application id: {app_id}")
-        if not definition.is_available:
-            raise SystemExit(f"Application '{definition.name}' is not available in this build.")
-
-        run_application(app_id)
-        return
-
-    _run_launcher()
+    host = os.getenv("SUITE_HOST", "0.0.0.0")
+    port = int(os.getenv("SUITE_PORT", "8000"))
+    reload = os.getenv("SUITE_RELOAD", "").lower() in {"1", "true", "yes"}
+    uvicorn.run("web_app.main:app", host=host, port=port, reload=reload)
 
 
 if __name__ == "__main__":
