@@ -45,6 +45,11 @@ def create_app() -> FastAPI:
         StaticFiles(directory=PROJECT_ROOT / "App_TestData" / "assets"),
         name="testdata-assets",
     )
+    application.mount(
+        "/organigrama-assets",
+        StaticFiles(directory=PROJECT_ROOT / "App_Organigrama" / "assets"),
+        name="organigrama-assets",
+    )
     application.include_router(health.router)
     application.include_router(catalog_routes.router)
     application.include_router(testdata_routes.router)
