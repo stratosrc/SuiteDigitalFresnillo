@@ -1,15 +1,8 @@
 import { useState } from "react";
 import { Modal } from "/static/js/shared/layout.js";
 import { h } from "/static/js/shared/react.js";
-import { PERSON_BULLET } from "../constants.js";
+import { COLOR_ROLE_LABELS, PERSON_BULLET } from "../constants.js";
 import { displayToPeople, peopleToDisplay } from "../utils/geometry.js";
-
-const COLOR_ROLE_LABELS = {
-  "#09519F": "Secretarios",
-  "#3C8AC9": "Directores",
-  "#9DC3E6": "Coordinadores, Jefes o Encargados de Departamento",
-  "#797E85": "Personal Administrativo",
-};
 
 export function NodeModal({ modal, palette, onSave, onClose }) {
   const [form, setForm] = useState({ ...modal, displayName: peopleToDisplay(modal.name) });

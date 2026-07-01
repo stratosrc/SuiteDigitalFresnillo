@@ -414,6 +414,17 @@
   background: #4b4b4b;
 }
 
+.org-hierarchy-warning {
+  color: var(--text-dark);
+  display: grid;
+  gap: 12px;
+}
+
+.org-hierarchy-warning p {
+  line-height: 1.35;
+  margin: 0;
+}
+
 @media (max-width: 900px) {
   .org-form-strip {
     grid-template-columns: 1fr;

@@ -3,11 +3,12 @@ import { responseToBlob, saveBlob } from "/static/js/shared/helpers.js";
 import { h } from "/static/js/shared/react.js";
 import { loadHelp, loadPalette, postJson } from "./api.js";
 import { HelpModal } from "./components/HelpModal.js";
+import { HierarchyConfirmModal } from "./components/HierarchyConfirmModal.js";
 import { NodeModal } from "./components/NodeModal.js";
 import { BottomBar, CanvasStage, MetadataStrip, ToolStrip } from "./components/OrganizationLayout.js";
 import { OrganizationMenu } from "./components/OrganizationMenu.js";
 import { OrientationModal } from "./components/OrientationModal.js";
-import { CELL_W, CELL_H, DEFAULT_PALETTE, NODE_LOGO_URL, PORTS, projectPayload, emptyDocument } from "./constants.js";
+import { CELL_W, CELL_H, DEFAULT_PALETTE, NODE_HIERARCHY_RANK_BY_COLOR, NODE_LOGO_URL, PORTS, projectPayload, emptyDocument } from "./constants.js";
 import { drawArrow, drawConnectionDraft, drawEmpty, drawGrid, drawNodeGhost } from "./utils/drawing.js";
 import {
   distance,
@@ -34,6 +35,7 @@ export default function Organization() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [nodeModal, setNodeModal] = useState(null);
   const [orientationModalOpen, setOrientationModalOpen] = useState(false);
+  const [hierarchyConfirm, setHierarchyConfirm] = useState(null);
   const [viewport, setViewport] = useState({ x: 420, y: 250, zoom: 1 });
   const [hoverPort, setHoverPort] = useState(null);
   const [previewCell, setPreviewCell] = useState(null);
@@ -71,7 +73,7 @@ export default function Organization() {
   useEffect(() => {
     const onResize = () => draw();
     const onKeyDown = (event) => {
-      if (nodeModal || helpOpen || orientationModalOpen) return;
+      if (nodeModal || helpOpen || orientationModalOpen || hierarchyConfirm) return;
       if ((event.key === "Delete" || event.key === "Backspace") && selected.id) {
         event.preventDefault();
         deleteSelection();
@@ -107,7 +109,7 @@ export default function Organization() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [document, selected, nodeModal, helpOpen, orientationModalOpen, undoStack, redoStack]);
+  }, [document, selected, nodeModal, helpOpen, orientationModalOpen, hierarchyConfirm, undoStack, redoStack]);
 
   const remember = () => {
     setUndoStack((items) => [...items.slice(-99), structuredClone(document)]);
@@ -307,6 +309,34 @@ export default function Organization() {
     }
     applyDocument(nextDocument, { message: "Seleccion eliminada." });
     setSelected({ type: null, id: null });
+  };
+
+  const connectWithHierarchyCheck = (source, target) => {
+    const sourceNode = document.nodes[source.nodeId];
+    const targetNode = document.nodes[target.nodeId];
+    if (!sourceNode || !targetNode) return;
+    if (isInverseHierarchyConnection(sourceNode, targetNode)) {
+      setHierarchyConfirm({
+        source,
+        target,
+        sourceLabel: nodeFlowLabel(sourceNode),
+        targetLabel: nodeFlowLabel(targetNode),
+      });
+      setStatus({ message: "Confirma la conexión jerárquica inversa." });
+      return;
+    }
+    addConnectionWithPython(source, target);
+  };
+
+  const isInverseHierarchyConnection = (sourceNode, targetNode) => {
+    const sourceRank = NODE_HIERARCHY_RANK_BY_COLOR[sourceNode.color];
+    const targetRank = NODE_HIERARCHY_RANK_BY_COLOR[targetNode.color];
+    return sourceRank != null && targetRank != null && sourceRank < targetRank;
+  };
+
+  const nodeFlowLabel = (node) => {
+    const name = (node.name || "Sin nombre").split("\n").filter(Boolean).join(", ");
+    return node.role ? `${name} — ${node.role}` : name;
   };
 
   const clearSelection = () => {
@@ -708,7 +738,7 @@ export default function Organization() {
     if (dragRef.current?.type === "connect" && connectionDraft) {
       const target = hitPort(screen) || nearestNodePort(screen, connectionDraft.source.nodeId);
       if (target && target.nodeId !== connectionDraft.source.nodeId) {
-        addConnectionWithPython(connectionDraft.source, target);
+        connectWithHierarchyCheck(connectionDraft.source, target);
       }
       setConnectionDraft(null);
       setHoverPort(null);
@@ -910,6 +940,21 @@ export default function Organization() {
             exportPdf(orientation);
           },
           onClose: () => setOrientationModalOpen(false),
+        })
+      : null,
+    hierarchyConfirm
+      ? h(HierarchyConfirmModal, {
+          sourceLabel: hierarchyConfirm.sourceLabel,
+          targetLabel: hierarchyConfirm.targetLabel,
+          onConfirm: () => {
+            const pending = hierarchyConfirm;
+            setHierarchyConfirm(null);
+            addConnectionWithPython(pending.source, pending.target);
+          },
+          onCancel: () => {
+            setHierarchyConfirm(null);
+            setStatus({ message: "Conexión cancelada." });
+          },
         })
       : null,
     helpOpen ? h(HelpModal, { content: help, onClose: () => setHelpOpen(false) }) : null

@@ -31,11 +31,25 @@ export const HIERARCHY_STYLE_BY_COLOR = {
   [NEUTRAL_GRAY]: { widthScale: 0.98, minHeightScale: 0.98, nameFontScale: 0.96, roleFontScale: 0.96 },
 };
 
+export const NODE_HIERARCHY_RANK_BY_COLOR = {
+  [PRIMARY_BLUE]: 4,
+  [SECONDARY_BLUE]: 3,
+  [LIGHT_BLUE]: 2,
+  [NEUTRAL_GRAY]: 1,
+};
+
+export const COLOR_ROLE_LABELS = {
+  [PRIMARY_BLUE]: "Secretarios",
+  [SECONDARY_BLUE]: "Directores",
+  [LIGHT_BLUE]: "Coordinadores, Jefes o Encargados de Departamento",
+  [NEUTRAL_GRAY]: "Personal Administrativo",
+};
+
 export const DEFAULT_PALETTE = [
-  { label: "Azul institucional", value: PRIMARY_BLUE },
-  { label: "Azul medio", value: SECONDARY_BLUE },
-  { label: "Azul claro", value: LIGHT_BLUE },
-  { label: "Gris institucional", value: NEUTRAL_GRAY },
+  { label: COLOR_ROLE_LABELS[PRIMARY_BLUE], value: PRIMARY_BLUE },
+  { label: COLOR_ROLE_LABELS[SECONDARY_BLUE], value: SECONDARY_BLUE },
+  { label: COLOR_ROLE_LABELS[LIGHT_BLUE], value: LIGHT_BLUE },
+  { label: COLOR_ROLE_LABELS[NEUTRAL_GRAY], value: NEUTRAL_GRAY },
 ];
 
 export const emptyDocument = () => ({
