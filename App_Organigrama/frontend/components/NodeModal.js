@@ -4,6 +4,13 @@ import { h } from "/static/js/shared/react.js";
 import { PERSON_BULLET } from "../constants.js";
 import { displayToPeople, peopleToDisplay } from "../utils/geometry.js";
 
+const COLOR_ROLE_LABELS = {
+  "#09519F": "Secretarios",
+  "#3C8AC9": "Directores",
+  "#9DC3E6": "Coordinadores, Jefes o Encargados de Departamento",
+  "#797E85": "Personal Administrativo",
+};
+
 export function NodeModal({ modal, palette, onSave, onClose }) {
   const [form, setForm] = useState({ ...modal, displayName: peopleToDisplay(modal.name) });
   const insertPerson = (event) => {
@@ -44,11 +51,10 @@ export function NodeModal({ modal, palette, onSave, onClose }) {
           palette.map((item) =>
             h("button", {
               key: item.value,
-              className: item.value === form.color ? "org-swatch selected" : "org-swatch",
+              className: item.value === form.color ? "org-color-option selected" : "org-color-option",
               title: item.label,
-              style: { background: item.value },
               onClick: () => setForm({ ...form, color: item.value }),
-            })
+            }, h("span", { className: "org-swatch", style: { background: item.value } }), h("span", null, COLOR_ROLE_LABELS[item.value] || item.label))
           )
         )
       ),

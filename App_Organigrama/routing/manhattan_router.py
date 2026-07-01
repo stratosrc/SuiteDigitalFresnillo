@@ -50,6 +50,10 @@ class ManhattanRouter:
                     blocked_paths.update(traffic_points)
 
             if connection.manual_points:
+                obstacle_boxes = self._node_obstacle_boxes(
+                    document,
+                    excluded_node_ids={source.id, target.id},
+                )
                 manual_route = build_manual_route(
                     self.rendering_engine.get_node_port_grid_position(
                         source,
@@ -63,10 +67,6 @@ class ManhattanRouter:
                     connection.source_port,
                     connection.target_port,
                 )
-                obstacle_boxes = self._node_obstacle_boxes(
-                    document,
-                    excluded_node_ids={source.id, target.id},
-                )
                 points = (
                     self.route(
                         source=source,
@@ -76,6 +76,7 @@ class ManhattanRouter:
                         target_port=connection.target_port,
                         blocked_paths=blocked_paths,
                         custom_obstacles=set(document.blocked_points),
+                        obstacle_boxes=obstacle_boxes,
                     )
                     if route_crosses_boxes(manual_route, obstacle_boxes)
                     else manual_route
@@ -89,6 +90,10 @@ class ManhattanRouter:
                     target_port=connection.target_port,
                     blocked_paths=blocked_paths,
                     custom_obstacles=set(document.blocked_points),
+                    obstacle_boxes=self._node_obstacle_boxes(
+                        document,
+                        excluded_node_ids={source.id, target.id},
+                    ),
                 )
             routes.append(ConnectionRoute(connection=connection, points=tuple(points)))
             traffic_by_source.setdefault(connection.source_id, set()).update(self.route_traffic_points(points))
@@ -128,6 +133,7 @@ class ManhattanRouter:
         target_port: str = "top",
         blocked_paths: set[GridPoint] | None = None,
         custom_obstacles: set[GridPoint] | None = None,
+        obstacle_boxes: list[GridBox] | None = None,
     ) -> list[GridPoint]:
         exact_start = self.rendering_engine.get_node_port_grid_position(source, source_port)
         exact_goal = self.rendering_engine.get_node_port_grid_position(target, target_port)
@@ -139,6 +145,8 @@ class ManhattanRouter:
             blocked.update(self._to_subgrid(point) for point in blocked_paths)
         if custom_obstacles:
             blocked.update(self._to_subgrid(point) for point in custom_obstacles)
+        if obstacle_boxes:
+            blocked.update(self._blocked_subgrid_for_boxes(obstacle_boxes))
 
         blocked.discard(start)
         blocked.discard(goal)
@@ -212,6 +220,23 @@ class ManhattanRouter:
         ys = [start[1], goal[1], *(y for _, y in blocked)]
         pad = self.padding * 2
         return (min(xs) - pad, min(ys) - pad, max(xs) + pad, max(ys) + pad)
+
+    def _blocked_subgrid_for_boxes(self, boxes: list[GridBox]) -> set[SubGridPoint]:
+        blocked: set[SubGridPoint] = set()
+        for box in boxes:
+            left = math.floor(box.left * 2)
+            right = math.ceil(box.right * 2)
+            top = math.floor(box.top * 2)
+            bottom = math.ceil(box.bottom * 2)
+            for x in range(left, right + 1):
+                grid_x = x / 2
+                if not box.left < grid_x < box.right:
+                    continue
+                for y in range(top, bottom + 1):
+                    grid_y = y / 2
+                    if box.top < grid_y < box.bottom:
+                        blocked.add((x, y))
+        return blocked
 
     def _astar(
         self,

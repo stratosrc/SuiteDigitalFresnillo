@@ -6,6 +6,7 @@ import { HelpModal } from "./components/HelpModal.js";
 import { NodeModal } from "./components/NodeModal.js";
 import { BottomBar, CanvasStage, MetadataStrip, ToolStrip } from "./components/OrganizationLayout.js";
 import { OrganizationMenu } from "./components/OrganizationMenu.js";
+import { OrientationModal } from "./components/OrientationModal.js";
 import { CELL_W, CELL_H, DEFAULT_PALETTE, NODE_LOGO_URL, PORTS, projectPayload, emptyDocument } from "./constants.js";
 import { drawArrow, drawConnectionDraft, drawEmpty, drawGrid, drawNodeGhost } from "./utils/drawing.js";
 import {
@@ -32,6 +33,7 @@ export default function Organization() {
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [nodeModal, setNodeModal] = useState(null);
+  const [orientationModalOpen, setOrientationModalOpen] = useState(false);
   const [viewport, setViewport] = useState({ x: 420, y: 250, zoom: 1 });
   const [hoverPort, setHoverPort] = useState(null);
   const [previewCell, setPreviewCell] = useState(null);
@@ -69,10 +71,14 @@ export default function Organization() {
   useEffect(() => {
     const onResize = () => draw();
     const onKeyDown = (event) => {
-      if (nodeModal || helpOpen) return;
+      if (nodeModal || helpOpen || orientationModalOpen) return;
       if ((event.key === "Delete" || event.key === "Backspace") && selected.id) {
         event.preventDefault();
         deleteSelection();
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        clearSelection();
       }
       if (event.ctrlKey && event.key.toLowerCase() === "z") {
         event.preventDefault();
@@ -101,7 +107,7 @@ export default function Organization() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [document, selected, nodeModal, helpOpen, undoStack, redoStack]);
+  }, [document, selected, nodeModal, helpOpen, orientationModalOpen, undoStack, redoStack]);
 
   const remember = () => {
     setUndoStack((items) => [...items.slice(-99), structuredClone(document)]);
@@ -268,12 +274,13 @@ export default function Organization() {
     }
   };
 
-  const exportPdf = async () => {
+  const exportPdf = async (orientation = document.page_orientation || "horizontal") => {
     try {
+      const exportDocument = { ...document, page_orientation: orientation };
       const response = await fetch("/api/organigrama/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ document }),
+        body: JSON.stringify({ document: exportDocument }),
       });
       const blob = await responseToBlob(response);
       const result = await saveBlob(blob, "organigrama.pdf", [
@@ -300,6 +307,14 @@ export default function Organization() {
     }
     applyDocument(nextDocument, { message: "Seleccion eliminada." });
     setSelected({ type: null, id: null });
+  };
+
+  const clearSelection = () => {
+    setSelected({ type: null, id: null });
+    setHoverPort(null);
+    setManualPreview(null);
+    setConnectionDraft(null);
+    setStatus({ message: "Seleccion limpiada." });
   };
 
   const resetSelectedRoute = () => {
@@ -383,9 +398,13 @@ export default function Organization() {
     if (connectionDraft) {
       const source = document.nodes[connectionDraft.source.nodeId];
       if (source) {
+        const hoverTarget =
+          hoverPort && hoverPort.nodeId !== connectionDraft.source.nodeId
+            ? document.nodes[hoverPort.nodeId]
+            : null;
         drawConnectionDraft(ctx, {
           start: worldToScreen(portWorld(source, connectionDraft.source.port)),
-          end: worldToScreen(connectionDraft.current),
+          end: hoverTarget ? worldToScreen(portWorld(hoverTarget, hoverPort.port)) : worldToScreen(connectionDraft.current),
           zoom: viewport.zoom,
         });
       }
@@ -576,6 +595,7 @@ export default function Organization() {
         };
         setSelected({ type: "connection", id: connection.id });
       } else {
+        clearSelection();
         dragRef.current = { type: "pan", startScreen: screen, original: { ...viewport } };
       }
       return;
@@ -628,6 +648,11 @@ export default function Organization() {
     }
     if (drag?.type === "node") {
       const nextCell = worldToGrid(world);
+      const occupantId = nodeAtCellId(document, nextCell.x, nextCell.y);
+      if (occupantId && occupantId !== drag.nodeId) {
+        setStatus({ message: "La celda seleccionada ya contiene un nodo.", error: true });
+        return;
+      }
       if (!drag.remembered) {
         remember();
         drag.remembered = true;
@@ -669,7 +694,7 @@ export default function Organization() {
       previewManualRoute(drag, world, false);
       return;
     }
-    const port = hitPort(screen);
+    const port = hitPort(screen) || nearestNodePort(screen);
     const node = hitNode(world);
     const connection = node || port ? null : hitConnection(screen);
     const blocked = node || port || connection ? null : hitBlockedPoint(screen);
@@ -681,11 +706,12 @@ export default function Organization() {
   const onMouseUp = (event) => {
     const screen = canvasPoint(event);
     if (dragRef.current?.type === "connect" && connectionDraft) {
-      const target = hitPort(screen);
+      const target = hitPort(screen) || nearestNodePort(screen, connectionDraft.source.nodeId);
       if (target && target.nodeId !== connectionDraft.source.nodeId) {
         addConnectionWithPython(connectionDraft.source, target);
       }
       setConnectionDraft(null);
+      setHoverPort(null);
     }
     if (dragRef.current?.type === "manual-route") {
       previewManualRoute(dragRef.current, screenToWorld(screen, viewport), true);
@@ -701,13 +727,29 @@ export default function Organization() {
   };
 
   const hitPort = (screen) => {
+    const radius = Math.max(16, 18 * viewport.zoom);
     for (const node of Object.values(document.nodes)) {
       for (const port of PORTS) {
         const point = worldToScreen(portWorld(node, port));
-        if (distance(screen, point) <= 10) return { nodeId: node.id, port };
+        if (distance(screen, point) <= radius) return { nodeId: node.id, port };
       }
     }
     return null;
+  };
+
+  const nearestNodePort = (screen, excludedNodeId = null) => {
+    const maxDistance = Math.max(18, 34 * viewport.zoom);
+    let closest = null;
+    let closestDistance = maxDistance;
+    Object.values(document.nodes).forEach((node) => {
+      if (node.id === excludedNodeId) return;
+      const currentDistance = nodeDistanceFromScreen(node, screen, viewport);
+      if (currentDistance <= closestDistance) {
+        closestDistance = currentDistance;
+        closest = { nodeId: node.id, port: nearestPort(node, screen, viewport) };
+      }
+    });
+    return closest;
   };
 
   const hitConnection = (screen) => {
@@ -835,12 +877,12 @@ export default function Organization() {
       onNew: newProject,
       onSaveProject: saveProject,
       onLoadProject: () => fileInputRef.current?.click(),
-      onExportPdf: exportPdf,
+      onExportPdf: () => setOrientationModalOpen(true),
       onHelp: () => setHelpOpen(true),
     }),
     h("input", { ref: fileInputRef, className: "org-hidden-input", type: "file", accept: ".og,application/json", onChange: loadProject }),
     h(MetadataStrip, { document, setDocument }),
-    h(ToolStrip, { blockMode, setBlockMode, document, setDocument, selected, deleteSelection, resetSelectedRoute, panCamera }),
+    h(ToolStrip, { document, setDocument, selected, deleteSelection, resetSelectedRoute, panCamera }),
     h(CanvasStage, {
       canvasRef,
       onMouseDown,
@@ -859,6 +901,17 @@ export default function Organization() {
     }),
     h(BottomBar, { focusNode, undo, redo, undoStack, redoStack, status, viewport, zoomBy }),
     nodeModal ? h(NodeModal, { modal: nodeModal, palette, onSave: nodeModal.mode === "edit" ? updateNodeWithPython : addNodeWithPython, onClose: () => setNodeModal(null) }) : null,
+    orientationModalOpen
+      ? h(OrientationModal, {
+          current: document.page_orientation || "horizontal",
+          onSelect: (orientation) => {
+            setOrientationModalOpen(false);
+            setDocument({ ...document, page_orientation: orientation });
+            exportPdf(orientation);
+          },
+          onClose: () => setOrientationModalOpen(false),
+        })
+      : null,
     helpOpen ? h(HelpModal, { content: help, onClose: () => setHelpOpen(false) }) : null
   );
 }

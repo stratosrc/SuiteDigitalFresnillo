@@ -299,19 +299,42 @@
 }
 
 .org-swatches {
-  display: flex;
+  display: grid;
   gap: 10px;
 }
 
-.org-swatch {
+.org-color-option {
+  align-items: center;
+  background: #ffffff;
   border: 1px solid var(--border);
+  color: var(--text-dark);
   cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-weight: 400;
+  gap: 14px;
+  min-height: 52px;
+  padding: 0 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.org-color-option:hover {
+  background: #ffffff;
+  color: var(--text-dark);
+}
+
+.org-color-option.selected {
+  border: 2px solid #00c853;
+}
+
+.org-color-option .org-swatch {
+  border: 1px solid var(--border);
   height: 24px;
-  padding: 0;
   width: 30px;
 }
 
-.org-swatch.selected {
+.org-color-option.selected .org-swatch {
   border: 3px solid #00c853;
 }
 
@@ -328,6 +351,67 @@
 
 .org-help h3 {
   margin: 0 0 8px;
+}
+
+.org-orientation-modal {
+  display: grid;
+  gap: 22px;
+  padding: 4px 4px 0;
+}
+
+.org-orientation-modal h3 {
+  color: var(--text-dark);
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.org-orientation-options {
+  display: grid;
+  gap: 32px;
+  grid-template-columns: repeat(2, 186px);
+}
+
+.org-orientation-option {
+  align-items: center;
+  background: var(--dark);
+  border: 0;
+  color: #ffffff;
+  display: grid;
+  font-weight: 700;
+  gap: 12px;
+  height: 146px;
+  justify-items: center;
+  padding: 22px 14px 18px;
+}
+
+.org-orientation-option:hover {
+  background: #4b4b4b;
+  color: #ffffff;
+}
+
+.org-orientation-icon {
+  height: 72px;
+  object-fit: contain;
+  width: 86px;
+}
+
+.org-orientation-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.org-orientation-actions button {
+  background: var(--dark);
+  border: 0;
+  color: #ffffff;
+  font-weight: 700;
+  height: 36px;
+  min-width: 164px;
+}
+
+.org-orientation-actions button:hover {
+  background: #4b4b4b;
 }
 
 @media (max-width: 900px) {

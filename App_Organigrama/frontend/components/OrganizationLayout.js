@@ -9,11 +9,10 @@ export function MetadataStrip({ document, setDocument }) {
   );
 }
 
-export function ToolStrip({ blockMode, setBlockMode, document, setDocument, selected, deleteSelection, resetSelectedRoute, panCamera }) {
+export function ToolStrip({ document, setDocument, selected, deleteSelection, resetSelectedRoute, panCamera }) {
   return h(
     "section",
     { className: "org-tool-strip" },
-    h("label", { className: "org-check" }, h("input", { type: "checkbox", checked: blockMode, onChange: (event) => setBlockMode(event.target.checked) }), h("span", null, "Obstaculos de ruta")),
     h("label", { className: "org-check" }, h("input", { type: "checkbox", checked: document.show_logos, onChange: (event) => setDocument({ ...document, show_logos: event.target.checked }) }), h("span", null, "Escudos")),
     h("button", { className: "org-danger", onClick: deleteSelection, disabled: !selected.id }, "Eliminar seleccion"),
     h("button", { onClick: resetSelectedRoute, disabled: selected.type !== "connection" }, "Restaurar ruta automatica"),
