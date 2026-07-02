@@ -53,11 +53,10 @@ begin
     'Hardware minimo:' + #13#10 +
     '  - Procesador compatible con x64' + #13#10 +
     '  - 4 GB de memoria RAM' + #13#10 +
-    '  - 2.5 GB de espacio libre durante la instalacion' + #13#10 +
+    '  - 500 MB de espacio libre durante la instalacion' + #13#10 +
     '  - Pantalla con resolucion de 1280 x 720 o superior' + #13#10 + #13#10 +
     'Dependencias:' + #13#10 +
     '  - No es necesario instalar Python' + #13#10 +
-    '  - No es necesario instalar LibreOffice' + #13#10 +
     '  - Todos los componentes requeridos vienen incluidos' + #13#10 + #13#10 +
     'Se requieren permisos de administrador para instalar la aplicacion.';
 

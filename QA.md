@@ -1,15 +1,15 @@
 # QA Manual
 
-Checklist minimo antes de entregar una version:
+Checklist minimo antes de entregar una version.
 
 ## Launcher
 
 - Abrir el launcher desde `main.py`.
-- Verificar que se muestren las apps disponibles con iconos.
-- Abrir TestData, Organigrama y Directorio desde sus tarjetas.
+- Verificar que se muestren Test Data, Organigrama y Directorio con iconos.
+- Abrir Test Data, Organigrama y Directorio desde sus tarjetas.
 - Cerrar cada app y confirmar que el launcher sigue respondiendo.
 
-## TestData
+## Test Data
 
 - Crear un nuevo trabajo y cargar un PDF valido.
 - Navegar entre paginas y verificar que los botones anterior/siguiente se deshabiliten en limites.
@@ -22,8 +22,8 @@ Checklist minimo antes de entregar una version:
 
 - Crear nodos con clic en el canvas.
 - Mover nodos arrastrando y comprobar que la barra contextual cambie de mensaje.
-- Conectar dos nodos con clic izquierdo desde el indicador de conexión y verificar que la selección no tape nodos.
-- Seleccionar una conexión, mover un segmento y un punto de doblez, y comprobar los ghosts válido e inválido.
+- Conectar dos nodos con clic izquierdo desde el indicador de conexion y verificar que la seleccion no tape nodos.
+- Seleccionar una conexion, mover un segmento y un punto de doblez, y comprobar los estados valido e invalido.
 - Probar deshacer y rehacer cambios del organigrama.
 - Activar obstaculos de ruta y confirmar que las conexiones se enruten alrededor.
 - Guardar proyecto `.og`, abrirlo de nuevo y confirmar nodos/conexiones.
@@ -39,17 +39,22 @@ Checklist minimo antes de entregar una version:
 - Corregir fechas y exportar PDF.
 - Crear un nuevo proyecto y confirmar que el formulario se limpia.
 
-## Ciclo de proyecto
+## Ciclo de Proyecto
 
-- Modificar un proyecto y confirmar que el título de la ventana muestre `*`.
+- Modificar un proyecto y confirmar que el titulo de la ventana muestre `*`.
 - Intentar crear, abrir o cerrar con cambios pendientes y verificar Guardar/Descartar/Cancelar.
 - Guardar un proyecto, abrirlo desde `Archivos recientes` y confirmar su contenido.
 
-## Instalador en Windows limpio
+## Instalador en Windows Limpio
 
-- Ejecutar el instalador en una VM de Windows 10/11 sin Python ni LibreOffice.
-- Confirmar que el ejecutable muestra icono y versión `1.0.0`.
-- Abrir los cuatro módulos desde el launcher.
-- Convertir DOCX, XLSX y PPTX usando únicamente LibreOffice incluido.
-- Cancelar una conversión y comprobar que no queden procesos `soffice.exe`.
+- Ejecutar el instalador en una VM de Windows 10/11 sin Python.
+- Confirmar que el ejecutable muestra icono y version `1.1.0`.
+- Abrir los tres modulos desde el launcher.
+- Guardar y recuperar proyectos `.td`, `.og` y `.dir`.
 - Desinstalar y comprobar que se eliminen accesos directos y archivos instalados.
+
+## Build en macOS
+
+- Compilar con `python -m PyInstaller --clean --noconfirm suite_fresnillo.spec`.
+- Confirmar que se genera `dist/SuiteFresnillo.app`.
+- Abrir el `.app` en macOS 10.11 El Capitan y validar los tres modulos desde el launcher.

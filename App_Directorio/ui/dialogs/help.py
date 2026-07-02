@@ -19,6 +19,7 @@ from components.shared.help_dialog import (
     HelpSection,
     show_help_dialog as show_shared_help_dialog,
 )
+from components.shared.platform import PRIMARY_MODIFIER_LABEL
 
 
 HELP_SECTIONS: tuple[HelpSection, ...] = (
@@ -42,11 +43,11 @@ HELP_SECTIONS: tuple[HelpSection, ...] = (
     (
         "ATAJOS DE TECLADO",
         (
-            "Ctrl+N: Crear un proyecto nuevo.",
-            "Ctrl+O: Abrir un proyecto existente.",
-            "Ctrl+S: Guardar el proyecto actual.",
-            "Ctrl+Z: Deshacer la última edición.",
-            "Ctrl+Y o Ctrl+Mayús+Z: Rehacer la edición deshecha.",
+            f"{PRIMARY_MODIFIER_LABEL}+N: Crear un proyecto nuevo.",
+            f"{PRIMARY_MODIFIER_LABEL}+O: Abrir un proyecto existente.",
+            f"{PRIMARY_MODIFIER_LABEL}+S: Guardar el proyecto actual.",
+            f"{PRIMARY_MODIFIER_LABEL}+Z: Deshacer la última edición.",
+            f"{PRIMARY_MODIFIER_LABEL}+Y o {PRIMARY_MODIFIER_LABEL}+Mayús+Z: Rehacer la edición deshecha.",
             "Tab y Mayús+Tab: Recorrer los campos y botones del formulario.",
         ),
     ),

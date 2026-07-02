@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 import os
+from pathlib import Path
 import subprocess
 import sys
 from tkinter import messagebox
@@ -11,6 +12,26 @@ from components.shared.windowing import prepare_window_for_open, reveal_window_m
 
 LauncherAppConfig = Mapping[str, str | bool]
 PROCESS_POLL_INTERVAL_MS = 500
+
+
+def _python_gui_executable() -> str:
+    """Prefer pythonw for Tk apps on macOS framework builds."""
+    if sys.platform != "darwin":
+        return sys.executable
+
+    executable_path = Path(sys.executable)
+    pythonw_path = executable_path.with_name("pythonw")
+    if pythonw_path.exists():
+        return str(pythonw_path)
+
+    return sys.executable
+
+
+def _child_process_env() -> dict[str, str]:
+    env = os.environ.copy()
+    if sys.platform == "darwin":
+        env.setdefault("OBJC_DISABLE_INITIALIZE_FORK_SAFETY", "YES")
+    return env
 
 
 class ApplicationRunner:
@@ -67,8 +88,9 @@ class ApplicationRunner:
 
         try:
             return subprocess.Popen(
-                [sys.executable, "-m", str(module_path_value)],
+                [_python_gui_executable(), "-m", str(module_path_value)],
                 cwd=base_path(),
+                env=_child_process_env(),
                 shell=False,
             )
         except OSError as exc:
@@ -99,8 +121,9 @@ class ApplicationRunner:
 
         try:
             return subprocess.Popen(
-                [sys.executable, "--app", str(app_id_value)],
+                [_python_gui_executable(), "--app", str(app_id_value)],
                 cwd=os.path.dirname(sys.executable),
+                env=_child_process_env(),
                 shell=False,
             )
         except OSError as exc:

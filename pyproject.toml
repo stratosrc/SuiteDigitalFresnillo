@@ -7,31 +7,39 @@ name = "suite-digital-fresnillo"
 version = "1.1.0"
 description = "Suite de escritorio para flujos administrativos del Municipio de Fresnillo"
 readme = "README.md"
-requires-python = ">=3.12,<3.15"
+requires-python = ">=3.10.11,<3.15"
 dependencies = [
     "customtkinter==5.2.2",
     "Pillow==12.2.0",
-    "PyMuPDF==1.27.2.3",
+    "PyMuPDF==1.25.5",
     "reportlab==4.5.1",
-    "tkinterdnd2==0.4.3",
 ]
 
 [project.optional-dependencies]
+build = [
+    "pyinstaller==6.20.0",
+    "PyMuPDF==1.25.5",
+]
+testdata = [
+    "PyMuPDF==1.25.5",
+]
+legacy-mac = [
+    "pyinstaller==6.20.0",
+]
 dev = [
     "pyinstaller==6.20.0",
+    "PyMuPDF==1.25.5",
     "pytest==9.0.2",
     "ruff==0.15.5",
 ]
 
 [tool.setuptools.packages.find]
 include = [
-    "App_ConversorPDF*",
     "App_Directorio*",
     "App_Organigrama*",
     "App_TestData*",
     "components*",
 ]
-exclude = ["App_ConversorPDF.vendor*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -39,10 +47,9 @@ python_files = ["test_*.py"]
 addopts = "-ra"
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py310"
 line-length = 120
 extend-exclude = [
-    "App_ConversorPDF/vendor",
     "build",
     "dist",
 ]

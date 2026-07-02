@@ -1,5 +1,7 @@
 """Mouse wheel helpers for scrolling and zooming."""
 
+from components.shared.platform import IS_MACOS
+
 CTRL_MASK = 0x0004
 
 
@@ -60,6 +62,18 @@ def setup_mousewheel_scroll(
             on_zoom_out=on_zoom_out,
         ),
     )
+    if IS_MACOS:
+        canvas_widget.bind(
+            "<Command-MouseWheel>",
+            lambda event: on_mousewheel(
+                canvas_widget,
+                event,
+                has_document=has_document,
+                on_zoom_in=on_zoom_in,
+                on_zoom_out=on_zoom_out,
+                force_zoom=True,
+            ),
+        )
 
 
 def on_mousewheel(
@@ -68,8 +82,9 @@ def on_mousewheel(
     has_document=None,
     on_zoom_in=None,
     on_zoom_out=None,
+    force_zoom=False,
 ):
-    """Handle normalized scroll and Ctrl+wheel zoom gestures."""
+    """Handle normalized scroll and modifier-wheel zoom gestures."""
     if has_document is not None and not has_document():
         return
 
@@ -77,6 +92,7 @@ def on_mousewheel(
         event_num=getattr(event, "num", None),
         event_delta=getattr(event, "delta", 0),
         event_state=getattr(event, "state", 0),
+        force_zoom=force_zoom,
     )
 
     if wheel_action == "zoom_in" and on_zoom_in is not None:
@@ -94,9 +110,9 @@ def on_mousewheel(
         canvas_widget.yview_scroll(scroll_direction, "units")
 
 
-def get_wheel_action(event_num=None, event_delta=0, event_state=0) -> str | None:
+def get_wheel_action(event_num=None, event_delta=0, event_state=0, force_zoom=False) -> str | None:
     """Resolve whether a wheel event should trigger zoom instead of scroll."""
-    if not bool(event_state & CTRL_MASK):
+    if not force_zoom and not bool(event_state & CTRL_MASK):
         return None
     if event_num == 4 or event_delta > 0:
         return "zoom_in"

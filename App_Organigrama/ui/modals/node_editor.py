@@ -14,6 +14,7 @@ from App_Organigrama.ui.theme import (
     make_font,
 )
 from components.shared.accessibility import enable_visible_focus
+from components.shared.platform import PRIMARY_MODIFIER_LABEL, bind_primary_shortcut
 
 
 class NodeEditorDialog(ctk.CTkToplevel):
@@ -58,11 +59,11 @@ class NodeEditorDialog(ctk.CTkToplevel):
         self._populate_name_entry()
         self.name_entry.bind("<Return>", self._ignore_enter)
         self.name_entry.bind("<KP_Enter>", self._ignore_enter)
-        self.name_entry.bind("<Control-Return>", self._insert_name_line)
-        self.name_entry.bind("<Control-KP_Enter>", self._insert_name_line)
+        bind_primary_shortcut(self.name_entry, "Return", self._insert_name_line)
+        bind_primary_shortcut(self.name_entry, "KP_Enter", self._insert_name_line)
         ctk.CTkLabel(
             frame,
-            text="Ctrl + Enter agrega otra persona con viñeta nueva",
+            text=f"{PRIMARY_MODIFIER_LABEL} + Enter agrega otra persona con viñeta nueva",
             text_color=TEXT_DARK,
             font=make_font(10),
         ).grid(row=2, column=0, sticky="w", pady=(0, 12))
@@ -145,10 +146,10 @@ class NodeEditorDialog(ctk.CTkToplevel):
         self.on_save(name, role, self.selected_color)
         self.destroy()
 
-    def _ignore_enter(self, _event: tk.Event[tk.Text]) -> str:
+    def _ignore_enter(self, _event: tk.Event) -> str:
         return "break"
 
-    def _insert_name_line(self, _event: tk.Event[tk.Text]) -> str:
+    def _insert_name_line(self, _event: tk.Event) -> str:
         self.name_entry.insert("insert", f"\n{self.PERSON_BULLET_PREFIX}")
         self.name_entry.see("insert")
         return "break"

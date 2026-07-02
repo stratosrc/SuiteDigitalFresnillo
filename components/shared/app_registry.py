@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from importlib import import_module
 from importlib.util import find_spec
+import os
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,42 +39,41 @@ APPLICATIONS: tuple[ApplicationDefinition, ...] = (
         name="Test Data",
         package_name="App_TestData",
         icon_path="components/assets/censor_icon.png",
-        description="Módulo de test data y\nversiones públicas",
+        description="Modulo de test data y\nversiones publicas",
     ),
     ApplicationDefinition(
         app_id="organigrama",
         name="Organigrama",
         package_name="App_Organigrama",
         icon_path="components/assets/organization_icon.png",
-        description="Gestión del diseño y estructura institucional",
+        description="Gestion del diseno y estructura institucional",
     ),
     ApplicationDefinition(
         app_id="directorio",
         name="Directorio",
         package_name="App_Directorio",
         icon_path="components/assets/directorio.png",
-        description="Gestión y Diseño del\nDirectorio de Área",
-    ),
-    ApplicationDefinition(
-        app_id="conversor_pdf",
-        name="Conversor a PDF",
-        package_name="App_ConversorPDF",
-        icon_path="components/assets/convert.png",
-        description="Conversión de archivos \ne imágenes a PDF",
+        description="Gestion y diseno del\nDirectorio de Area",
     ),
 )
 
 
+def _enabled_applications() -> tuple[ApplicationDefinition, ...]:
+    if os.environ.get("SUITE_LEGACY_MAC") == "1":
+        return tuple(definition for definition in APPLICATIONS if definition.app_id != "testdata")
+    return APPLICATIONS
+
+
 def get_application(app_id: str) -> ApplicationDefinition | None:
     normalized_app_id = app_id.strip().lower()
-    for definition in APPLICATIONS:
+    for definition in _enabled_applications():
         if definition.app_id == normalized_app_id:
             return definition
     return None
 
 
 def get_launcher_applications() -> list[dict[str, str | bool]]:
-    return [definition.to_launcher_config() for definition in APPLICATIONS]
+    return [definition.to_launcher_config() for definition in _enabled_applications()]
 
 
 def run_application(app_id: str) -> None:

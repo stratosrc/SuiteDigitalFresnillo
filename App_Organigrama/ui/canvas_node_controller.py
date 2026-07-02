@@ -56,7 +56,7 @@ class CanvasNodeController:
         self._set_selection(node_id=duplicate.id)
         self._mark_document_changed()
 
-    def _show_context_menu(self, event: tk.Event[tk.Canvas]) -> None:
+    def _show_context_menu(self, event: tk.Event) -> None:
         node = self._node_at_screen(event.x, event.y)
         connection = None if node is not None else self._connection_at_screen(event.x, event.y)
         if node is None and connection is None and getattr(event, "keyboard", False):
@@ -113,7 +113,7 @@ class CanvasNodeController:
             selected_color=node.color,
         )
 
-    def _delete_selected(self, _event: tk.Event[tk.Canvas] | None = None) -> None:
+    def _delete_selected(self, _event: tk.Event | None = None) -> None:
         if self.selected_node_id is not None:
             node_id = self.selected_node_id
             self.document.remove_node(node_id)

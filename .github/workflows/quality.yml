@@ -6,7 +6,11 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-13]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -15,7 +19,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.10"
           cache: pip
 
       - name: Install project and quality tools
@@ -25,13 +29,21 @@ jobs:
         run: python -m ruff check .
 
       - name: Compile modules
-        run: python -m compileall -q App_TestData App_Organigrama App_Directorio App_ConversorPDF components
+        run: python -m compileall -q App_TestData App_Organigrama App_Directorio components
 
       - name: Run tests
         run: python -m unittest discover -s tests -v
 
   pyinstaller-smoke:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_path: dist/SuiteFresnillo/SuiteFresnillo.exe
+          - os: macos-13
+            artifact_path: dist/SuiteFresnillo.app
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -40,17 +52,21 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.10"
           cache: pip
 
       - name: Install project and PyInstaller
         run: python -m pip install --upgrade pip && python -m pip install ".[dev]"
 
-      - name: Build executable without bundled LibreOffice
+      - name: Build application
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "10.11"
+        run: |
+          python -m PyInstaller --clean --noconfirm suite_fresnillo.spec
+
+      - name: Verify artifact
         shell: pwsh
         run: |
-          $env:SUITE_SKIP_LIBREOFFICE = "1"
-          python -m PyInstaller --clean --noconfirm convertidor.spec
-          if (-not (Test-Path "dist/SuiteFresnillo/SuiteFresnillo.exe")) {
-            throw "PyInstaller did not create SuiteFresnillo.exe"
+          if (-not (Test-Path "${{ matrix.artifact_path }}")) {
+            throw "PyInstaller did not create ${{ matrix.artifact_path }}"
           }

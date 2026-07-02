@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from components.shared.platform import IS_MACOS, bind_sequences
 from App_Organigrama.ui.canvas_selection import (
     draw_connection_selection_overlay,
     draw_node_selection_overlay,
@@ -22,13 +23,22 @@ class CanvasInteractionController:
         self.canvas.bind("<ButtonPress-1>", self._on_press)
         self.canvas.bind("<B1-Motion>", self._on_drag)
         self.canvas.bind("<ButtonRelease-1>", self._on_release)
-        self.canvas.bind("<ButtonPress-3>", self._on_pan_press)
-        self.canvas.bind("<B3-Motion>", self._on_pan_drag)
-        self.canvas.bind("<ButtonRelease-3>", self._on_pan_release)
+        secondary_press_events = ["<ButtonPress-3>"]
+        secondary_drag_events = ["<B3-Motion>"]
+        secondary_release_events = ["<ButtonRelease-3>"]
+        if IS_MACOS:
+            secondary_press_events.extend(("<ButtonPress-2>", "<Control-ButtonPress-1>"))
+            secondary_drag_events.extend(("<B2-Motion>", "<Control-B1-Motion>"))
+            secondary_release_events.extend(("<ButtonRelease-2>", "<Control-ButtonRelease-1>"))
+        bind_sequences(self.canvas, tuple(secondary_press_events), self._on_pan_press)
+        bind_sequences(self.canvas, tuple(secondary_drag_events), self._on_pan_drag)
+        bind_sequences(self.canvas, tuple(secondary_release_events), self._on_pan_release)
         self.canvas.bind("<Double-Button-1>", self._on_double_click)
         self.canvas.bind("<Motion>", self._on_motion)
         self.canvas.bind("<Leave>", self._on_leave)
         self.canvas.bind("<MouseWheel>", self._on_mousewheel)
+        if IS_MACOS:
+            self.canvas.bind("<Command-MouseWheel>", self._on_command_mousewheel)
         self.canvas.bind("<Delete>", self._delete_selected)
         self.canvas.bind("<BackSpace>", self._delete_selected)
         self.canvas.bind("<Escape>", self._cancel_connection)
@@ -64,7 +74,7 @@ class CanvasInteractionController:
         draw_node_selection_overlay(self)
         self.canvas.tag_raise("node-selection-overlay")
 
-    def _on_press(self, event: tk.Event[tk.Canvas]) -> None:
+    def _on_press(self, event: tk.Event) -> None:
         self.canvas.focus_set()
         self.dragged = False
         self.connection_press_source_id = None
@@ -135,7 +145,7 @@ class CanvasInteractionController:
             self._set_selection(node_id=node.id)
             self._emit_context_change()
 
-    def _on_drag(self, event: tk.Event[tk.Canvas]) -> None:
+    def _on_drag(self, event: tk.Event) -> None:
         if self.drag_press is None:
             return
         start_x, start_y, _, _ = self.drag_press
@@ -175,7 +185,7 @@ class CanvasInteractionController:
         self._emit_context_change()
         self.request_redraw()
 
-    def _on_release(self, event: tk.Event[tk.Canvas]) -> None:
+    def _on_release(self, event: tk.Event) -> None:
         if self.drag_press is None:
             return
         self.drag_press = None
@@ -218,7 +228,7 @@ class CanvasInteractionController:
             return
         self._handle_click(event.x, event.y)
 
-    def _on_motion(self, event: tk.Event[tk.Canvas]) -> None:
+    def _on_motion(self, event: tk.Event) -> None:
         if self.drag_press is not None:
             return
         if self.block_mode:
@@ -255,7 +265,7 @@ class CanvasInteractionController:
             self.request_redraw()
         self._emit_context_change()
 
-    def _on_leave(self, _event: tk.Event[tk.Canvas]) -> None:
+    def _on_leave(self, _event: tk.Event) -> None:
         self.hover_port = None
         self.preview_obstacle = None
         self.last_hover_cell = None
@@ -337,7 +347,7 @@ class CanvasInteractionController:
         self._redraw_selection_overlay()
         self._schedule_selection_blink()
 
-    def _cancel_connection(self, _event: tk.Event[tk.Canvas] | None = None) -> None:
+    def _cancel_connection(self, _event: tk.Event | None = None) -> None:
         self.pending_connection_source_id = None
         self.pending_source_port = None
         self.hover_port = None

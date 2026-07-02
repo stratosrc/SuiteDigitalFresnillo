@@ -1,9 +1,14 @@
 from pathlib import Path
 
-import fitz
-
 
 def export_pdf_as_image(pdf_path: str | Path, output_image_path: str | Path, dpi: int = 300) -> Path:
+    try:
+        import fitz
+    except ImportError as error:
+        raise RuntimeError(
+            "No se pudo exportar la imagen porque PyMuPDF no esta disponible en este sistema"
+        ) from error
+
     source = Path(pdf_path)
     target = Path(output_image_path)
     if not source.exists():

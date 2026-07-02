@@ -18,6 +18,7 @@ from App_Organigrama.ui.theme import (
     BORDER_COLOR,
     SURFACE_BACKGROUND,
 )
+from components.shared.platform import PRIMARY_MODIFIER_LABEL
 
 
 GridPoint = tuple[float, float]
@@ -170,7 +171,7 @@ class OrgGridCanvas(
                 text=(
                     "Organigrama vacío\n"
                     "Haz clic en una celda para crear el primer nodo.\n"
-                    "También puedes abrir un proyecto con Ctrl+O."
+                    f"También puedes abrir un proyecto con {PRIMARY_MODIFIER_LABEL}+O."
                 ),
                 fill="#64748B",
                 font=("Arial", 14),

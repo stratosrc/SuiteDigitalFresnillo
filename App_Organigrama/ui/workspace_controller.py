@@ -40,6 +40,7 @@ from App_Organigrama.ui.theme import (
 from components.shared.images import load_ctk_image
 from components.shared.entries import VariablePlaceholderEntry
 from components.shared.accessibility import enable_visible_focus
+from components.shared.platform import IS_MACOS, PRIMARY_MODIFIER_LABEL
 from components.shared.project_lifecycle import ProjectLifecycle
 from components.shared.progress_overlay import ProgressOverlay
 from components.shared.shortcuts import bind_common_shortcuts
@@ -377,7 +378,7 @@ class MainFrame(ctk.CTkFrame):
             font=make_font(12, "bold"),
         )
         self.undo_button.pack(side="left", padx=(6, 3))
-        Tooltip(self.undo_button, "Deshacer (Ctrl+Z)", show_when_disabled=True)
+        Tooltip(self.undo_button, f"Deshacer ({PRIMARY_MODIFIER_LABEL}+Z)", show_when_disabled=True)
 
         self.redo_icon = load_ctk_image(REDO_ICON_PATH, (18, 18), crop_alpha=True)
         self.redo_button = ctk.CTkButton(
@@ -394,7 +395,7 @@ class MainFrame(ctk.CTkFrame):
             font=make_font(12, "bold"),
         )
         self.redo_button.pack(side="left", padx=(3, 0))
-        Tooltip(self.redo_button, "Rehacer (Ctrl+Y)", show_when_disabled=True)
+        Tooltip(self.redo_button, f"Rehacer ({PRIMARY_MODIFIER_LABEL}+Y)", show_when_disabled=True)
 
         self.context_status_label = ctk.CTkLabel(
             footer,
@@ -480,11 +481,6 @@ class MainFrame(ctk.CTkFrame):
         self._metadata_history_after_id = None
         self._record_document_change()
 
-    def _bind_history_shortcuts(self) -> None:
-        self.master.bind("<Control-z>", self.undo, add=True)
-        self.master.bind("<Control-y>", self.redo, add=True)
-        self.master.bind("<Control-Shift-Z>", self.redo, add=True)
-
     def _toggle_logos(self) -> None:
         self.document.show_logos = self.show_logos_var.get()
         self.grid_canvas.set_show_logos(self.document.show_logos)
@@ -534,7 +530,7 @@ class MainFrame(ctk.CTkFrame):
         self._context_status_refresh_after_id = None
         self._refresh_context_status_label()
 
-    def _refresh_context_status_label(self, _event: tk.Event[tk.Misc] | None = None) -> None:
+    def _refresh_context_status_label(self, _event: tk.Event | None = None) -> None:
         if not hasattr(self, "context_status_label"):
             return
 
@@ -727,6 +723,19 @@ class MainFrame(ctk.CTkFrame):
         self._set_busy_state("disabled")
         message = "Generando imagen..." if "Imagen" in success_title else "Generando PDF..."
         self.export_progress_overlay.show(message)
+        if IS_MACOS:
+            self.update_idletasks()
+            try:
+                result_path = task()
+                messagebox.showinfo(success_title, f"Archivo generado correctamente en:\n{result_path}", parent=self)
+            except Exception as error:  # noqa: BLE001
+                LOGGER.exception("Unable to complete org chart export task")
+                messagebox.showerror("Error", f"No se pudo completar la operaciÃ³n:\n{error}", parent=self)
+            finally:
+                self.export_progress_overlay.hide()
+                self._set_busy_state("normal")
+            return
+
         future = self._executor.submit(task)
         self._pending_task = future
         self.after(120, lambda: self._poll_task(future, success_title))

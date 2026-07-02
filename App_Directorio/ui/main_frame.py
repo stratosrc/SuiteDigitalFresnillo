@@ -31,6 +31,7 @@ from App_Directorio.ui.theme import (
 )
 from components.shared.images import load_ctk_image
 from App_Directorio.ui.accessibility import enable_visible_focus
+from components.shared.platform import IS_MACOS
 from components.shared.project_lifecycle import ProjectLifecycle
 from components.shared.progress_overlay import ProgressOverlay
 from components.shared.shortcuts import bind_common_shortcuts
@@ -219,6 +220,27 @@ class DirectoryMainFrame(ctk.CTkFrame):
 
         self._set_export_busy("disabled")
         self.export_progress_overlay.show("Generando PDF...")
+        if IS_MACOS:
+            self.update_idletasks()
+            try:
+                output_path = DirectoryPdfExporter().export(data, Path(target))
+                messagebox.showinfo(
+                    "PDF guardado",
+                    f"El reporte se guardÃ³ correctamente en:\n{output_path}",
+                    parent=self,
+                )
+            except Exception as error:  # noqa: BLE001
+                LOGGER.exception("Unable to export directory PDF")
+                messagebox.showerror(
+                    "No se pudo guardar",
+                    f"No fue posible generar el PDF.\n\n{error}",
+                    parent=self,
+                )
+            finally:
+                self.export_progress_overlay.hide()
+                self._set_export_busy("normal")
+            return
+
         future = self._executor.submit(DirectoryPdfExporter().export, data, Path(target))
         self._pending_export = future
         self.after(100, lambda: self._poll_pdf_export(future))

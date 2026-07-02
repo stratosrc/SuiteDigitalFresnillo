@@ -79,7 +79,7 @@ class CanvasViewportController:
         self._routes_dirty = False
         self.request_redraw()
 
-    def _on_pan_press(self, event: tk.Event[tk.Canvas]) -> str:
+    def _on_pan_press(self, event: tk.Event) -> str:
         self.canvas.focus_set()
         try:
             self.canvas.grab_set()
@@ -121,7 +121,7 @@ class CanvasViewportController:
             self._emit_context_change("Arrastra con clic derecho para desplazar el lienzo")
         return "break"
 
-    def _on_pan_drag(self, event: tk.Event[tk.Canvas]) -> str:
+    def _on_pan_drag(self, event: tk.Event) -> str:
         if self.pan_drag_press is None:
             return "break"
         start_x, start_y, initial_pan_x, initial_pan_y = self.pan_drag_press
@@ -139,7 +139,7 @@ class CanvasViewportController:
         self.request_redraw()
         return "break"
 
-    def _on_pan_release(self, event: tk.Event[tk.Canvas]) -> str:
+    def _on_pan_release(self, event: tk.Event) -> str:
         try:
             self.canvas.grab_release()
         except tk.TclError:
@@ -168,18 +168,23 @@ class CanvasViewportController:
         self._emit_context_change()
         return "break"
 
-    def _on_double_click(self, event: tk.Event[tk.Canvas]) -> None:
+    def _on_double_click(self, event: tk.Event) -> None:
         node = self._node_at_screen(event.x, event.y)
         if node is not None:
             self._open_node_dialog(node)
 
-    def _on_mousewheel(self, event: tk.Event[tk.Canvas]) -> None:
+    def _on_mousewheel(self, event: tk.Event) -> None:
         if event.state & 0x0004:
             factor = 1.1 if event.delta > 0 else 1 / 1.1
             self._zoom_at(event.x, event.y, factor)
             return
         self.pan_y += event.delta / 2
         self.request_redraw()
+
+    def _on_command_mousewheel(self, event: tk.Event) -> str:
+        factor = 1.1 if event.delta > 0 else 1 / 1.1
+        self._zoom_at(event.x, event.y, factor)
+        return "break"
 
     def _world_to_screen(self, world_x: float, world_y: float) -> tuple[float, float]:
         return world_to_screen(world_x, world_y, self.pan_x, self.pan_y, self.zoom)
