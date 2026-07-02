@@ -30,6 +30,11 @@ def create_app() -> FastAPI:
         name="organigrama-frontend",
     )
     application.mount(
+        "/module-static/directorio/assets",
+        StaticFiles(directory=PROJECT_ROOT / "App_Directorio" / "assets"),
+        name="directorio-module-assets",
+    )
+    application.mount(
         "/module-static/directorio",
         StaticFiles(directory=PROJECT_ROOT / "App_Directorio" / "frontend"),
         name="directorio-frontend",
@@ -49,6 +54,11 @@ def create_app() -> FastAPI:
         "/organigrama-assets",
         StaticFiles(directory=PROJECT_ROOT / "App_Organigrama" / "assets"),
         name="organigrama-assets",
+    )
+    application.mount(
+        "/directorio-assets",
+        StaticFiles(directory=PROJECT_ROOT / "App_Directorio" / "assets"),
+        name="directorio-assets",
     )
     application.include_router(health.router)
     application.include_router(catalog_routes.router)
