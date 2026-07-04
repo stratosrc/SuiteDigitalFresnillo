@@ -7,14 +7,7 @@ block_cipher = None
 project_root = Path(SPECPATH).resolve()
 is_windows = sys.platform.startswith("win")
 is_macos = sys.platform == "darwin"
-macos_minimum_version = "10.11"
-
-if is_macos:
-    # El Capitan's codesign cannot handle PyInstaller's modern signature-removal flags.
-    import PyInstaller.utils.osx as osxutils
-
-    osxutils.remove_signature_from_binary = lambda *args, **kwargs: None
-    osxutils.sign_binary = lambda *args, **kwargs: None
+macos_minimum_version = "13.0"
 
 
 def collect_tree(source: Path, destination: str):

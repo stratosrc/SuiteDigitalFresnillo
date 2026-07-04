@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from tkinter import messagebox
+
 from App_Organigrama.models.document import OrgNode
+from App_Organigrama.rendering.palette import NODE_HIERARCHY_RANK_BY_COLOR
 from App_Organigrama.routing.manhattan_router import ConnectionRoute
 from App_Organigrama.routing.manual_routes import (
     GridBox,
@@ -284,6 +287,14 @@ class CanvasConnectionController:
         source_id = self.pending_connection_source_id
         if source_id is None:
             return
+        source_node = self.document.nodes.get(source_id)
+        if source_node is None:
+            return
+        if not self._confirm_inverse_hierarchy_connection(source_node, target_node):
+            self.pending_connection_source_id = None
+            self.pending_source_port = None
+            self.hover_port = None
+            return
         target_port = self._nearest_port(target_node, screen_x, screen_y)
         new_connection = self.document.add_connection(
             source_id,
@@ -297,6 +308,25 @@ class CanvasConnectionController:
         if new_connection is not None:
             self._set_selection(connection_id=new_connection.id)
             self._mark_document_changed()
+
+    def _confirm_inverse_hierarchy_connection(self, source_node: OrgNode, target_node: OrgNode) -> bool:
+        source_rank = NODE_HIERARCHY_RANK_BY_COLOR.get(source_node.color)
+        target_rank = NODE_HIERARCHY_RANK_BY_COLOR.get(target_node.color)
+        if source_rank is None or target_rank is None or source_rank >= target_rank:
+            return True
+
+        source_label = self._node_flow_label(source_node)
+        target_label = self._node_flow_label(target_node)
+        return messagebox.askyesno(
+            "Conexión jerárquica inversa",
+            (
+                "Estás conectando de una jerarquía menor hacia una jerarquía mayor.\n\n"
+                f"Origen: {source_label}\n"
+                f"Destino: {target_label}\n\n"
+                "Esto podría invertir el sentido natural del organigrama. ¿Quieres continuar?"
+            ),
+            parent=self,
+        )
 
     def _hover_target_id(self, source_id: str) -> str | None:
         if self.hover_port is None or self.hover_port[0] == source_id:

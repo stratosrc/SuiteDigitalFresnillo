@@ -48,8 +48,9 @@ from components.styles.spacing import (
 from components.styles.typography import (
     CTK_FONT_FAMILY,
     FONT_FAMILY,
-    SEGOE_UI_BOLD_FONT_FILE,
-    SEGOE_UI_FONT_FILE,
+    PDF_FONT_BOLD,
+    PDF_FONT_REGULAR,
+    PYMUPDF_FONT_REGULAR,
 )
 
 
@@ -98,8 +99,9 @@ __all__ = [
     "PRIMARY_BLUE",
     "SECONDARY_BLUE",
     "SECTION_GAP",
-    "SEGOE_UI_BOLD_FONT_FILE",
-    "SEGOE_UI_FONT_FILE",
+    "PDF_FONT_BOLD",
+    "PDF_FONT_REGULAR",
+    "PYMUPDF_FONT_REGULAR",
     "SELECTED_OUTLINE",
     "SUCCESS_BG",
     "SUCCESS_BG_ACTIVE",

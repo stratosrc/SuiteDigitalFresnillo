@@ -1,6 +1,12 @@
 rm -rf .venv-mac10
 python3.10 -m venv .venv-mac10
 
+cd ~/Desktop/SuiteDigitalFresnilloMac
+python3.12 -m venv .venv-mac
+source .venv-mac/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -e ".[build]"
+
 source .venv-mac10/bin/activate
 python -m pip install PyMuPDF==1.25.5
 python -c "import fitz; print(fitz.__doc__)"
@@ -8,5 +14,18 @@ python -m pip install -e ".[build]
 
 para compilar
 rm -rf build dist
-export MACOSX_DEPLOYMENT_TARGET=10.13
+export MACOSX_DEPLOYMENT_TARGET=13.0
 python -m PyInstaller --clean --nsourceoconfirm suite_fresnillo.spec
+
+tahoe 26.5
+
+cd C:\Program Files\Oracle\VirtualBox
+VBoxManage modifyvm "mac1" --cpuidset 00000001 000106e5 00100800 0098e3fd bfebfbff
+VBoxManage setextradata "mac1" "VBoxInternal/Devices/efi/0/Config/DmiSystemProduct" "iMac19,3"
+VBoxManage setextradata "mac1" "VBoxInternal/Devices/efi/0/Config/DmiSystemVersion" "1.0"
+VBoxManage setextradata "mac1" "VBoxInternal/Devices/efi/0/Config/DmiBoardProduct" "Iloveapple"
+VBoxManage setextradata "mac1" "VBoxInternal/Devices/smc/0/Config/DeviceKey" "ourhardworkbythesewordsguardedpleasedontsteal(c)AppleComputerInc"
+VBoxManage setextradata "mac1" VBoxInternal2/EfiGraphicsResolution 1920x1080
+VBoxManage setextradata "mac1" "VBoxInternal/TM/TSCMode" "RealTSCOffset"
+
+VBoxManage setextradata "mac1" "VBoxInternal/Devices/smc/0/Config/GetKeyFromRealSMC" 1

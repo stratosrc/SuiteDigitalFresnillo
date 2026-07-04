@@ -7,11 +7,18 @@ LIGHT_BLUE = "#9DC3E6"
 NEUTRAL_GRAY = "#797E85"
 
 NODE_COLOR_CHOICES: tuple[tuple[str, str], ...] = (
-    ("Azul institucional", PRIMARY_BLUE),
-    ("Azul medio", SECONDARY_BLUE),
-    ("Azul claro", LIGHT_BLUE),
-    ("Gris institucional", NEUTRAL_GRAY),
+    ("Secretarios", PRIMARY_BLUE),
+    ("Directores", SECONDARY_BLUE),
+    ("Coordinadores, Jefes o Encargados de Departamento", LIGHT_BLUE),
+    ("Personal Administrativo", NEUTRAL_GRAY),
 )
+
+NODE_HIERARCHY_RANK_BY_COLOR: dict[str, int] = {
+    PRIMARY_BLUE: 4,
+    SECONDARY_BLUE: 3,
+    LIGHT_BLUE: 2,
+    NEUTRAL_GRAY: 1,
+}
 
 
 @dataclass(frozen=True, slots=True)

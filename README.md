@@ -57,8 +57,8 @@ SuiteDigitalFresnillo/
 
 ## Requisitos de Desarrollo
 
-- Windows 10/11 o macOS 10.11 El Capitan o superior.
-- Python 3.10.11 o superior. Para El Capitan usa Python 3.10.11, que fue la ultima version 3.10 con instalador de macOS.
+- Windows 10/11 o macOS Ventura 13.0 o superior para el build principal.
+- Python 3.10.11 o superior.
 - Dependencias Python usadas por la suite:
   - `customtkinter`
   - `Pillow`
@@ -110,7 +110,7 @@ python -m compileall -q App_TestData App_Organigrama App_Directorio components
 
 ## Compilar con PyInstaller
 
-El proyecto incluye `suite_fresnillo.spec`, configurado para generar `SuiteFresnillo` en Windows y `SuiteFresnillo.app` para macOS 10.11 El Capitan o superior en Intel x86_64.
+El proyecto incluye `suite_fresnillo.spec`, configurado para generar `SuiteFresnillo` en Windows y `SuiteFresnillo.app` para macOS Ventura 13.0 o superior.
 
 Comando recomendado:
 
@@ -118,13 +118,13 @@ Comando recomendado:
 python -m PyInstaller --clean --noconfirm suite_fresnillo.spec
 ```
 
-En macOS, usa este comando para apuntar a El Capitan:
+En macOS, usa este comando para apuntar al build principal de Ventura:
 
 ```bash
-MACOSX_DEPLOYMENT_TARGET=10.11 python -m PyInstaller --clean --noconfirm suite_fresnillo.spec
+MACOSX_DEPLOYMENT_TARGET=13.0 python -m PyInstaller --clean --noconfirm suite_fresnillo.spec
 ```
 
-Para El Capitan, revisa tambien `docs/macos_el_capitan.md`: PyInstaller puede requerir bootloader recompilado con target 10.11.
+La referencia legacy de El Capitan queda documentada en `docs/macos_el_capitan.md`, pero ya no es el objetivo del build principal.
 
 Salida esperada en Windows:
 

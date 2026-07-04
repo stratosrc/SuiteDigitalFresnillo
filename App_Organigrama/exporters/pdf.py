@@ -4,8 +4,6 @@ from pathlib import Path
 
 from reportlab.lib.colors import Color, HexColor
 from reportlab.lib.utils import ImageReader
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 
 from App_Organigrama.models.document import OrgGridDocument, OrgNode
@@ -15,18 +13,14 @@ from App_Organigrama.routing.manhattan_router import ConnectionRoute, ManhattanR
 from App_Organigrama.config.assets import (
     BANNER_LOGO_PATH,
     NODE_LOGO_PATH,
-    SEGOE_UI_BOLD_FONT_PATH,
-    SEGOE_UI_FONT_PATH,
     WATERMARK_LOGO_PATH,
 )
 from components.shared.images import crop_transparent, load_pil_rgba
 from components.shared.atomic_output import write_atomic_output
+from components.styles.styles import PDF_FONT_BOLD, PDF_FONT_REGULAR
 
 
 LOGGER = logging.getLogger(__name__)
-PDF_FONT_REGULAR = "SegoeUI"
-PDF_FONT_BOLD = "SegoeUI-Bold"
-_FONTS_REGISTERED = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,7 +56,6 @@ class PdfOrgChartExporter:
         self._node_logo_reader = self._load_node_logo_reader()
 
     def export(self, document: OrgGridDocument, target_path: str | Path) -> Path:
-        self._register_fonts()
         path = Path(target_path)
         return write_atomic_output(
             path,
@@ -83,17 +76,6 @@ class PdfOrgChartExporter:
             self._draw_nodes(canvas, transform, document)
 
         canvas.save()
-
-    def _register_fonts(self) -> None:
-        global _FONTS_REGISTERED
-        if _FONTS_REGISTERED:
-            return
-
-        if SEGOE_UI_FONT_PATH.exists():
-            pdfmetrics.registerFont(TTFont(PDF_FONT_REGULAR, str(SEGOE_UI_FONT_PATH)))
-        if SEGOE_UI_BOLD_FONT_PATH.exists():
-            pdfmetrics.registerFont(TTFont(PDF_FONT_BOLD, str(SEGOE_UI_BOLD_FONT_PATH)))
-        _FONTS_REGISTERED = True
 
     def _build_transform(
         self,

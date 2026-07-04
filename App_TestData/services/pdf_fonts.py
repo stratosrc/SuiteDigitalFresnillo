@@ -2,29 +2,23 @@
 
 from __future__ import annotations
 
-import os
-
 import fitz
 
-from components.styles.styles import SEGOE_UI_FONT_FILE
+from components.styles.styles import PYMUPDF_FONT_REGULAR
 
 
-PDF_FONT_REGULAR = "SegoeUI"
-_SEGOE_FITZ_FONT = None
+PDF_FONT_REGULAR = PYMUPDF_FONT_REGULAR
+_FITZ_FONT = None
 
 
 def fitz_font_kwargs() -> dict[str, str]:
-    if os.path.exists(SEGOE_UI_FONT_FILE):
-        return {"fontname": PDF_FONT_REGULAR, "fontfile": SEGOE_UI_FONT_FILE}
-    return {}
+    return {"fontname": PDF_FONT_REGULAR}
 
 
 def fitz_text_width(text: str, fontsize: float) -> float:
-    global _SEGOE_FITZ_FONT
+    global _FITZ_FONT
 
-    if os.path.exists(SEGOE_UI_FONT_FILE):
-        if _SEGOE_FITZ_FONT is None:
-            _SEGOE_FITZ_FONT = fitz.Font(fontfile=SEGOE_UI_FONT_FILE)
-        return _SEGOE_FITZ_FONT.text_length(text, fontsize=fontsize)
+    if _FITZ_FONT is None:
+        _FITZ_FONT = fitz.Font(fontname=PDF_FONT_REGULAR)
 
-    return max(len(text), 1) * fontsize * 0.52
+    return _FITZ_FONT.text_length(text, fontsize=fontsize)

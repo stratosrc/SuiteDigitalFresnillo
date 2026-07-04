@@ -9,6 +9,7 @@ from App_Organigrama.rendering.connection_arrows import (
     build_arrow_triangle,
     flatten_points,
 )
+from App_Organigrama.ui.theme import FONT_FAMILY
 from App_Organigrama.routing.manhattan_router import ConnectionRoute
 from App_Organigrama.ui.canvas_shapes import create_rounded_rectangle
 from App_Organigrama.ui.theme import (
@@ -229,7 +230,7 @@ class CanvasDrawingMixin:
                     text=line.text,
                     fill=TEXT_LIGHT,
                     font=(
-                        "Segoe UI",
+                        FONT_FAMILY,
                         max(6, int(line.font_size)),
                         "bold" if line.is_bold else "normal",
                     ),
@@ -400,7 +401,7 @@ class CanvasDrawingMixin:
                 center_y + size + max(10, int(10 * self.zoom)),
                 text=label,
                 fill=color,
-                font=("Segoe UI", max(6, int(8 * self.zoom)), "bold"),
+                font=(FONT_FAMILY, max(6, int(8 * self.zoom)), "bold"),
                 tags="ghost",
             )
             return
@@ -437,7 +438,7 @@ class CanvasDrawingMixin:
             center_y,
             text="Ocupado" if occupied else "Nuevo nodo",
             fill=outline,
-            font=("Segoe UI", max(6, int(8 * self.zoom)), "bold"),
+            font=(FONT_FAMILY, max(6, int(8 * self.zoom)), "bold"),
             tags="ghost",
         )
 
