@@ -107,13 +107,14 @@ class RedactionPdfExporter:
             text_width = fitz_text_width(label_text, font_size)
             start_x = ((rect_data["x1"] + rect_data["x2"]) / 2) - (text_width / 2)
             center_y = (rect_data["y1"] + rect_data["y2"]) / 2
-            baseline_y = center_y + (font_size * 0.35)
             background = fitz.Rect(start_x - 2, center_y - 6, start_x + text_width + 2, center_y + 6)
             page.draw_rect(background, color=(1, 1, 1), fill=(1, 1, 1), width=0)
-            page.insert_text(
-                (start_x, baseline_y),
+            page.insert_textbox(
+                background,
                 label_text,
                 fontsize=font_size,
+                align=fitz.TEXT_ALIGN_CENTER,
+                rotate=page.rotation,
                 color=(0, 0, 0),
                 **fitz_font_kwargs(),
             )
