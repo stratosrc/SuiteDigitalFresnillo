@@ -322,9 +322,8 @@ class CanvasConnectionController:
 
     @staticmethod
     def _node_flow_label(node: OrgNode) -> str:
-        name = node.name.strip() or "Sin nombre"
         role = node.role.strip()
-        return f"{name} — {role}" if role else name
+        return role or "Sin cargo"
 
 
 __all__ = ["CanvasConnectionController"]

@@ -399,11 +399,7 @@ class CanvasInteractionController:
         if self.selected_connection_id is not None:
             connection = self.document.get_connection(self.selected_connection_id)
             if connection is not None:
-                suffix = (
-                    ". Arrastra un tramo intermedio; puedes restaurar la ruta automática"
-                    if connection.manual_points
-                    else ". Arrastra un tramo intermedio para ajustar la ruta"
-                )
+                suffix = ". Ruta manual" if connection.manual_points else ". Ajusta ruta"
                 return self._connection_flow_message(
                     connection.source_id,
                     connection.target_id,

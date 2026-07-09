@@ -51,6 +51,8 @@ from components.shared.topbar import TopbarButton, TopbarStyle, build_topbar
 
 LOGGER = logging.getLogger(__name__)
 INVALID_FILENAME_CHARS = '<>:"/\\|?*'
+FOOTER_ACTIONS_WIDTH = 216
+FOOTER_ZOOM_WIDTH = 166
 
 
 class MainFrame(ctk.CTkFrame):
@@ -347,11 +349,19 @@ class MainFrame(ctk.CTkFrame):
     def _build_footer(self) -> None:
         footer = ctk.CTkFrame(self, fg_color=DARK_BACKGROUND, corner_radius=0, height=34)
         footer.grid(row=4, column=0, sticky="ew")
+        footer.grid_columnconfigure(0, weight=0, minsize=FOOTER_ACTIONS_WIDTH)
         footer.grid_columnconfigure(1, weight=1)
+        footer.grid_columnconfigure(2, weight=0, minsize=FOOTER_ZOOM_WIDTH)
         footer.grid_propagate(False)
 
-        footer_actions = ctk.CTkFrame(footer, fg_color="transparent")
+        footer_actions = ctk.CTkFrame(
+            footer,
+            fg_color="transparent",
+            width=FOOTER_ACTIONS_WIDTH,
+            height=25,
+        )
         footer_actions.grid(row=0, column=0, padx=(5, 0), pady=5, sticky="w")
+        footer_actions.pack_propagate(False)
 
         ctk.CTkButton(
             footer_actions,
@@ -402,9 +412,10 @@ class MainFrame(ctk.CTkFrame):
         self.context_status_label = ctk.CTkLabel(
             footer,
             text="Clic para crear nodo",
+            width=1,
             text_color=TEXT_LIGHT,
             font=make_font(12),
-            anchor="w",
+            anchor="center",
         )
         self.context_status_label.grid(row=0, column=1, padx=(14, 12), pady=5, sticky="ew")
         self._context_status_message = "Clic para crear nodo"
@@ -412,8 +423,14 @@ class MainFrame(ctk.CTkFrame):
         self._context_status_refresh_after_id: str | None = None
         footer.bind("<Configure>", self._refresh_context_status_label, add=True)
 
-        zoom_frame = ctk.CTkFrame(footer, fg_color="transparent")
+        zoom_frame = ctk.CTkFrame(
+            footer,
+            fg_color="transparent",
+            width=FOOTER_ZOOM_WIDTH,
+            height=25,
+        )
         zoom_frame.grid(row=0, column=2, padx=(12, 5), pady=5, sticky="e")
+        zoom_frame.pack_propagate(False)
         ctk.CTkLabel(zoom_frame, text="Zoom", text_color=TEXT_LIGHT, font=make_font(12)).pack(side="left", padx=(0, 4))
 
         zoom_out_button = ctk.CTkButton(
