@@ -201,27 +201,75 @@ class PDFManager:
             )
             return False
 
+    def _current_page_object(self) -> fitz.Page | None:
+        if not self._state.pdf_document:
+            return None
+        return self._state.pdf_document[self._state.current_page]
+
+    def _rotated_rect_to_pdf_rect(self, rect: fitz.Rect, page: fitz.Page) -> fitz.Rect:
+        if page.rotation:
+            rect = rect * page.derotation_matrix
+        cropbox = page.cropbox
+        rect = fitz.Rect(
+            min(max(rect.x0, cropbox.x0), cropbox.x1),
+            min(max(rect.y0, cropbox.y0), cropbox.y1),
+            min(max(rect.x1, cropbox.x0), cropbox.x1),
+            min(max(rect.y1, cropbox.y0), cropbox.y1),
+        )
+        return fitz.Rect(
+            min(rect.x0, rect.x1),
+            min(rect.y0, rect.y1),
+            max(rect.x0, rect.x1),
+            max(rect.y0, rect.y1),
+        )
+
+    def _pdf_rect_to_rotated_rect(self, rect: fitz.Rect, page: fitz.Page) -> fitz.Rect:
+        if page.rotation:
+            rect = rect * page.rotation_matrix
+        page_rect = page.rect
+        rect = fitz.Rect(
+            min(max(rect.x0, page_rect.x0), page_rect.x1),
+            min(max(rect.y0, page_rect.y0), page_rect.y1),
+            min(max(rect.x1, page_rect.x0), page_rect.x1),
+            min(max(rect.y1, page_rect.y0), page_rect.y1),
+        )
+        return fitz.Rect(
+            min(rect.x0, rect.x1),
+            min(rect.y0, rect.y1),
+            max(rect.x0, rect.x1),
+            max(rect.y0, rect.y1),
+        )
+
     def canvas_to_pdf_rect(self, x1: float, y1: float, x2: float, y2: float) -> tuple[float, float, float, float]:
         """Convert canvas coordinates into PDF coordinates."""
         zoom = self._state.current_zoom or 1
-        left, right = sorted((x1 / zoom, x2 / zoom))
-        top, bottom = sorted((y1 / zoom, y2 / zoom))
-        if self._state.pdf_document:
-            page_rect = self._state.pdf_document[self._state.current_page].rect
-            left = min(max(left, page_rect.x0), page_rect.x1)
-            right = min(max(right, page_rect.x0), page_rect.x1)
-            top = min(max(top, page_rect.y0), page_rect.y1)
-            bottom = min(max(bottom, page_rect.y0), page_rect.y1)
-        return left, top, right, bottom
+        rotated_rect = fitz.Rect(x1 / zoom, y1 / zoom, x2 / zoom, y2 / zoom)
+        page = self._current_page_object()
+        if page is None:
+            normalized = fitz.Rect(rotated_rect)
+            normalized.normalize()
+            return normalized.x0, normalized.y0, normalized.x1, normalized.y1
+
+        pdf_rect = self._rotated_rect_to_pdf_rect(rotated_rect, page)
+        return pdf_rect.x0, pdf_rect.y0, pdf_rect.x1, pdf_rect.y1
 
     def pdf_rect_to_canvas(self, rect_data: RectangleData) -> tuple[float, float, float, float]:
         """Convert PDF rectangle coordinates into canvas coordinates."""
         zoom = self._state.current_zoom or 1
+        page = self._current_page_object()
+        pdf_rect = fitz.Rect(
+            rect_data["x1"],
+            rect_data["y1"],
+            rect_data["x2"],
+            rect_data["y2"],
+        )
+        if page is not None:
+            pdf_rect = self._pdf_rect_to_rotated_rect(pdf_rect, page)
         return (
-            rect_data["x1"] * zoom,
-            rect_data["y1"] * zoom,
-            rect_data["x2"] * zoom,
-            rect_data["y2"] * zoom,
+            pdf_rect.x0 * zoom,
+            pdf_rect.y0 * zoom,
+            pdf_rect.x1 * zoom,
+            pdf_rect.y1 * zoom,
         )
 
     def generate_pdf(
