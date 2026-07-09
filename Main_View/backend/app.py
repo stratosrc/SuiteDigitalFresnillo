@@ -40,6 +40,11 @@ def create_app() -> FastAPI:
         name="directorio-frontend",
     )
     application.mount(
+        "/module-static/conversor/assets",
+        StaticFiles(directory=PROJECT_ROOT / "App_ConversorPDF" / "assets"),
+        name="conversor-module-assets",
+    )
+    application.mount(
         "/module-static/conversor",
         StaticFiles(directory=PROJECT_ROOT / "App_ConversorPDF" / "frontend"),
         name="conversor-frontend",

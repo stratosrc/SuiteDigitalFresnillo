@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import Launcher from "./modules/Launcher.js";
-import Converter from "/module-static/conversor/Converter.js";
+import Converter from "/module-static/conversor/Converter.js?v=20260703-instant-plan";
 import Directory from "/module-static/directorio/Directory.js";
 import Organization from "/module-static/organigrama/Organization.js";
 import TestData from "/module-static/testdata/TestData.js";

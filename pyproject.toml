@@ -40,7 +40,7 @@ Main_View = ["frontend/*", "frontend/js/**/*.js"]
 App_TestData = ["frontend/**/*.js", "frontend/**/*.css"]
 App_Organigrama = ["assets/*.png", "frontend/**/*.js", "frontend/**/*.css"]
 App_Directorio = ["assets/*.png", "frontend/**/*.js", "frontend/**/*.css"]
-App_ConversorPDF = ["frontend/*.js", "frontend/*.css"]
+App_ConversorPDF = ["assets/*.png", "frontend/**/*.js", "frontend/**/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
