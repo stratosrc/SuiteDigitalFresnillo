@@ -6,16 +6,8 @@ import tkinter as tk
 import customtkinter as ctk
 
 from App_Directorio.config import (
-    MINUS_ICON_HOVER_PATH,
-    MINUS_ICON_PATH,
     PLUS_ICON_HOVER_PATH,
     PLUS_ICON_PATH,
-    DOWN_ICON_HOVER_PATH,
-    DOWN_ICON_PATH,
-    REMOVE_ICON_HOVER_PATH,
-    REMOVE_ICON_PATH,
-    UP_ICON_HOVER_PATH,
-    UP_ICON_PATH,
 )
 from App_Directorio.models import AreaReportData, DirectoryReportData, PersonReportRow
 from App_Directorio.ui.theme import (
@@ -76,27 +68,15 @@ class PersonnelRow:
         self,
         master: ctk.CTkFrame,
         grid_row: int,
-        on_remove: Callable[[], None],
-        on_move_up: Callable[[], None],
-        on_move_down: Callable[[], None],
-        move_up_icons: IconPair,
-        move_down_icons: IconPair,
-        remove_icons: IconPair,
         on_change: Callable[[], None],
         on_reposition: Callable[[int], None],
-        on_transfer_request: Callable[[ctk.CTkButton], None],
+        on_actions_request: Callable[[ctk.CTkButton], None],
     ) -> None:
         self.master = master
         self.grid_row = grid_row
-        self._on_remove = on_remove
-        self._on_move_up = on_move_up
-        self._on_move_down = on_move_down
-        self.move_up_icons = move_up_icons
-        self.move_down_icons = move_down_icons
-        self.remove_icons = remove_icons
         self._on_change = on_change
         self._on_reposition = on_reposition
-        self._on_transfer_request = on_transfer_request
+        self._on_actions_request = on_actions_request
         self.entries: list[ctk.CTkEntry] = []
         self.position_entry: ctk.CTkEntry | None = None
         self.date_entry: ctk.CTkEntry | None = None
@@ -104,10 +84,10 @@ class PersonnelRow:
         self._build_entries()
 
     def _build_entries(self) -> None:
-        transfer_button = ctk.CTkButton(
+        actions_button = ctk.CTkButton(
             self.master,
             text="▼",
-            command=lambda: self._on_transfer_request(transfer_button),
+            command=lambda: self._on_actions_request(actions_button),
             width=30,
             height=30,
             corner_radius=0,
@@ -116,14 +96,14 @@ class PersonnelRow:
             text_color=TEXT_LIGHT,
             font=make_font(10, "bold"),
         )
-        transfer_button.grid(
+        actions_button.grid(
             row=self.grid_row,
             column=0,
             sticky="w",
             padx=(0, 6),
             pady=(0, 8),
         )
-        self.widgets.append(transfer_button)
+        self.widgets.append(actions_button)
 
         self.position_entry = ctk.CTkEntry(
             self.master,
@@ -181,48 +161,6 @@ class PersonnelRow:
             entry.grid(row=self.grid_row, column=column, sticky="ew", padx=padx, pady=(0, 8))
             self.entries.append(entry)
             self.widgets.append(entry)
-
-        up_button = HoverIconButton(
-            self.master,
-            icons=self.move_up_icons,
-            command=self._handle_move_up,
-            width=30,
-            height=30,
-            tooltip_text="Subir persona",
-        )
-        up_button.grid(row=self.grid_row, column=7, padx=(10, 4), pady=(0, 8), sticky="e")
-        self.widgets.append(up_button)
-
-        down_button = HoverIconButton(
-            self.master,
-            icons=self.move_down_icons,
-            command=self._handle_move_down,
-            width=30,
-            height=30,
-            tooltip_text="Bajar persona",
-        )
-        down_button.grid(row=self.grid_row, column=8, padx=(0, 4), pady=(0, 8), sticky="e")
-        self.widgets.append(down_button)
-
-        remove_button = HoverIconButton(
-            self.master,
-            icons=self.remove_icons,
-            command=self._handle_remove,
-            width=30,
-            height=30,
-            tooltip_text="Eliminar persona",
-        )
-        remove_button.grid(row=self.grid_row, column=9, padx=(0, 0), pady=(0, 8), sticky="e")
-        self.widgets.append(remove_button)
-
-    def _handle_remove(self) -> None:
-        self._on_remove()
-
-    def _handle_move_up(self) -> None:
-        self._on_move_up()
-
-    def _handle_move_down(self) -> None:
-        self._on_move_down()
 
     def _handle_date_focus_out(self, _event: tk.Event) -> None:
         self.validate_date()
@@ -297,17 +235,11 @@ class AreaSection(ctk.CTkFrame):
     def __init__(
         self,
         master: ctk.CTkFrame,
-        on_remove: Callable[[], None],
-        on_move_up: Callable[[], None],
-        on_move_down: Callable[[], None],
-        move_up_icons: IconPair,
-        move_down_icons: IconPair,
         add_icons: IconPair,
-        area_remove_icons: IconPair,
-        person_remove_icons: IconPair,
         on_change: Callable[[], None],
         on_reposition: Callable[[int], None],
-        on_transfer_request: Callable[["AreaSection", PersonnelRow, ctk.CTkButton], None],
+        on_person_actions_request: Callable[["AreaSection", PersonnelRow, ctk.CTkButton], None],
+        on_area_actions_request: Callable[["AreaSection", ctk.CTkButton], None],
         removable: bool = True,
     ) -> None:
         super().__init__(
@@ -317,17 +249,11 @@ class AreaSection(ctk.CTkFrame):
             border_width=1,
             border_color=BORDER_COLOR,
         )
-        self._on_remove = on_remove
-        self._on_move_up = on_move_up
-        self._on_move_down = on_move_down
-        self.move_up_icons = move_up_icons
-        self.move_down_icons = move_down_icons
         self.add_icons = add_icons
-        self.area_remove_icons = area_remove_icons
-        self.person_remove_icons = person_remove_icons
         self._on_change = on_change
         self._on_reposition = on_reposition
-        self._on_transfer_request = on_transfer_request
+        self._on_person_actions_request = on_person_actions_request
+        self._on_area_actions_request = on_area_actions_request
         self.removable = removable
         self.rows: list[PersonnelRow] = []
         self.area_name_var = tk.StringVar()
@@ -377,40 +303,24 @@ class AreaSection(ctk.CTkFrame):
         self.area_name_entry.grid(row=0, column=1, sticky="ew")
 
         if self.removable:
-            HoverIconButton(
+            actions_button = ctk.CTkButton(
                 header_frame,
-                icons=self.move_up_icons,
-                command=self._handle_move_up,
-                width=32,
+                text="...",
+                command=lambda: self._on_area_actions_request(self, actions_button),
+                width=36,
                 height=32,
-                tooltip_text="Subir área",
-            ).grid(row=0, column=2, padx=(10, 0), sticky="e")
-
-            HoverIconButton(
-                header_frame,
-                icons=self.move_down_icons,
-                command=self._handle_move_down,
-                width=32,
-                height=32,
-                tooltip_text="Bajar área",
-            ).grid(row=0, column=3, padx=(6, 0), sticky="e")
-
-            HoverIconButton(
-                header_frame,
-                icons=self.area_remove_icons,
-                command=self._handle_remove,
-                width=32,
-                height=32,
-                tooltip_text="Eliminar área",
-            ).grid(row=0, column=4, padx=(10, 0), sticky="e")
+                corner_radius=0,
+                fg_color=PRIMARY_BUTTON,
+                hover_color=PRIMARY_BUTTON_ACTIVE,
+                text_color=TEXT_LIGHT,
+                font=make_font(10, "bold"),
+            )
+            actions_button.grid(row=0, column=2, padx=(10, 0), sticky="e")
 
         self.detail_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.detail_frame.grid(row=1, column=0, sticky="ew", padx=(16, 16), pady=(14, 14))
         for column, weight in enumerate(PERSONNEL_COLUMN_WEIGHTS):
             self.detail_frame.grid_columnconfigure(column, weight=weight, uniform="personnel")
-        for column in (7, 8, 9):
-            self.detail_frame.grid_columnconfigure(column, weight=0)
-
         self._build_headers(self.detail_frame)
 
         self.add_person_button = HoverIconButton(
@@ -457,36 +367,18 @@ class AreaSection(ctk.CTkFrame):
         row = PersonnelRow(
             self.detail_frame,
             grid_row=len(self.rows) + 1,
-            on_remove=lambda: None,
-            on_move_up=lambda: None,
-            on_move_down=lambda: None,
-            move_up_icons=self.move_up_icons,
-            move_down_icons=self.move_down_icons,
-            remove_icons=self.person_remove_icons,
             on_change=self._on_change,
             on_reposition=lambda _position: None,
-            on_transfer_request=lambda _button: None,
+            on_actions_request=lambda _button: None,
         )
-        row._on_remove = lambda current=row: self.remove_person_row(current)
-        row._on_move_up = lambda current=row: self.move_person_row(current, -1)
-        row._on_move_down = lambda current=row: self.move_person_row(current, 1)
         row._on_reposition = lambda position, current=row: self.move_person_to(current, position)
-        row._on_transfer_request = (
-            lambda button, current=row: self._on_transfer_request(self, current, button)
+        row._on_actions_request = (
+            lambda button, current=row: self._on_person_actions_request(self, current, button)
         )
         self.rows.append(row)
         self._refresh_rows()
         enable_visible_focus_for(self.detail_frame)
         self._on_change()
-
-    def _handle_remove(self) -> None:
-        self._on_remove()
-
-    def _handle_move_up(self) -> None:
-        self._on_move_up()
-
-    def _handle_move_down(self) -> None:
-        self._on_move_down()
 
     def _handle_position_request(self, _event: tk.Event) -> None:
         try:
@@ -565,7 +457,7 @@ class AreaSection(ctk.CTkFrame):
         if self.add_person_button is None:
             return
 
-        self.add_person_button.grid(row=len(self.rows) + 1, column=9, sticky="e", pady=(2, 0))
+        self.add_person_button.grid(row=len(self.rows) + 1, column=6, sticky="e", pady=(2, 0))
 
     def get_data(self, fallback_name: str = "") -> AreaReportData:
         area_name = self.area_name_var.get().strip()
@@ -601,10 +493,6 @@ class DirectoryFormFrame(ctk.CTkFrame):
         bind_uppercase(self.title_var)
         bind_uppercase(self.period_var)
         self.plus_icons = load_icon_pair(PLUS_ICON_PATH, PLUS_ICON_HOVER_PATH, (22, 22))
-        self.move_up_icons = load_icon_pair(UP_ICON_PATH, UP_ICON_HOVER_PATH, (20, 20))
-        self.move_down_icons = load_icon_pair(DOWN_ICON_PATH, DOWN_ICON_HOVER_PATH, (20, 20))
-        self.area_remove_icons = load_icon_pair(REMOVE_ICON_PATH, REMOVE_ICON_HOVER_PATH, (20, 20))
-        self.person_remove_icons = load_icon_pair(MINUS_ICON_PATH, MINUS_ICON_HOVER_PATH, (20, 20))
         self.area_sections: list[AreaSection] = []
         self.areas_container: ctk.CTkFrame | None = None
         self._change_suppressed = False
@@ -727,22 +615,13 @@ class DirectoryFormFrame(ctk.CTkFrame):
 
         section = AreaSection(
             self.areas_container,
-            on_remove=lambda: None,
-            on_move_up=lambda: None,
-            on_move_down=lambda: None,
-            move_up_icons=self.move_up_icons,
-            move_down_icons=self.move_down_icons,
             add_icons=self.plus_icons,
-            area_remove_icons=self.area_remove_icons,
-            person_remove_icons=self.person_remove_icons,
             on_change=self._notify_change,
             on_reposition=lambda _position: None,
-            on_transfer_request=self._show_transfer_menu,
+            on_person_actions_request=self._show_person_actions_menu,
+            on_area_actions_request=self._show_area_actions_menu,
             removable=removable,
         )
-        section._on_remove = lambda current=section: self.remove_area(current)
-        section._on_move_up = lambda current=section: self.move_area(current, -1)
-        section._on_move_down = lambda current=section: self.move_area(current, 1)
         section._on_reposition = lambda position, current=section: self.move_area_to(current, position)
         section.grid(row=len(self.area_sections), column=0, sticky="ew", pady=(0, 16))
         self.area_sections.append(section)
@@ -750,7 +629,7 @@ class DirectoryFormFrame(ctk.CTkFrame):
         enable_visible_focus_for(section)
         self._notify_change()
 
-    def _show_transfer_menu(
+    def _show_person_actions_menu(
         self,
         source_section: AreaSection,
         row: PersonnelRow,
@@ -765,13 +644,18 @@ class DirectoryFormFrame(ctk.CTkFrame):
             activeforeground=TEXT_LIGHT,
         )
 
+        menu.add_command(label="Subir persona", command=lambda: source_section.move_person_row(row, -1))
+        menu.add_command(label="Bajar persona", command=lambda: source_section.move_person_row(row, 1))
+        menu.add_command(label="Eliminar persona", command=lambda: source_section.remove_person_row(row))
+        menu.add_separator()
+        transfer_menu = tk.Menu(menu, tearoff=0)
         for index, target_section in enumerate(self.area_sections, start=1):
             area_name = target_section.area_name_var.get().strip() or f"Área {index}"
             label = f"{index}. {area_name}"
             if target_section is source_section:
-                menu.add_command(label=label, state="disabled")
+                transfer_menu.add_command(label=label, state="disabled")
             else:
-                menu.add_command(
+                transfer_menu.add_command(
                     label=label,
                     command=lambda target=target_section: self._transfer_person(
                         source_section,
@@ -781,14 +665,31 @@ class DirectoryFormFrame(ctk.CTkFrame):
                 )
 
         if len(self.area_sections) == 1:
-            menu.add_separator()
-            menu.add_command(label="No hay otra área disponible", state="disabled")
+            transfer_menu.add_command(label="No hay otra área disponible", state="disabled")
+        menu.add_cascade(label="Cambiar área", menu=transfer_menu)
 
         try:
             menu.tk_popup(
                 button.winfo_rootx(),
                 button.winfo_rooty() + button.winfo_height(),
             )
+        finally:
+            menu.grab_release()
+
+    def _show_area_actions_menu(self, section: AreaSection, button: ctk.CTkButton) -> None:
+        menu = tk.Menu(
+            self,
+            tearoff=0,
+            bg=SURFACE_BACKGROUND,
+            fg=TEXT_DARK,
+            activebackground=PRIMARY_BUTTON_ACTIVE,
+            activeforeground=TEXT_LIGHT,
+        )
+        menu.add_command(label="Subir área", command=lambda: self.move_area(section, -1))
+        menu.add_command(label="Bajar área", command=lambda: self.move_area(section, 1))
+        menu.add_command(label="Eliminar área", command=lambda: self.remove_area(section))
+        try:
+            menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
         finally:
             menu.grab_release()
 
