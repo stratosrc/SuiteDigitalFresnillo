@@ -79,6 +79,27 @@ class ProjectFileTypeTests(unittest.TestCase):
 
         self.assertEqual(document.title, "")
 
+    def test_organigrama_ignores_legacy_route_obstacles(self):
+        payload = {
+            "app": "organigrama",
+            "schema_version": 3,
+            "document": {
+                "nodes": {},
+                "connections": [],
+                "blocked_points": [[1.0, 2.0]],
+            },
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "legacy-obstacles.og"
+            source.write_text(json.dumps(payload), encoding="utf-8")
+
+            document = PersistenceManager().load(source)
+            target = Path(temp_dir) / "migrated.og"
+            PersistenceManager().save(document, target)
+            migrated_payload = json.loads(target.read_text(encoding="utf-8"))
+
+        self.assertNotIn("blocked_points", migrated_payload["document"])
+
     def test_organigrama_roundtrip_preserves_manual_route_points(self):
         document = OrgGridDocument()
         source = document.add_node("Origen", "Cargo", 0, 0, "#123456")

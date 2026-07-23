@@ -22,6 +22,7 @@ from App_TestData.domain.redaction_editing import (
 )
 from App_TestData.domain.redaction_history import make_history_action
 from App_TestData.ui.dialogs.concept_dialog import ConceptDialog
+from components.shared.platform import IS_MACOS, bind_secondary_click
 
 RESIZE_HANDLE_DISTANCE = 10
 
@@ -29,12 +30,17 @@ RESIZE_HANDLE_DISTANCE = 10
 def setup_canvas_events(app):
     """Bind pointer and keyboard events to the PDF canvas."""
     app.pdf_canvas.bind("<ButtonPress-1>", lambda event: on_button_press(app, event))
+    bind_secondary_click(
+        app.pdf_canvas,
+        lambda event: on_secondary_button_press(app, event),
+    )
     app.pdf_canvas.bind("<Double-Button-1>", lambda event: on_double_click(app, event))
     app.pdf_canvas.bind("<B1-Motion>", lambda event: on_move_press(app, event))
     app.pdf_canvas.bind("<ButtonRelease-1>", lambda event: on_button_release(app, event))
     app.pdf_canvas.bind("<Motion>", lambda event: on_pointer_motion(app, event))
     app.bind("<Delete>", lambda _event: _delete_selected_from_key(app))
     app.bind("<BackSpace>", lambda _event: _delete_selected_from_key(app))
+    app.bind("<Escape>", lambda _event: cancel_active_interaction(app))
 
 
 def on_button_press(app, event):
@@ -139,11 +145,11 @@ def on_pointer_motion(app, event):
     canvas_y = app.pdf_canvas.canvasy(event.y)
     rectangle, mode, corner = _hit_test_rectangle(app, canvas_x, canvas_y)
     if not rectangle:
-        app.pdf_canvas.configure(cursor="")
+        _set_canvas_cursor(app, "")
     elif mode == "resize":
-        app.pdf_canvas.configure(cursor=_cursor_for_corner(corner))
+        _set_canvas_cursor(app, _cursor_for_corner(corner))
     else:
-        app.pdf_canvas.configure(cursor="fleur")
+        _set_canvas_cursor(app, "fleur")
 
 
 def on_double_click(app, event):
@@ -175,6 +181,48 @@ def on_double_click(app, event):
     app.pdf_manager.render_current_page()
     _select_rectangle(app, rectangle)
     app.notify_project_changed()
+
+
+def on_secondary_button_press(app, _event):
+    """Cancel the active rectangle interaction on secondary click."""
+    cancel_active_interaction(app)
+
+
+def cancel_active_interaction(app):
+    """Abort the active draw / move / resize interaction, if any."""
+    if getattr(app, "drag_mode", None) is None:
+        return
+
+    if app.drag_mode == "draw" and getattr(app, "current_rect", None):
+        app.pdf_canvas.delete(app.current_rect)
+        app.current_rect = None
+    elif app.drag_mode in {"move", "resize"} and getattr(app, "active_rect_data", None):
+        original = getattr(app, "drag_original_rectangle", None)
+        if original:
+            app.active_rect_data.update(
+                {
+                    "x1": original["x1"],
+                    "y1": original["y1"],
+                    "x2": original["x2"],
+                    "y2": original["y2"],
+                }
+            )
+            if app.active_rect_data.get("canvas_rect_id") and app.active_rect_data.get("canvas_text_id"):
+                canvas_x1, canvas_y1, canvas_x2, canvas_y2 = app.pdf_manager.pdf_rect_to_canvas(app.active_rect_data)
+                app.pdf_canvas.coords(
+                    app.active_rect_data["canvas_rect_id"],
+                    canvas_x1,
+                    canvas_y1,
+                    canvas_x2,
+                    canvas_y2,
+                )
+                app.pdf_canvas.coords(
+                    app.active_rect_data["canvas_text_id"],
+                    (canvas_x1 + canvas_x2) / 2,
+                    (canvas_y1 + canvas_y2) / 2,
+                )
+
+    _reset_drag_state(app)
 
 
 def _build_rectangle_data(app, result, end_x, end_y):
@@ -401,15 +449,28 @@ def _reset_drag_state(app):
     app.drag_start_y = None
     app.drag_original_coords = None
     app.drag_original_rectangle = None
-    app.pdf_canvas.configure(cursor="")
+    _set_canvas_cursor(app, "")
 
 
 def _cursor_for_corner(corner):
+    if IS_MACOS:
+        return "crosshair"
     if corner in {"nw", "se"}:
         return "size_nw_se"
     if corner in {"ne", "sw"}:
         return "size_ne_sw"
     return "sizing"
+
+
+def _set_canvas_cursor(app, cursor_name):
+    try:
+        app.pdf_canvas.configure(cursor=cursor_name)
+    except Exception:
+        fallback_cursor = "crosshair" if cursor_name else ""
+        try:
+            app.pdf_canvas.configure(cursor=fallback_cursor)
+        except Exception:
+            pass
 
 
 def _get_concept_name(app, concept_id):

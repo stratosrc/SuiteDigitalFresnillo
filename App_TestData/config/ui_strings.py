@@ -1,5 +1,7 @@
 """Centralized Spanish strings used by the user-facing interface."""
 
+from components.shared.platform import PRIMARY_MODIFIER_LABEL
+
 APP_WINDOW_TITLE = "Test Data"
 
 FILE_MENU_LABELS = {
@@ -25,7 +27,10 @@ ACTION_LABELS = {
 }
 
 CONTENT_LABELS = {
-    "empty_state": "Sin PDF cargado. Usa Nuevo (Ctrl+N) para elegir un documento o abre un proyecto con Ctrl+O.",
+    "empty_state": (
+        f"Sin PDF cargado. Usa Nuevo ({PRIMARY_MODIFIER_LABEL}+N) para elegir un documento "
+        f"o abre un proyecto con {PRIMARY_MODIFIER_LABEL}+O."
+    ),
 }
 
 NAVIGATION_LABELS = {
@@ -52,11 +57,11 @@ HELP_DIALOG = {
         (
             "ATAJOS DE TECLADO",
             [
-                "Ctrl+N: Iniciar un proyecto nuevo.",
-                "Ctrl+O: Abrir un proyecto existente.",
-                "Ctrl+S: Guardar el proyecto actual.",
-                "Ctrl+Z: Deshacer la última edición de recuadros.",
-                "Ctrl+Y o Ctrl+Mayús+Z: Rehacer la edición deshecha.",
+                f"{PRIMARY_MODIFIER_LABEL}+N: Iniciar un proyecto nuevo.",
+                f"{PRIMARY_MODIFIER_LABEL}+O: Abrir un proyecto existente.",
+                f"{PRIMARY_MODIFIER_LABEL}+S: Guardar el proyecto actual.",
+                f"{PRIMARY_MODIFIER_LABEL}+Z: Deshacer la última edición de recuadros.",
+                f"{PRIMARY_MODIFIER_LABEL}+Y o {PRIMARY_MODIFIER_LABEL}+Mayús+Z: Rehacer la edición deshecha.",
             ],
         ),
         (

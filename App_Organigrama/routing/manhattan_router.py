@@ -33,12 +33,35 @@ class ManhattanRouter:
         self.padding = padding
         self.bend_penalty = bend_penalty
 
-    def route_document(self, document: OrgGridDocument) -> list[ConnectionRoute]:
+    def route_document(
+        self,
+        document: OrgGridDocument,
+        reusable_prefix: list[ConnectionRoute] | tuple[ConnectionRoute, ...] = (),
+    ) -> list[ConnectionRoute]:
         occupied = {(node.grid_x, node.grid_y) for node in document.nodes.values()}
         routes: list[ConnectionRoute] = []
         traffic_by_source: dict[str, set[GridPoint]] = {}
 
-        for connection in document.connections:
+        for index, cached_route in enumerate(reusable_prefix):
+            if index >= len(document.connections):
+                break
+            connection = document.connections[index]
+            if (
+                cached_route.connection.id != connection.id
+                or connection.source_id not in document.nodes
+                or connection.target_id not in document.nodes
+            ):
+                break
+            route = ConnectionRoute(
+                connection=connection,
+                points=cached_route.points,
+            )
+            routes.append(route)
+            traffic_by_source.setdefault(connection.source_id, set()).update(
+                self.route_traffic_points(list(route.points))
+            )
+
+        for connection in document.connections[len(routes):]:
             source = document.nodes.get(connection.source_id)
             target = document.nodes.get(connection.target_id)
             if source is None or target is None:
@@ -75,7 +98,6 @@ class ManhattanRouter:
                         source_port=connection.source_port,
                         target_port=connection.target_port,
                         blocked_paths=blocked_paths,
-                        custom_obstacles=set(document.blocked_points),
                     )
                     if route_crosses_boxes(manual_route, obstacle_boxes)
                     else manual_route
@@ -88,7 +110,6 @@ class ManhattanRouter:
                     source_port=connection.source_port,
                     target_port=connection.target_port,
                     blocked_paths=blocked_paths,
-                    custom_obstacles=set(document.blocked_points),
                 )
             routes.append(ConnectionRoute(connection=connection, points=tuple(points)))
             traffic_by_source.setdefault(connection.source_id, set()).update(self.route_traffic_points(points))
@@ -127,7 +148,6 @@ class ManhattanRouter:
         source_port: str = "bottom",
         target_port: str = "top",
         blocked_paths: set[GridPoint] | None = None,
-        custom_obstacles: set[GridPoint] | None = None,
     ) -> list[GridPoint]:
         exact_start = self.rendering_engine.get_node_port_grid_position(source, source_port)
         exact_goal = self.rendering_engine.get_node_port_grid_position(target, target_port)
@@ -137,8 +157,6 @@ class ManhattanRouter:
         blocked = {self._to_subgrid(point) for point in occupied}
         if blocked_paths:
             blocked.update(self._to_subgrid(point) for point in blocked_paths)
-        if custom_obstacles:
-            blocked.update(self._to_subgrid(point) for point in custom_obstacles)
 
         blocked.discard(start)
         blocked.discard(goal)

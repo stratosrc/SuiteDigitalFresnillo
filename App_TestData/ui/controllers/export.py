@@ -12,6 +12,7 @@ from tkinter import filedialog, messagebox
 from App_TestData.config.ui_strings import EXPORT_MESSAGES, FILE_MENU_LABELS
 from App_TestData.ui.dialogs.export_dialog import ExportDialog
 from components.shared.atomic_output import OutputCancelled
+from components.shared.platform import IS_MACOS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -77,6 +78,10 @@ class ExportController:
         self.app.show_export_progress(EXPORT_MESSAGES["generating_status"])
         rectangles_snapshot = deepcopy(self.app.censored_rectangles)
         committee_snapshot = deepcopy(committee_data)
+        if IS_MACOS:
+            self._generate_pdf_synchronously(output_path, committee_snapshot, rectangles_snapshot)
+            return
+
         future = self.executor.submit(
             self.app.pdf_manager.generate_pdf,
             output_path,
@@ -87,6 +92,40 @@ class ExportController:
         )
         self.pending_future = future
         self.app.after(100, lambda: self._poll_generate_pdf(future, output_path))
+
+    def _generate_pdf_synchronously(self, output_path: str, committee_data, rectangles) -> None:
+        try:
+            self.app.update_idletasks()
+            self.app.pdf_manager.generate_pdf(
+                output_path,
+                committee_data,
+                source_path=self.app.current_pdf_path,
+                rectangles=rectangles,
+                cancel_check=self.cancel_event.is_set,
+            )
+            self.app.message_label.configure(
+                text=EXPORT_MESSAGES["generated_status"].format(output_path=output_path)
+            )
+            messagebox.showinfo(
+                EXPORT_MESSAGES["generated_title"],
+                EXPORT_MESSAGES["generated_message"],
+                parent=self.app,
+            )
+        except OutputCancelled:
+            self.app.message_label.configure(text="Exportación cancelada")
+        except Exception as error:  # noqa: BLE001
+            LOGGER.exception("Unable to generate redacted PDF")
+            self.app.message_label.configure(text=EXPORT_MESSAGES["error_status"])
+            messagebox.showerror(
+                EXPORT_MESSAGES["error_title"],
+                EXPORT_MESSAGES["error_message"].format(error=error),
+                parent=self.app,
+            )
+        finally:
+            self.cancel_requested = False
+            self.cancel_event.clear()
+            self.app.hide_export_progress()
+            self.set_controls_state("normal")
 
     def is_running(self) -> bool:
         return self.pending_future is not None and not self.pending_future.done()

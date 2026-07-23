@@ -75,7 +75,15 @@ class RedactionPdfExporter:
     def _apply_redactions(self, document, ordered_rectangles):
         for rect_data in ordered_rectangles:
             page = document[rect_data["page"]]
-            rect = fitz.Rect(rect_data["x1"], rect_data["y1"], rect_data["x2"], rect_data["y2"]) & page.rect
+            rect = (
+                fitz.Rect(
+                    rect_data["x1"],
+                    rect_data["y1"],
+                    rect_data["x2"],
+                    rect_data["y2"],
+                )
+                & page.cropbox
+            )
             if rect.is_empty or rect.is_infinite:
                 continue
             rect_data["rect"] = rect
@@ -105,9 +113,19 @@ class RedactionPdfExporter:
             label_text = rect_data.get("final_number", rect_data.get("label", ""))
             font_size = 10
             text_width = fitz_text_width(label_text, font_size)
-            start_x = ((rect_data["x1"] + rect_data["x2"]) / 2) - (text_width / 2)
-            center_y = (rect_data["y1"] + rect_data["y2"]) / 2
-            background = fitz.Rect(start_x - 2, center_y - 6, start_x + text_width + 2, center_y + 6)
+            rect = rect_data["rect"]
+            center_x = (rect.x0 + rect.x1) / 2
+            center_y = (rect.y0 + rect.y1) / 2
+            text_box_width = text_width + 4
+            text_box_height = 18
+            if page.rotation in (90, 270):
+                text_box_width, text_box_height = text_box_height, text_box_width
+            background = fitz.Rect(
+                center_x - (text_box_width / 2),
+                center_y - (text_box_height / 2),
+                center_x + (text_box_width / 2),
+                center_y + (text_box_height / 2),
+            )
             page.draw_rect(background, color=(1, 1, 1), fill=(1, 1, 1), width=0)
             page.insert_textbox(
                 background,

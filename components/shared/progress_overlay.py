@@ -1,4 +1,4 @@
-"""Reusable indeterminate progress overlay for long-running exports."""
+"""Reusable indeterminate progress overlay for long-running operations."""
 
 from __future__ import annotations
 

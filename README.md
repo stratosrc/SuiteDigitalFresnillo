@@ -37,6 +37,7 @@ Modulo para generar directorios de area en PDF.
 - Cada colaborador incluye rango/clave/nivel, nombre, cargo, correo electronico y fecha de alta.
 - Permite reordenar areas y filas de colaboradores.
 - Mantiene una fila minima por area.
+- Carga las areas bajo demanda y reutiliza una ventana de filas para conservar el rendimiento en directorios grandes.
 - Valida que las fechas mantengan formato `dd/mm/aaaa`.
 - Muestra vista previa/resumen antes de guardar el PDF.
 - Genera PDF final con la informacion capturada.

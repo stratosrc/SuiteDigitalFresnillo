@@ -33,6 +33,7 @@ def write_atomic_output(
             delete=False,
         ) as temporary:
             temporary_path = Path(temporary.name)
+        temporary_path.unlink(missing_ok=True)
         writer(temporary_path)
         if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
             raise RuntimeError("La operación no generó un archivo de salida válido.")
