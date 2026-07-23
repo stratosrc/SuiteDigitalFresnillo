@@ -17,5 +17,4 @@ ruff==0.15.5
 pyinstaller==6.20.0
 
 [testdata]
-PyMuPDF==1.18.19
 PyMuPDF==1.25.5

@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 import tkinter as tk
 
 import customtkinter as ctk
+from PIL import Image
 
 from App_Organigrama.rendering.palette import NODE_COLOR_CHOICES
 from App_Organigrama.ui.theme import (
@@ -40,8 +43,8 @@ class NodeEditorDialog(ctk.CTkToplevel):
         self.initial_name = name
         self.role_var = tk.StringVar(value=role)
         self.selected_color = selected_color or NODE_COLOR_CHOICES[0][1]
-        self.swatches: dict[str, tk.Canvas] = {}
-        self.color_rows: dict[str, ctk.CTkFrame] = {}
+        self.color_buttons: dict[str, ctk.CTkButton] = {}
+        self.color_images: dict[str, ctk.CTkImage] = {}
 
         self._build()
         self.update_idletasks()
@@ -55,7 +58,7 @@ class NodeEditorDialog(ctk.CTkToplevel):
         frame.grid_columnconfigure(0, weight=1)
 
         self._build_label(frame, "Nombre(s)", row=0)
-        self.name_entry = ctk.CTkTextbox(frame, width=340, height=120, corner_radius=0)
+        self.name_entry = ctk.CTkTextbox(frame, width=560, height=120, corner_radius=0)
         self.name_entry.grid(row=1, column=0, sticky="ew", pady=(4, 4))
         self._populate_name_entry()
         self.name_entry.bind("<Return>", self._ignore_enter)
@@ -70,14 +73,14 @@ class NodeEditorDialog(ctk.CTkToplevel):
         ).grid(row=2, column=0, sticky="w", pady=(0, 12))
 
         self._build_label(frame, "Cargo", row=3)
-        ctk.CTkEntry(frame, textvariable=self.role_var, width=340, corner_radius=0).grid(
+        ctk.CTkEntry(frame, textvariable=self.role_var, width=560, corner_radius=0).grid(
             row=4,
             column=0,
             sticky="ew",
             pady=(4, 12),
         )
 
-        self._build_label(frame, "Color", row=5)
+        self._build_label(frame, "Color y uso recomendado", row=5)
         self._build_swatches(frame)
         self._build_actions(frame)
 
@@ -95,45 +98,31 @@ class NodeEditorDialog(ctk.CTkToplevel):
         swatch_frame.grid_columnconfigure(0, weight=1)
 
         for index, (label, color) in enumerate(NODE_COLOR_CHOICES):
-            row = ctk.CTkFrame(
+            image = Image.new("RGB", (42, 26), color)
+            color_image = ctk.CTkImage(
+                light_image=image,
+                dark_image=image,
+                size=(42, 26),
+            )
+            button = ctk.CTkButton(
                 swatch_frame,
-                fg_color=SURFACE_BACKGROUND,
-                border_color=BORDER_COLOR,
-                border_width=1,
-                corner_radius=0,
-                cursor="hand2",
-            )
-            row.grid(row=index, column=0, sticky="ew", pady=(0, 6))
-            row.grid_columnconfigure(1, weight=1)
-            row.bind("<Button-1>", lambda _event, selected=color: self._select_color(selected))
-
-            swatch = tk.Canvas(
-                row,
-                width=34,
-                height=26,
-                bg=SURFACE_BACKGROUND,
-                highlightthickness=0,
-                cursor="hand2",
-            )
-            swatch.grid(row=0, column=0, padx=(8, 10), pady=8)
-            swatch.create_rectangle(3, 3, 31, 23, fill=color, outline=BORDER_COLOR, width=1, tags="fill")
-            swatch.bind("<Button-1>", lambda _event, selected=color: self._select_color(selected))
-
-            label_widget = ctk.CTkLabel(
-                row,
                 text=label,
+                image=color_image,
+                compound="left",
+                command=lambda selected=color: self._select_color(selected),
+                height=56,
+                corner_radius=0,
+                border_width=1,
+                border_color=BORDER_COLOR,
+                fg_color=SURFACE_BACKGROUND,
+                hover_color="#EEF2F5",
                 text_color=TEXT_DARK,
                 font=make_font(12),
                 anchor="w",
-                justify="left",
-                wraplength=285,
-                cursor="hand2",
             )
-            label_widget.grid(row=0, column=1, sticky="ew", padx=(0, 10), pady=8)
-            label_widget.bind("<Button-1>", lambda _event, selected=color: self._select_color(selected))
-
-            self.swatches[color] = swatch
-            self.color_rows[color] = row
+            button.grid(row=index, column=0, sticky="ew", pady=(0, 8))
+            self.color_images[color] = color_image
+            self.color_buttons[color] = button
 
         self._refresh_swatches()
 
@@ -175,10 +164,10 @@ class NodeEditorDialog(ctk.CTkToplevel):
         self.on_save(name, role, self.selected_color)
         self.destroy()
 
-    def _ignore_enter(self, _event: tk.Event) -> str:
+    def _ignore_enter(self, _event: tk.Event[tk.Text]) -> str:
         return "break"
 
-    def _insert_name_line(self, _event: tk.Event) -> str:
+    def _insert_name_line(self, _event: tk.Event[tk.Text]) -> str:
         self.name_entry.insert("insert", f"\n{self.PERSON_BULLET_PREFIX}")
         self.name_entry.see("insert")
         return "break"
@@ -212,12 +201,7 @@ class NodeEditorDialog(ctk.CTkToplevel):
         self._refresh_swatches()
 
     def _refresh_swatches(self) -> None:
-        for color, swatch in self.swatches.items():
+        for color, button in self.color_buttons.items():
             outline = SELECTED_OUTLINE if color == self.selected_color else BORDER_COLOR
-            width = 3 if color == self.selected_color else 1
-            swatch.itemconfigure("fill", outline=outline, width=width)
-            row = self.color_rows[color]
-            row.configure(
-                border_color=SELECTED_OUTLINE if color == self.selected_color else BORDER_COLOR,
-                border_width=2 if color == self.selected_color else 1,
-            )
+            width = 2 if color == self.selected_color else 1
+            button.configure(border_color=outline, border_width=width)

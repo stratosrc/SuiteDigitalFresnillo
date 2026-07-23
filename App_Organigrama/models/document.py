@@ -34,9 +34,7 @@ class OrgGridDocument:
     show_logos: bool = True
     nodes: dict[str, OrgNode] = field(default_factory=dict)
     connections: list[Connection] = field(default_factory=list)
-    blocked_points: list[GridPoint] = field(default_factory=list)
     _node_ids_by_position: dict[GridCell, str] = field(default_factory=dict, init=False, repr=False)
-    _blocked_points_index: set[GridPoint] = field(default_factory=set, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._rebuild_indexes()
@@ -46,11 +44,6 @@ class OrgGridDocument:
             (node.grid_x, node.grid_y): node_id
             for node_id, node in self.nodes.items()
         }
-        self._blocked_points_index = {self._normalize_blocked_point(point) for point in self.blocked_points}
-        self.blocked_points = sorted(self._blocked_points_index, key=lambda item: (item[1], item[0]))
-
-    def _normalize_blocked_point(self, point: GridPoint) -> GridPoint:
-        return (float(point[0]), float(point[1]))
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -81,7 +74,6 @@ class OrgGridDocument:
                 }
                 for connection in self.connections
             ],
-            "blocked_points": list(self.blocked_points),
         }
 
     def add_node(
@@ -214,36 +206,10 @@ class OrgGridDocument:
             None,
         )
 
-    def has_blocked_point(self, point: GridPoint) -> bool:
-        return self._normalize_blocked_point(point) in self._blocked_points_index
-
-    def toggle_blocked_point(self, point: GridPoint) -> bool:
-        normalized = self._normalize_blocked_point(point)
-        if normalized in self._blocked_points_index:
-            self._blocked_points_index.remove(normalized)
-            self.blocked_points = [existing for existing in self.blocked_points if existing != normalized]
-            return False
-
-        self._blocked_points_index.add(normalized)
-        self.blocked_points.append(normalized)
-        self.blocked_points.sort(key=lambda item: (item[1], item[0]))
-        return True
-
-    def remove_blocked_point(self, point: GridPoint) -> bool:
-        normalized = self._normalize_blocked_point(point)
-        if normalized not in self._blocked_points_index:
-            return False
-
-        self._blocked_points_index.remove(normalized)
-        self.blocked_points = [existing for existing in self.blocked_points if existing != normalized]
-        return True
-
     def clear(self) -> None:
         self.nodes.clear()
         self.connections.clear()
-        self.blocked_points.clear()
         self._node_ids_by_position.clear()
-        self._blocked_points_index.clear()
 
     def bounds(self) -> tuple[int, int, int, int]:
         if not self.nodes:

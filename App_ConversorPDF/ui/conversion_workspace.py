@@ -9,13 +9,17 @@ from queue import Empty, Queue
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import sys
 
 import customtkinter as ctk
 
-try:
-    from tkinterdnd2 import DND_FILES
-except ImportError:
+if sys.platform == "darwin":
     DND_FILES = None
+else:
+    try:
+        from tkinterdnd2 import DND_FILES
+    except ImportError:
+        DND_FILES = None
 
 from App_ConversorPDF.config import (
     APP_DESCRIPTION,

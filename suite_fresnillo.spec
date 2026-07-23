@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
 import sys
 from pathlib import Path
 
@@ -15,18 +16,50 @@ def collect_tree(source: Path, destination: str):
         return []
     files = []
     for path in source.rglob("*"):
+        if "__MACOSX" in path.parts:
+            continue
         if path.is_file():
             files.append((str(path), str(Path(destination) / path.relative_to(source).parent)))
     return files
 
 
-datas = []
-datas += collect_tree(project_root / "App_Directorio" / "assets", "App_Directorio/assets")
-datas += collect_tree(project_root / "App_Organigrama" / "assets", "App_Organigrama/assets")
-datas += collect_tree(project_root / "App_TestData" / "assets", "App_TestData/assets")
-datas += collect_tree(project_root / "components" / "assets", "components/assets")
+def repair_framework_symlink(link_path: Path, expected_target: str) -> None:
+    if link_path.is_symlink():
+        return
+    if not link_path.exists() or not link_path.is_file():
+        return
+
+    current_target = link_path.read_text(encoding="utf-8", errors="ignore").strip()
+    if current_target != expected_target:
+        return
+
+    link_path.unlink()
+    os.symlink(expected_target, link_path)
+
+
+def repair_libreoffice_python_framework(project_root: Path) -> None:
+    framework_root = (
+        project_root
+        / "App_ConversorPDF"
+        / "vendor"
+        / "LibreOffice"
+        / "Contents"
+        / "Frameworks"
+        / "LibreOfficePython.framework"
+    )
+    if not framework_root.exists():
+        return
+
+    repair_framework_symlink(framework_root / "Versions" / "Current", "3.12")
+    repair_framework_symlink(framework_root / "Headers", "Versions/Current/Headers")
+    repair_framework_symlink(framework_root / "Resources", "Versions/Current/Resources")
+    repair_framework_symlink(
+        framework_root / "LibreOfficePython",
+        "Versions/Current/LibreOfficePython",
+    )
 
 hiddenimports = [
+    "App_ConversorPDF",
     "App_TestData",
     "App_Organigrama",
     "App_Directorio",
@@ -34,6 +67,24 @@ hiddenimports = [
     "PIL.Image",
     "PIL.ImageTk",
 ]
+
+if is_macos:
+    repair_libreoffice_python_framework(project_root)
+
+datas = []
+datas += collect_tree(project_root / "App_ConversorPDF" / "assets", "App_ConversorPDF/assets")
+datas += collect_tree(project_root / "App_ConversorPDF" / "vendor", "App_ConversorPDF/vendor")
+datas += collect_tree(project_root / "App_Directorio" / "assets", "App_Directorio/assets")
+datas += collect_tree(project_root / "App_Organigrama" / "assets", "App_Organigrama/assets")
+datas += collect_tree(project_root / "App_TestData" / "assets", "App_TestData/assets")
+datas += collect_tree(project_root / "components" / "assets", "components/assets")
+
+if is_macos:
+    datas = [
+        item
+        for item in datas
+        if "App_ConversorPDF/vendor/python" not in item[0].replace("\\", "/")
+    ]
 
 version_info = None
 if is_windows:
@@ -82,7 +133,10 @@ if is_windows:
 
 a = Analysis(
     [str(project_root / "main.py")],
-    pathex=[str(project_root)],
+    pathex=[
+        str(project_root),
+        *([] if is_macos else [str(project_root / "App_ConversorPDF" / "vendor" / "python")]),
+    ],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,

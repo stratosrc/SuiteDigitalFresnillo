@@ -39,21 +39,28 @@ APPLICATIONS: tuple[ApplicationDefinition, ...] = (
         name="Test Data",
         package_name="App_TestData",
         icon_path="components/assets/censor_icon.png",
-        description="Modulo de test data y\nversiones publicas",
+        description="Módulo de test data y\nversiones públicas",
     ),
     ApplicationDefinition(
         app_id="organigrama",
         name="Organigrama",
         package_name="App_Organigrama",
         icon_path="components/assets/organization_icon.png",
-        description="Gestion del diseno y estructura institucional",
+        description="Gestión del diseño y estructura institucional",
     ),
     ApplicationDefinition(
         app_id="directorio",
         name="Directorio",
         package_name="App_Directorio",
         icon_path="components/assets/directorio.png",
-        description="Gestion y diseno del\nDirectorio de Area",
+        description="Gestión y Diseño del\nDirectorio de Área",
+    ),
+    ApplicationDefinition(
+        app_id="conversorpdf",
+        name="Conversor PDF",
+        package_name="App_ConversorPDF",
+        icon_path="components/assets/convert.png",
+        description="Conversion y union\nde documentos PDF",
     ),
 )
 

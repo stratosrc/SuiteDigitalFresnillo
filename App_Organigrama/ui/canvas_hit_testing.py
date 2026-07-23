@@ -8,8 +8,36 @@ from App_Organigrama.models.document import OrgNode
 from App_Organigrama.rendering.engine import RenderingEngine
 from App_Organigrama.routing.manhattan_router import ConnectionRoute
 
-GridPoint = tuple[float, float]
 ScreenPoint = tuple[float, float]
+
+
+def find_tagged_entity_ids(
+    canvas,
+    screen_x: int,
+    screen_y: int,
+    tag_prefix: str,
+    *,
+    hit_radius: float = 0.0,
+) -> list[str]:
+    """Return topmost-first entity ids already drawn around the pointer."""
+    item_ids = canvas.find_overlapping(
+        screen_x - hit_radius,
+        screen_y - hit_radius,
+        screen_x + hit_radius,
+        screen_y + hit_radius,
+    )
+    entity_ids: list[str] = []
+    seen: set[str] = set()
+    prefix = f"{tag_prefix}:"
+    for item_id in reversed(item_ids):
+        for tag in canvas.gettags(item_id):
+            if not tag.startswith(prefix):
+                continue
+            entity_id = tag[len(prefix):]
+            if entity_id and entity_id not in seen:
+                seen.add(entity_id)
+                entity_ids.append(entity_id)
+    return entity_ids
 
 
 def distance_to_segment(
@@ -30,28 +58,6 @@ def distance_to_segment(
     point_x = ax + (projection * dx)
     point_y = ay + (projection * dy)
     return math.hypot(screen_x - point_x, screen_y - point_y)
-
-
-def find_blocked_point_at_screen(
-    blocked_points: list[GridPoint],
-    screen_x: int,
-    screen_y: int,
-    zoom: float,
-    rendering_engine: RenderingEngine,
-    world_to_screen,
-) -> GridPoint | None:
-    """Find the closest blocked point under the pointer."""
-    hit_radius = max(10.0, 12.0 * zoom)
-    closest_point: GridPoint | None = None
-    closest_distance = hit_radius
-    for blocked_point in blocked_points:
-        world_x, world_y = rendering_engine.grid_to_world(blocked_point[0], blocked_point[1])
-        center_x, center_y = world_to_screen(world_x, world_y)
-        distance = math.hypot(screen_x - center_x, screen_y - center_y)
-        if distance <= closest_distance:
-            closest_distance = distance
-            closest_point = blocked_point
-    return closest_point
 
 
 def find_connection_at_screen(

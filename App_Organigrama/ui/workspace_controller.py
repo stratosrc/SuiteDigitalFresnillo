@@ -1,5 +1,7 @@
 """Organigrama workspace controller implementation."""
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from copy import deepcopy
@@ -7,7 +9,6 @@ import logging
 from pathlib import Path
 import tempfile
 import tkinter as tk
-import tkinter.font as tkfont
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
@@ -40,7 +41,11 @@ from App_Organigrama.ui.theme import (
 from components.shared.images import load_ctk_image
 from components.shared.entries import VariablePlaceholderEntry
 from components.shared.accessibility import enable_visible_focus
-from components.shared.platform import IS_MACOS, PRIMARY_MODIFIER_LABEL
+from components.shared.platform import (
+    IS_MACOS,
+    PRIMARY_MODIFIER_LABEL,
+    bind_primary_shortcut,
+)
 from components.shared.project_lifecycle import ProjectLifecycle
 from components.shared.progress_overlay import ProgressOverlay
 from components.shared.shortcuts import bind_common_shortcuts
@@ -72,7 +77,7 @@ class MainFrame(ctk.CTkFrame):
         self._metadata_sync_paused = False
         self._metadata_history_after_id: str | None = None
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="orgchart-worker")
-        self._pending_task: Future[Path] | None = None
+        self._pending_task: Future | None = None
         self.toolbar_logo_image: ctk.CTkImage | None = None
         self.undo_icon: ctk.CTkImage | None = None
         self.redo_icon: ctk.CTkImage | None = None
@@ -80,10 +85,9 @@ class MainFrame(ctk.CTkFrame):
         self.title_var = tk.StringVar(value=self.document.title)
         self.period_var = tk.StringVar(value=self.document.period)
         self.show_logos_var = tk.BooleanVar(value=self.document.show_logos)
-        self.block_mode_var = tk.BooleanVar(value=False)
 
         self._build_layout()
-        self.export_progress_overlay = ProgressOverlay(self, color=PRIMARY_BUTTON)
+        self.progress_overlay = ProgressOverlay(self, color=PRIMARY_BUTTON)
         self._build_menu()
         self._bind_metadata()
         bind_common_shortcuts(
@@ -255,18 +259,6 @@ class MainFrame(ctk.CTkFrame):
         tools = ctk.CTkFrame(header, fg_color="transparent")
         tools.grid(row=0, column=0, sticky="w")
 
-        self.block_checkbox = ctk.CTkCheckBox(
-            tools,
-            text="Obstáculos de ruta",
-            variable=self.block_mode_var,
-            command=self._toggle_block_mode,
-            fg_color=PRIMARY_BUTTON,
-            hover_color=DARK_BACKGROUND_ACTIVE,
-            text_color=TEXT_DARK,
-            corner_radius=0,
-        )
-        self.block_checkbox.pack(side="left", padx=(0, 20))
-
         self.logos_checkbox = ctk.CTkCheckBox(
             tools,
             text="Escudos",
@@ -318,7 +310,6 @@ class MainFrame(ctk.CTkFrame):
             on_selection_change=self._update_delete_state,
             on_zoom_change=self._update_zoom_label,
             on_document_change=self._record_document_change,
-            on_context_change=self._update_context_status,
             corner_radius=0,
         )
         self.grid_canvas.grid(row=1, column=0, sticky="nsew", pady=(8, 0))
@@ -378,7 +369,11 @@ class MainFrame(ctk.CTkFrame):
             font=make_font(12, "bold"),
         )
         self.undo_button.pack(side="left", padx=(6, 3))
-        Tooltip(self.undo_button, f"Deshacer ({PRIMARY_MODIFIER_LABEL}+Z)", show_when_disabled=True)
+        Tooltip(
+            self.undo_button,
+            f"Deshacer ({PRIMARY_MODIFIER_LABEL}+Z)",
+            show_when_disabled=True,
+        )
 
         self.redo_icon = load_ctk_image(REDO_ICON_PATH, (18, 18), crop_alpha=True)
         self.redo_button = ctk.CTkButton(
@@ -395,20 +390,11 @@ class MainFrame(ctk.CTkFrame):
             font=make_font(12, "bold"),
         )
         self.redo_button.pack(side="left", padx=(3, 0))
-        Tooltip(self.redo_button, f"Rehacer ({PRIMARY_MODIFIER_LABEL}+Y)", show_when_disabled=True)
-
-        self.context_status_label = ctk.CTkLabel(
-            footer,
-            text="Clic para crear nodo",
-            text_color=TEXT_LIGHT,
-            font=make_font(12),
-            anchor="w",
+        Tooltip(
+            self.redo_button,
+            f"Rehacer ({PRIMARY_MODIFIER_LABEL}+Y)",
+            show_when_disabled=True,
         )
-        self.context_status_label.grid(row=0, column=1, padx=(14, 12), pady=5, sticky="ew")
-        self._context_status_message = "Clic para crear nodo"
-        self._context_status_tooltip = Tooltip(self.context_status_label, "")
-        self._context_status_refresh_after_id: str | None = None
-        footer.bind("<Configure>", self._refresh_context_status_label, add=True)
 
         zoom_frame = ctk.CTkFrame(footer, fg_color="transparent")
         zoom_frame.grid(row=0, column=2, padx=(12, 5), pady=5, sticky="e")
@@ -442,7 +428,6 @@ class MainFrame(ctk.CTkFrame):
         )
         zoom_in_button.pack(side="left")
         Tooltip(zoom_in_button, "Acercar")
-        self._schedule_context_status_refresh()
 
     def _bind_metadata(self) -> None:
         self.title_var.trace_add("write", self._sync_metadata)
@@ -481,12 +466,14 @@ class MainFrame(ctk.CTkFrame):
         self._metadata_history_after_id = None
         self._record_document_change()
 
+    def _bind_history_shortcuts(self) -> None:
+        bind_primary_shortcut(self.master, "z", self.undo, add=True)
+        bind_primary_shortcut(self.master, "y", self.redo, add=True)
+        bind_primary_shortcut(self.master, "z", self.redo, shift=True, add=True)
+
     def _toggle_logos(self) -> None:
         self.document.show_logos = self.show_logos_var.get()
         self.grid_canvas.set_show_logos(self.document.show_logos)
-
-    def _toggle_block_mode(self) -> None:
-        self.grid_canvas.set_block_mode(self.block_mode_var.get())
 
     def _show_file_menu(self) -> None:
         self._refresh_recent_menu()
@@ -516,56 +503,10 @@ class MainFrame(ctk.CTkFrame):
         percent = self.grid_canvas.zoom_percent() if zoom_percent is None else zoom_percent
         self.zoom_label.configure(text=f"{percent}%")
 
-    def _update_context_status(self, message: str) -> None:
-        if hasattr(self, "context_status_label"):
-            self._context_status_message = message
-            self._refresh_context_status_label()
-
-    def _schedule_context_status_refresh(self) -> None:
-        if self._context_status_refresh_after_id is not None:
-            return
-        self._context_status_refresh_after_id = self.after_idle(self._run_scheduled_context_status_refresh)
-
-    def _run_scheduled_context_status_refresh(self) -> None:
-        self._context_status_refresh_after_id = None
-        self._refresh_context_status_label()
-
-    def _refresh_context_status_label(self, _event: tk.Event | None = None) -> None:
-        if not hasattr(self, "context_status_label"):
-            return
-
-        full_message = getattr(self, "_context_status_message", "") or ""
-        label_width = self.context_status_label.winfo_width()
-        if label_width <= 1:
-            return
-
-        font = tkfont.Font(font=self.context_status_label.cget("font"))
-        available_width = max(24, label_width - 10)
-        display_message = self._truncate_text_to_width(full_message, font, available_width)
-        self.context_status_label.configure(text=display_message)
-        self._context_status_tooltip.text = full_message if display_message != full_message else ""
-
-    @staticmethod
-    def _truncate_text_to_width(text: str, font: tkfont.Font, max_width: int) -> str:
-        if not text or font.measure(text) <= max_width:
-            return text
-
-        ellipsis = "..."
-        if font.measure(ellipsis) >= max_width:
-            return ellipsis
-
-        low = 0
-        high = len(text)
-        while low < high:
-            middle = (low + high + 1) // 2
-            candidate = text[:middle].rstrip() + ellipsis
-            if font.measure(candidate) <= max_width:
-                low = middle
-            else:
-                high = middle - 1
-        return text[:low].rstrip() + ellipsis
-
     def new_project(self) -> None:
+        if self._is_operation_running():
+            self._show_operation_warning()
+            return
         if not self._confirm_discard_changes():
             return
 
@@ -576,6 +517,9 @@ class MainFrame(ctk.CTkFrame):
         self.project_lifecycle.reset(mark_saved=True)
 
     def open_project(self) -> None:
+        if self._is_operation_running():
+            self._show_operation_warning()
+            return
         if not self._confirm_discard_changes():
             return
 
@@ -591,23 +535,12 @@ class MainFrame(ctk.CTkFrame):
         if not source_path:
             return
 
-        try:
-            self.document = self.persistence_manager.load(source_path)
-        except Exception as error:  # noqa: BLE001
-            LOGGER.exception("Unable to load org chart project from %s", source_path)
-            messagebox.showerror(
-                "No se pudo abrir",
-                f"No fue posible cargar el proyecto:\n{error}",
-                parent=self,
-            )
-            return
-
-        self.current_project_path = Path(source_path)
-        self._load_document_into_ui(self.document)
-        self._reset_document_history(mark_saved=True)
-        self.project_lifecycle.mark_saved(self.current_project_path)
+        self._start_project_load(source_path)
 
     def save_project(self) -> bool:
+        if self._is_operation_running():
+            self._show_operation_warning()
+            return False
         self._commit_pending_metadata_history()
         if self.current_project_path is None:
             return self.save_project_as()
@@ -665,9 +598,6 @@ class MainFrame(ctk.CTkFrame):
     def export_pdf(self) -> None:
         if not self._can_start_export():
             return
-        OrientationDialog(self, self._export_pdf_for_orientation)
-
-    def _export_pdf_for_orientation(self, orientation: str) -> None:
         target_path = filedialog.asksaveasfilename(
             parent=self,
             title="Exportar organigrama como PDF",
@@ -679,7 +609,6 @@ class MainFrame(ctk.CTkFrame):
             return
 
         export_document = deepcopy(self.document)
-        export_document.page_orientation = orientation
         self._run_background_task(lambda: self.pdf_exporter.export(export_document, target_path), success_title="PDF exportado")
 
     def export_image(self) -> None:
@@ -711,7 +640,11 @@ class MainFrame(ctk.CTkFrame):
             temp_pdf_path = Path(temp_pdf.name)
             temp_pdf.close()
             try:
-                self.pdf_exporter.export(export_document, temp_pdf_path)
+                self.pdf_exporter.export(
+                    export_document,
+                    temp_pdf_path,
+                    digital=False,
+                )
                 return export_pdf_as_image(temp_pdf_path, target_path, dpi=300)
             finally:
                 if temp_pdf_path.exists():
@@ -722,17 +655,25 @@ class MainFrame(ctk.CTkFrame):
     def _run_background_task(self, task: Callable[[], Path], success_title: str) -> None:
         self._set_busy_state("disabled")
         message = "Generando imagen..." if "Imagen" in success_title else "Generando PDF..."
-        self.export_progress_overlay.show(message)
+        self.progress_overlay.show(message)
         if IS_MACOS:
             self.update_idletasks()
             try:
                 result_path = task()
-                messagebox.showinfo(success_title, f"Archivo generado correctamente en:\n{result_path}", parent=self)
+                messagebox.showinfo(
+                    success_title,
+                    f"Archivo generado correctamente en:\n{result_path}",
+                    parent=self,
+                )
             except Exception as error:  # noqa: BLE001
                 LOGGER.exception("Unable to complete org chart export task")
-                messagebox.showerror("Error", f"No se pudo completar la operaciÃ³n:\n{error}", parent=self)
+                messagebox.showerror(
+                    "Error",
+                    f"No se pudo completar la operación:\n{error}",
+                    parent=self,
+                )
             finally:
-                self.export_progress_overlay.hide()
+                self.progress_overlay.hide()
                 self._set_busy_state("normal")
             return
 
@@ -757,11 +698,69 @@ class MainFrame(ctk.CTkFrame):
         finally:
             if self._pending_task is future:
                 self._pending_task = None
-            self.export_progress_overlay.hide()
+            self.progress_overlay.hide()
+            self._set_busy_state("normal")
+
+    def _start_project_load(
+        self,
+        source_path: str | Path,
+        *,
+        remove_recent_on_error: bool = False,
+    ) -> None:
+        self._set_busy_state("disabled")
+        self.progress_overlay.show("Cargando proyecto...")
+        future = self._executor.submit(self.persistence_manager.load, source_path)
+        self._pending_task = future
+        self.after(
+            120,
+            lambda: self._poll_project_load(
+                future,
+                Path(source_path),
+                remove_recent_on_error,
+            ),
+        )
+
+    def _poll_project_load(
+        self,
+        future: Future,
+        source_path: Path,
+        remove_recent_on_error: bool,
+    ) -> None:
+        if not future.done():
+            self.after(
+                120,
+                lambda: self._poll_project_load(
+                    future,
+                    source_path,
+                    remove_recent_on_error,
+                ),
+            )
+            return
+
+        try:
+            document = future.result()
+            self.document = document
+            self.current_project_path = source_path
+            self._load_document_into_ui(document)
+            self._reset_document_history(mark_saved=True)
+            self.project_lifecycle.mark_saved(source_path)
+        except Exception as error:  # noqa: BLE001
+            if remove_recent_on_error:
+                self.project_lifecycle.recent_files.remove(source_path)
+            LOGGER.exception("Unable to load org chart project from %s", source_path)
+            messagebox.showerror(
+                "No se pudo abrir",
+                f"No fue posible cargar el proyecto:\n{error}",
+                parent=self,
+            )
+        finally:
+            if self._pending_task is future:
+                self._pending_task = None
+            self.progress_overlay.hide()
             self._set_busy_state("normal")
 
     def _is_operation_running(self) -> bool:
-        return self._pending_task is not None and not self._pending_task.done()
+        return self._pending_task is not None
 
     def _can_start_export(self) -> bool:
         if not self.document.nodes:
@@ -775,7 +774,7 @@ class MainFrame(ctk.CTkFrame):
     def _show_operation_warning(self) -> None:
         messagebox.showwarning(
             "Operación en curso",
-            "Espera a que termine la exportación actual antes de iniciar otra.",
+            "Espera a que termine la operación actual antes de iniciar otra.",
             parent=self,
         )
 
@@ -802,7 +801,7 @@ class MainFrame(ctk.CTkFrame):
         if restored is None:
             return "break" if _event is not None else None
         self.document = restored
-        self._load_document_into_ui(restored)
+        self._load_document_into_ui(restored, preserve_viewport=True)
         self._set_dirty(self.document_history.is_dirty)
         self._update_history_buttons()
         return "break" if _event is not None else None
@@ -812,7 +811,7 @@ class MainFrame(ctk.CTkFrame):
         if restored is None:
             return "break" if _event is not None else None
         self.document = restored
-        self._load_document_into_ui(restored)
+        self._load_document_into_ui(restored, preserve_viewport=True)
         self._set_dirty(self.document_history.is_dirty)
         self._update_history_buttons()
         return "break" if _event is not None else None
@@ -846,20 +845,26 @@ class MainFrame(ctk.CTkFrame):
         normalized_extension = extension if extension.startswith(".") else f".{extension}"
         return f"{base_name}{normalized_extension}"
 
-    def _load_document_into_ui(self, document: OrgGridDocument) -> None:
+    def _load_document_into_ui(
+        self,
+        document: OrgGridDocument,
+        *,
+        preserve_viewport: bool = False,
+    ) -> None:
         document.title = document.title.upper()
         document.period = document.period.upper()
         self._metadata_sync_paused = True
         self.title_var.set(document.title)
         self.period_var.set(document.period)
         self.show_logos_var.set(document.show_logos)
-        self.block_mode_var.set(False)
         self._metadata_sync_paused = False
         self.grid_canvas.set_document(document)
-        self.grid_canvas.zoom = 1.0
-        self.grid_canvas.set_block_mode(False)
-        self.grid_canvas.fit_document_to_content_top()
-        self._update_zoom_label(100)
+        if preserve_viewport:
+            self._update_zoom_label()
+        else:
+            self.grid_canvas.zoom = 1.0
+            self.grid_canvas.fit_document_to_content_top()
+            self._update_zoom_label(100)
         self._update_delete_state(False)
         self._update_window_title()
 
@@ -887,23 +892,12 @@ class MainFrame(ctk.CTkFrame):
             )
 
     def _open_project_path(self, source_path: str | Path) -> None:
+        if self._is_operation_running():
+            self._show_operation_warning()
+            return
         if not self._confirm_discard_changes():
             return
-        try:
-            self.document = self.persistence_manager.load(source_path)
-        except Exception as error:  # noqa: BLE001
-            self.project_lifecycle.recent_files.remove(source_path)
-            LOGGER.exception("Unable to load org chart project from %s", source_path)
-            messagebox.showerror(
-                "No se pudo abrir",
-                f"No fue posible cargar el proyecto:\n{error}",
-                parent=self,
-            )
-            return
-        self.current_project_path = Path(source_path)
-        self._load_document_into_ui(self.document)
-        self._reset_document_history(mark_saved=True)
-        self.project_lifecycle.mark_saved(self.current_project_path)
+        self._start_project_load(source_path, remove_recent_on_error=True)
 
     def _restore_autosave(self, snapshot: object, path: Path | None) -> None:
         if not isinstance(snapshot, dict):

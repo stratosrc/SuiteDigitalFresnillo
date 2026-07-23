@@ -1,14 +1,17 @@
 from dataclasses import dataclass
+from io import BytesIO
 import logging
+import math
 from pathlib import Path
 
+import fitz
 from reportlab.lib.colors import Color, HexColor
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen.canvas import Canvas
 
 from App_Organigrama.models.document import OrgGridDocument, OrgNode
 from App_Organigrama.rendering.connection_arrows import build_arrow_triangle
-from App_Organigrama.rendering.engine import Box, DocumentBounds, NodeLayout, PageLayout, RenderingEngine, VERTICAL_ORIENTATION
+from App_Organigrama.rendering.engine import Box, DocumentBounds, NodeLayout, PageLayout, RenderingEngine
 from App_Organigrama.routing.manhattan_router import ConnectionRoute, ManhattanRouter
 from App_Organigrama.config.assets import (
     BANNER_LOGO_PATH,
@@ -21,6 +24,19 @@ from components.styles.styles import PDF_FONT_BOLD, PDF_FONT_REGULAR
 
 
 LOGGER = logging.getLogger(__name__)
+DIGITAL_CONTENT_SCALE = 0.75
+MAX_PDF_MEDIA_BOX_POINTS = 14_000.0
+MAX_PDF_USER_UNIT = 75
+MIN_DIGITAL_PAGE_WIDTH = 792.0
+MIN_DIGITAL_PAGE_HEIGHT = 612.0
+DIGITAL_MARGIN_X = 24.0
+DIGITAL_MARGIN_BOTTOM = 24.0
+DIGITAL_MARGIN_TOP = 16.0
+DIGITAL_HEADER_HEIGHT = 112.0
+DIGITAL_CONTENT_TOP_MARGIN = 18.0
+MAX_DIGITAL_DECORATION_SCALE = 4.0
+WATERMARK_PAGE_RATIO = 0.80
+WATERMARK_ASPECT_RATIO = 465 / 633
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +46,7 @@ class PdfTransform:
     offset_y: float
     page_height: float
     bounds: DocumentBounds
+    user_unit: float = 1.0
 
     def world_to_pdf_x(self, world_x: float) -> float:
         return self.offset_x + ((world_x - self.bounds.left) * self.scale)
@@ -55,37 +72,231 @@ class PdfOrgChartExporter:
         self.router = router
         self._node_logo_reader = self._load_node_logo_reader()
 
-    def export(self, document: OrgGridDocument, target_path: str | Path) -> Path:
+    def export(
+        self,
+        document: OrgGridDocument,
+        target_path: str | Path,
+        *,
+        digital: bool = True,
+    ) -> Path:
         path = Path(target_path)
         return write_atomic_output(
             path,
-            lambda temporary: self._write_pdf(document, temporary),
+            lambda temporary: self._write_pdf(
+                document,
+                temporary,
+                digital=digital,
+            ),
         )
 
-    def _write_pdf(self, document: OrgGridDocument, path: Path) -> None:
-        page_layout = self.rendering_engine.get_page_layout(document.page_orientation)
-        canvas = Canvas(str(path), pagesize=(page_layout.width, page_layout.height))
-
-        self._draw_background_assets(canvas, page_layout)
-        self._draw_header(canvas, document, page_layout)
-
+    def _write_pdf(
+        self,
+        document: OrgGridDocument,
+        path: Path,
+        *,
+        digital: bool,
+    ) -> None:
         routes = self.router.route_document(document)
+        if not digital:
+            self._write_page_pdf(document, path, routes)
+            return
+
+        (
+            page_layout,
+            transform,
+            user_unit,
+            decoration_scale,
+        ) = self._build_digital_layout(
+            document,
+            routes,
+        )
+        pdf_buffer = BytesIO()
+        canvas = Canvas(
+            pdf_buffer,
+            pagesize=(page_layout.width, page_layout.height),
+            pdfVersion=(1, 6),
+            pageCompression=1,
+        )
+
+        drawing_unit = decoration_scale / user_unit
+        self._draw_background_assets(canvas, page_layout, drawing_unit)
+        self._draw_header(canvas, document, page_layout, drawing_unit)
+
         if document.nodes:
-            transform = self._build_transform(document, page_layout, routes)
             self._draw_connections(canvas, transform, routes)
             self._draw_nodes(canvas, transform, document)
 
         canvas.save()
+        pdf_buffer.seek(0)
+        with fitz.open(stream=pdf_buffer.getvalue(), filetype="pdf") as pdf_document:
+            if user_unit > 1:
+                pdf_document.xref_set_key(
+                    pdf_document[0].xref,
+                    "UserUnit",
+                    self._format_pdf_number(user_unit),
+                )
+            pdf_document.save(path)
 
-    def _build_transform(
+    def _write_page_pdf(
+        self,
+        document: OrgGridDocument,
+        path: Path,
+        routes: list[ConnectionRoute],
+    ) -> None:
+        page_layout = self.rendering_engine.get_page_layout(
+            document.page_orientation
+        )
+        canvas = Canvas(
+            str(path),
+            pagesize=(page_layout.width, page_layout.height),
+            pageCompression=1,
+        )
+        self._draw_background_assets(canvas, page_layout, 1.0)
+        self._draw_header(canvas, document, page_layout, 1.0)
+        if document.nodes:
+            transform = self._build_page_transform(
+                document,
+                page_layout,
+                routes,
+            )
+            self._draw_connections(canvas, transform, routes)
+            self._draw_nodes(canvas, transform, document)
+        canvas.save()
+
+    def _build_digital_layout(
+        self,
+        document: OrgGridDocument,
+        routes: list[ConnectionRoute],
+    ) -> tuple[PageLayout, PdfTransform, float, float]:
+        route_points = [list(route.points) for route in routes]
+        bounds = self.rendering_engine.compute_document_bounds(
+            document,
+            route_points,
+        )
+        content_width = max(bounds.width, 1.0)
+        content_height = max(bounds.height, 1.0)
+        decoration_scale = self._digital_decoration_scale(
+            content_width,
+            content_height,
+        )
+        margin_x = DIGITAL_MARGIN_X * decoration_scale
+        margin_bottom = DIGITAL_MARGIN_BOTTOM * decoration_scale
+        margin_top = DIGITAL_MARGIN_TOP * decoration_scale
+        header_height = DIGITAL_HEADER_HEIGHT * decoration_scale
+        content_top_margin = DIGITAL_CONTENT_TOP_MARGIN * decoration_scale
+
+        max_digital_dimension = MAX_PDF_MEDIA_BOX_POINTS * MAX_PDF_USER_UNIT
+        max_content_width = max_digital_dimension - (margin_x * 2)
+        max_content_height = max_digital_dimension - (
+            margin_top
+            + header_height
+            + content_top_margin
+            + margin_bottom
+        )
+        content_scale = min(
+            DIGITAL_CONTENT_SCALE,
+            max_content_width / content_width,
+            max_content_height / content_height,
+        )
+
+        desired_content_width = content_width * content_scale
+        desired_content_height = content_height * content_scale
+        desired_page_width = max(
+            MIN_DIGITAL_PAGE_WIDTH,
+            desired_content_width + (margin_x * 2),
+        )
+        desired_page_height = max(
+            MIN_DIGITAL_PAGE_HEIGHT,
+            margin_top
+            + header_height
+            + content_top_margin
+            + desired_content_height
+            + margin_bottom,
+        )
+        user_unit = float(
+            max(
+                1,
+                min(
+                    MAX_PDF_USER_UNIT,
+                    math.ceil(
+                        max(desired_page_width, desired_page_height)
+                        / MAX_PDF_MEDIA_BOX_POINTS
+                    ),
+                ),
+            )
+        )
+        coordinate_scale = 1.0 / user_unit
+        page_layout = PageLayout(
+            width=desired_page_width * coordinate_scale,
+            height=desired_page_height * coordinate_scale,
+            margin_left=margin_x * coordinate_scale,
+            margin_top=margin_top * coordinate_scale,
+            margin_right=margin_x * coordinate_scale,
+            margin_bottom=margin_bottom * coordinate_scale,
+            header_height=header_height * coordinate_scale,
+        )
+        available_width = desired_page_width - (margin_x * 2)
+        offset_x = (
+            margin_x
+            + ((available_width - desired_content_width) / 2)
+        ) * coordinate_scale
+        offset_y = (
+            margin_top
+            + header_height
+            + content_top_margin
+        ) * coordinate_scale
+        transform = PdfTransform(
+            scale=content_scale * coordinate_scale,
+            offset_x=offset_x,
+            offset_y=offset_y,
+            page_height=page_layout.height,
+            bounds=bounds,
+            user_unit=user_unit,
+        )
+        return page_layout, transform, user_unit, decoration_scale
+
+    def _digital_decoration_scale(
+        self,
+        content_width: float,
+        content_height: float,
+    ) -> float:
+        reference_width = (
+            MIN_DIGITAL_PAGE_WIDTH - (DIGITAL_MARGIN_X * 2)
+        )
+        reference_height = (
+            MIN_DIGITAL_PAGE_HEIGHT
+            - DIGITAL_MARGIN_TOP
+            - DIGITAL_HEADER_HEIGHT
+            - DIGITAL_CONTENT_TOP_MARGIN
+            - DIGITAL_MARGIN_BOTTOM
+        )
+        extent_ratio = max(
+            (content_width * DIGITAL_CONTENT_SCALE) / reference_width,
+            (content_height * DIGITAL_CONTENT_SCALE) / reference_height,
+        )
+        if extent_ratio <= 1.5:
+            return 1.0
+        return min(
+            MAX_DIGITAL_DECORATION_SCALE,
+            math.sqrt(extent_ratio),
+        )
+
+    def _build_page_transform(
         self,
         document: OrgGridDocument,
         page_layout: PageLayout,
         routes: list[ConnectionRoute],
     ) -> PdfTransform:
         route_points = [list(route.points) for route in routes]
-        bounds = self.rendering_engine.compute_document_bounds(document, route_points, include_blocked_points=False)
-        available_width = page_layout.width - page_layout.margin_left - page_layout.margin_right
+        bounds = self.rendering_engine.compute_document_bounds(
+            document,
+            route_points,
+        )
+        available_width = (
+            page_layout.width
+            - page_layout.margin_left
+            - page_layout.margin_right
+        )
         available_height = (
             page_layout.height
             - page_layout.margin_top
@@ -97,8 +308,14 @@ class PdfOrgChartExporter:
         content_width = max(bounds.width, 1.0)
         content_height = max(bounds.height, 1.0)
         usable_height = max(1.0, available_height - content_top_margin)
-        scale = min(1.0, available_width / content_width, usable_height / content_height)
-        offset_x = page_layout.margin_left + ((available_width - (content_width * scale)) / 2)
+        scale = min(
+            1.0,
+            available_width / content_width,
+            usable_height / content_height,
+        )
+        offset_x = page_layout.margin_left + (
+            (available_width - (content_width * scale)) / 2
+        )
         offset_y = content_origin_y + content_top_margin
         return PdfTransform(
             scale=scale,
@@ -108,48 +325,82 @@ class PdfOrgChartExporter:
             bounds=bounds,
         )
 
-    def _draw_background_assets(self, pdf: Canvas, page_layout: PageLayout) -> None:
+    def _draw_background_assets(
+        self,
+        pdf: Canvas,
+        page_layout: PageLayout,
+        drawing_unit: float,
+    ) -> None:
         if WATERMARK_LOGO_PATH.exists():
+            watermark_width, watermark_height = self._watermark_dimensions(
+                page_layout,
+            )
             pdf.saveState()
             pdf.setFillColor(Color(1, 1, 1, alpha=1))
             pdf.drawImage(
                 str(WATERMARK_LOGO_PATH),
-                (page_layout.width / 2) - 232,
-                (page_layout.height / 2) - 310,
-                width=465,
-                height=633,
+                (page_layout.width - watermark_width) / 2,
+                (page_layout.height - watermark_height) / 2,
+                width=watermark_width,
+                height=watermark_height,
                 mask="auto",
             )
             pdf.restoreState()
 
         if BANNER_LOGO_PATH.exists():
-            banner_width = 250
-            banner_height = 125
+            banner_width = 250 * drawing_unit
+            banner_height = 125 * drawing_unit
             pdf.drawImage(
                 str(BANNER_LOGO_PATH),
-                1,
-                page_layout.height - banner_height + 15,
+                1 * drawing_unit,
+                page_layout.height - banner_height + (15 * drawing_unit),
                 width=banner_width,
                 height=banner_height,
                 mask="auto",
             )
 
-    def _draw_header(self, pdf: Canvas, document: OrgGridDocument, page_layout: PageLayout) -> None:
+    def _watermark_dimensions(
+        self,
+        page_layout: PageLayout,
+    ) -> tuple[float, float]:
+        max_width = page_layout.width * WATERMARK_PAGE_RATIO
+        max_height = page_layout.height * WATERMARK_PAGE_RATIO
+        if max_width / max_height <= WATERMARK_ASPECT_RATIO:
+            return max_width, max_width / WATERMARK_ASPECT_RATIO
+        return max_height * WATERMARK_ASPECT_RATIO, max_height
+
+    def _draw_header(
+        self,
+        pdf: Canvas,
+        document: OrgGridDocument,
+        page_layout: PageLayout,
+        drawing_unit: float,
+    ) -> None:
         title = document.title.strip() or "Título del organigrama"
         period = document.period.strip()
-        title_y = page_layout.height - 84
-        period_y = title_y - 26
-        if document.page_orientation == VERTICAL_ORIENTATION:
-            title_y = page_layout.height - 98
-            period_y = title_y - 28
-
-        title_font_size = self._fit_text_size(pdf, title, PDF_FONT_BOLD, 20.0, page_layout.width - 210)
+        title_y = page_layout.height - (84 * drawing_unit)
+        period_y = title_y - (26 * drawing_unit)
+        title_font_size = self._fit_text_size(
+            pdf,
+            title,
+            PDF_FONT_BOLD,
+            20.0 * drawing_unit,
+            page_layout.width - (210 * drawing_unit),
+            minimum_size=8.0 * drawing_unit,
+        )
         pdf.setFillColor(HexColor("#263238"))
         pdf.setFont(PDF_FONT_BOLD, title_font_size)
         pdf.drawCentredString(page_layout.width / 2, title_y, title)
 
         if period:
-            period_font_size = self._fit_text_size(pdf, period, PDF_FONT_REGULAR, 18.0, page_layout.width - 220)
+            period_font_size = self._fit_text_size(
+                pdf,
+                period,
+                PDF_FONT_REGULAR,
+                18.0 * drawing_unit,
+                page_layout.width - (220 * drawing_unit),
+                minimum_size=8.0 * drawing_unit,
+            )
             pdf.setFont(PDF_FONT_REGULAR, period_font_size)
             pdf.drawCentredString(page_layout.width / 2, period_y, period)
 
@@ -160,10 +411,13 @@ class PdfOrgChartExporter:
         font_name: str,
         start_size: float,
         max_width: float,
+        *,
+        minimum_size: float = 8.0,
     ) -> float:
         size = start_size
-        while size > 8 and pdf.stringWidth(text, font_name, size) > max_width:
-            size -= 0.5
+        step = max(0.05, 0.5 * (start_size / 20.0))
+        while size > minimum_size and pdf.stringWidth(text, font_name, size) > max_width:
+            size -= step
         return size
 
     def _draw_connections(self, pdf: Canvas, transform: PdfTransform, routes: list[ConnectionRoute]) -> None:
@@ -173,7 +427,7 @@ class PdfOrgChartExporter:
             if len(route.points) < 2:
                 continue
             line_width = self.rendering_engine.base_line_width * transform.scale
-            pdf.setLineWidth(max(0.75, line_width))
+            pdf.setLineWidth(max(0.75 / transform.user_unit, line_width))
             pdf_points: list[tuple[float, float]] = []
             for start, end in zip(route.points, route.points[1:]):
                 start_x, start_y = self.rendering_engine.grid_to_world(start[0], start[1])
@@ -199,9 +453,9 @@ class PdfOrgChartExporter:
                 )
             arrow = build_arrow_triangle(
                 pdf_points,
-                length=max(4.5, 8.0 * transform.scale),
-                width=max(4.5, 7.0 * transform.scale),
-                target_gap=max(3.5, 6.0 * transform.scale),
+                length=max(4.5 / transform.user_unit, 8.0 * transform.scale),
+                width=max(4.5 / transform.user_unit, 7.0 * transform.scale),
+                target_gap=max(3.5 / transform.user_unit, 6.0 * transform.scale),
             )
             if arrow is not None:
                 path = pdf.beginPath()
@@ -227,7 +481,15 @@ class PdfOrgChartExporter:
         x, y, width, height = transform.box_to_pdf(layout.box)
         pdf.setFillColor(HexColor(node.color))
         pdf.setStrokeColor(HexColor(node.color))
-        pdf.roundRect(x, y, width, height, 5, fill=True, stroke=True)
+        pdf.roundRect(
+            x,
+            y,
+            width,
+            height,
+            5 / transform.user_unit,
+            fill=True,
+            stroke=True,
+        )
 
         if show_logo:
             self._draw_node_logo(pdf, transform, layout, node.color)
@@ -248,8 +510,13 @@ class PdfOrgChartExporter:
                 text_x = transform.world_to_pdf_x(layout.center_x) - (text_width / 2)
                 pdf.drawCentredString(transform.world_to_pdf_x(layout.center_x), baseline_pdf_y, line.text)
             if line.is_underlined:
-                underline_y = baseline_pdf_y - max(0.8, transform.scale * 1.2)
-                pdf.setLineWidth(max(0.6, transform.scale * 0.9))
+                underline_y = baseline_pdf_y - max(
+                    0.8 / transform.user_unit,
+                    transform.scale * 1.2,
+                )
+                pdf.setLineWidth(
+                    max(0.6 / transform.user_unit, transform.scale * 0.9)
+                )
                 pdf.line(text_x, underline_y, text_x + text_width, underline_y)
 
     def _draw_node_logo(self, pdf: Canvas, transform: PdfTransform, layout: NodeLayout, color: str) -> None:
@@ -258,7 +525,7 @@ class PdfOrgChartExporter:
         radius = layout.style.logo_radius * transform.scale
         pdf.setFillColor(HexColor(color))
         pdf.setStrokeColor(HexColor("#FFFFFF"))
-        pdf.setLineWidth(max(0.8, transform.scale))
+        pdf.setLineWidth(max(0.8 / transform.user_unit, transform.scale))
         pdf.circle(center_x, center_y, radius, fill=True, stroke=True)
 
         if self._node_logo_reader is None:
@@ -284,6 +551,11 @@ class PdfOrgChartExporter:
         except OSError as error:
             LOGGER.warning("Unable to load node logo: %s", error)
             return None
+
+    def _format_pdf_number(self, value: float) -> str:
+        if value.is_integer():
+            return str(int(value))
+        return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
 __all__ = ["PdfOrgChartExporter"]

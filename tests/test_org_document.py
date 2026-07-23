@@ -20,13 +20,5 @@ class OrgGridDocumentTests(unittest.TestCase):
         document.remove_node(first.id)
         self.assertEqual(document.connections, [])
 
-    def test_blocked_points_are_normalized_and_toggleable(self):
-        document = OrgGridDocument()
-        self.assertTrue(document.toggle_blocked_point((1, 1)))
-        self.assertTrue(document.has_blocked_point((1.0, 1.0)))
-        self.assertFalse(document.toggle_blocked_point((1.0, 1.0)))
-        self.assertFalse(document.has_blocked_point((1.0, 1.0)))
-
-
 if __name__ == "__main__":
     unittest.main()

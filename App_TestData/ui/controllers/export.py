@@ -112,7 +112,7 @@ class ExportController:
                 parent=self.app,
             )
         except OutputCancelled:
-            self.app.message_label.configure(text="ExportaciÃ³n cancelada")
+            self.app.message_label.configure(text="Exportación cancelada")
         except Exception as error:  # noqa: BLE001
             LOGGER.exception("Unable to generate redacted PDF")
             self.app.message_label.configure(text=EXPORT_MESSAGES["error_status"])

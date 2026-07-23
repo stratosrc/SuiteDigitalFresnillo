@@ -11,7 +11,6 @@ GridPoint = tuple[float, float]
 
 class InteractionMode(Enum):
     IDLE = auto()
-    BLOCKING = auto()
     CONNECTING = auto()
     EDITING_ROUTE = auto()
     PANNING = auto()
@@ -28,7 +27,6 @@ class CanvasInteractionState:
     pending_connection_source_id: str | None = None
     pending_source_port: str | None = None
     hover_port: tuple[str, str] | None = None
-    preview_obstacle: GridPoint | None = None
     last_hover_cell: tuple[int, int] | None = None
     drag_node_id: str | None = None
     drag_screen_point: tuple[int, int] | None = None
@@ -69,8 +67,7 @@ class CanvasInteractionState:
         self.manual_drag_original_route = None
         self.manual_drag_candidate_route = None
         self.manual_drag_collision_node_ids = ()
-        if self.mode is not InteractionMode.BLOCKING:
-            self.mode = InteractionMode.IDLE
+        self.mode = InteractionMode.IDLE
 
 
 __all__ = ["CanvasInteractionState", "InteractionMode"]

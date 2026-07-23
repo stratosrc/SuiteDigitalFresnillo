@@ -137,6 +137,7 @@ components/shared/entries.py
 components/shared/help_dialog.py
 components/shared/images.py
 components/shared/paths.py
+components/shared/platform.py
 components/shared/progress_overlay.py
 components/shared/project_lifecycle.py
 components/shared/protected_storage.py
@@ -156,6 +157,9 @@ suite_digital_fresnillo.egg-info/requires.txt
 suite_digital_fresnillo.egg-info/top_level.txt
 tests/test_atomic_output.py
 tests/test_common_shortcuts.py
+tests/test_converter_libreoffice_env.py
+tests/test_converter_macos_behavior.py
+tests/test_libreoffice_paths.py
 tests/test_manhattan_router.py
 tests/test_manual_routes.py
 tests/test_navigation_zoom_validation.py
@@ -170,6 +174,9 @@ tests/test_project_file_types.py
 tests/test_project_lifecycle.py
 tests/test_redaction_history.py
 tests/test_summary_pages.py
+tests/test_testdata_cancel_interaction.py
+tests/test_testdata_cursors.py
+tests/test_testdata_pdf_rotation.py
 tests/test_testdata_project_persistence.py
 tests/test_tooltip_widgets.py
 tests/test_uppercase_fields.py

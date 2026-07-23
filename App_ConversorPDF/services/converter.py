@@ -11,7 +11,10 @@ import fitz
 from PIL import Image, ImageSequence
 
 from App_ConversorPDF.config import IMAGE_EXTENSIONS, PDF_EXTENSIONS, SHEET_EXTENSIONS
-from App_ConversorPDF.services.libreoffice import require_soffice_path
+from App_ConversorPDF.services.libreoffice import (
+    build_libreoffice_subprocess_env,
+    require_soffice_path,
+)
 from App_ConversorPDF.services.process_control import run_cancellable_process
 from App_ConversorPDF.services.spreadsheet_exporter import SpreadsheetPdfExporter
 from components.shared.atomic_output import write_atomic_output
@@ -143,6 +146,7 @@ class PdfConverter:
         cancel_check=None,
     ) -> Path:
         soffice_path = require_soffice_path()
+        worker_env = build_libreoffice_subprocess_env(soffice_path)
         self._ensure_output_dir(target_path.parent)
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -166,7 +170,7 @@ class PdfConverter:
                 str(temp_output_dir),
                 str(source_path),
             ]
-            completed = self._run_libreoffice(command, cancel_check)
+            completed = self._run_libreoffice(command, worker_env, cancel_check)
 
             generated_path = temp_output_dir / f"{source_path.stem}.pdf"
             if not generated_path.exists():
@@ -239,10 +243,12 @@ class PdfConverter:
     def _run_libreoffice(
         self,
         command: list[str],
+        env: dict[str, str] | None = None,
         cancel_check=None,
     ) -> subprocess.CompletedProcess[str]:
         completed = run_cancellable_process(
             command,
+            env=env,
             timeout_seconds=LIBREOFFICE_TIMEOUT_SECONDS,
             cancel_check=cancel_check,
         )

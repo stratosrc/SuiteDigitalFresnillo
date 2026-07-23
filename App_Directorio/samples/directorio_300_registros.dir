@@ -1,0 +1,2185 @@
+{
+  "app": "directorio",
+  "version": 1,
+  "directory": {
+    "title": "DIRECTORIO DE PRUEBA DE RENDIMIENTO",
+    "period": "ENERO - DICIEMBRE 2026",
+    "areas": [
+      {
+        "name": "PRESIDENCIA",
+        "personnel": [
+          {
+            "rank": "B2",
+            "name": "Miguel López Mendoza",
+            "position": "ANALISTA",
+            "email": "persona001@fresnillo.gob.mx",
+            "start_date": "02/02/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Verónica Flores Flores",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona002@fresnillo.gob.mx",
+            "start_date": "03/03/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Elena Mendoza López",
+            "position": "COORDINADOR(A)",
+            "email": "persona003@fresnillo.gob.mx",
+            "start_date": "04/04/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Héctor García Navarro",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona004@fresnillo.gob.mx",
+            "start_date": "05/05/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Jorge González Ruiz",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona005@fresnillo.gob.mx",
+            "start_date": "06/06/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Claudia Vargas Torres",
+            "position": "ANALISTA",
+            "email": "persona006@fresnillo.gob.mx",
+            "start_date": "07/07/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Sofía Ortega Martínez",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona007@fresnillo.gob.mx",
+            "start_date": "08/08/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Raúl Hernández Salazar",
+            "position": "COORDINADOR(A)",
+            "email": "persona008@fresnillo.gob.mx",
+            "start_date": "09/09/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Carlos Ramírez Castro",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona009@fresnillo.gob.mx",
+            "start_date": "10/10/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Patricia Castro Ramírez",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona010@fresnillo.gob.mx",
+            "start_date": "11/11/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "María Salazar Hernández",
+            "position": "ANALISTA",
+            "email": "persona011@fresnillo.gob.mx",
+            "start_date": "12/12/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Diego Martínez Ortega",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona012@fresnillo.gob.mx",
+            "start_date": "13/01/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Luis Torres Vargas",
+            "position": "COORDINADOR(A)",
+            "email": "persona013@fresnillo.gob.mx",
+            "start_date": "14/02/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Laura Ruiz González",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona014@fresnillo.gob.mx",
+            "start_date": "15/03/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Ana Navarro García",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona015@fresnillo.gob.mx",
+            "start_date": "16/04/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Miguel López Mendoza",
+            "position": "ANALISTA",
+            "email": "persona016@fresnillo.gob.mx",
+            "start_date": "17/05/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Verónica Flores Flores",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona017@fresnillo.gob.mx",
+            "start_date": "18/06/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Elena Mendoza López",
+            "position": "COORDINADOR(A)",
+            "email": "persona018@fresnillo.gob.mx",
+            "start_date": "19/07/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Héctor García Navarro",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona019@fresnillo.gob.mx",
+            "start_date": "20/08/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Jorge González Ruiz",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona020@fresnillo.gob.mx",
+            "start_date": "21/09/2026"
+          }
+        ]
+      },
+      {
+        "name": "SECRETARÍA DEL AYUNTAMIENTO",
+        "personnel": [
+          {
+            "rank": "C3",
+            "name": "Héctor López Flores",
+            "position": "ANALISTA",
+            "email": "persona021@fresnillo.gob.mx",
+            "start_date": "22/10/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Jorge Flores López",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona022@fresnillo.gob.mx",
+            "start_date": "23/11/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Claudia Mendoza Navarro",
+            "position": "COORDINADOR(A)",
+            "email": "persona023@fresnillo.gob.mx",
+            "start_date": "24/12/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Sofía García Ruiz",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona024@fresnillo.gob.mx",
+            "start_date": "25/01/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Raúl González Torres",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona025@fresnillo.gob.mx",
+            "start_date": "26/02/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Carlos Vargas Martínez",
+            "position": "ANALISTA",
+            "email": "persona026@fresnillo.gob.mx",
+            "start_date": "27/03/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Patricia Ortega Salazar",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona027@fresnillo.gob.mx",
+            "start_date": "28/04/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "María Hernández Castro",
+            "position": "COORDINADOR(A)",
+            "email": "persona028@fresnillo.gob.mx",
+            "start_date": "01/05/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Diego Ramírez Ramírez",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona029@fresnillo.gob.mx",
+            "start_date": "02/06/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Luis Castro Hernández",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona030@fresnillo.gob.mx",
+            "start_date": "03/07/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Laura Salazar Ortega",
+            "position": "ANALISTA",
+            "email": "persona031@fresnillo.gob.mx",
+            "start_date": "04/08/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Ana Martínez Vargas",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona032@fresnillo.gob.mx",
+            "start_date": "05/09/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Miguel Torres González",
+            "position": "COORDINADOR(A)",
+            "email": "persona033@fresnillo.gob.mx",
+            "start_date": "06/10/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Verónica Ruiz García",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona034@fresnillo.gob.mx",
+            "start_date": "07/11/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Elena Navarro Mendoza",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona035@fresnillo.gob.mx",
+            "start_date": "08/12/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Héctor López Flores",
+            "position": "ANALISTA",
+            "email": "persona036@fresnillo.gob.mx",
+            "start_date": "09/01/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Jorge Flores López",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona037@fresnillo.gob.mx",
+            "start_date": "10/02/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Claudia Mendoza Navarro",
+            "position": "COORDINADOR(A)",
+            "email": "persona038@fresnillo.gob.mx",
+            "start_date": "11/03/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Sofía García Ruiz",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona039@fresnillo.gob.mx",
+            "start_date": "12/04/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Raúl González Torres",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona040@fresnillo.gob.mx",
+            "start_date": "13/05/2026"
+          }
+        ]
+      },
+      {
+        "name": "TESORERÍA MUNICIPAL",
+        "personnel": [
+          {
+            "rank": "D4",
+            "name": "Sofía López López",
+            "position": "ANALISTA",
+            "email": "persona041@fresnillo.gob.mx",
+            "start_date": "14/06/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Raúl Flores Navarro",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona042@fresnillo.gob.mx",
+            "start_date": "15/07/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Carlos Mendoza Ruiz",
+            "position": "COORDINADOR(A)",
+            "email": "persona043@fresnillo.gob.mx",
+            "start_date": "16/08/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Patricia García Torres",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona044@fresnillo.gob.mx",
+            "start_date": "17/09/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "María González Martínez",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona045@fresnillo.gob.mx",
+            "start_date": "18/10/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Diego Vargas Salazar",
+            "position": "ANALISTA",
+            "email": "persona046@fresnillo.gob.mx",
+            "start_date": "19/11/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Luis Ortega Castro",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona047@fresnillo.gob.mx",
+            "start_date": "20/12/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Laura Hernández Ramírez",
+            "position": "COORDINADOR(A)",
+            "email": "persona048@fresnillo.gob.mx",
+            "start_date": "21/01/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Ana Ramírez Hernández",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona049@fresnillo.gob.mx",
+            "start_date": "22/02/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Miguel Castro Ortega",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona050@fresnillo.gob.mx",
+            "start_date": "23/03/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Verónica Salazar Vargas",
+            "position": "ANALISTA",
+            "email": "persona051@fresnillo.gob.mx",
+            "start_date": "24/04/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Elena Martínez González",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona052@fresnillo.gob.mx",
+            "start_date": "25/05/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Héctor Torres García",
+            "position": "COORDINADOR(A)",
+            "email": "persona053@fresnillo.gob.mx",
+            "start_date": "26/06/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Jorge Ruiz Mendoza",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona054@fresnillo.gob.mx",
+            "start_date": "27/07/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Claudia Navarro Flores",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona055@fresnillo.gob.mx",
+            "start_date": "28/08/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Sofía López López",
+            "position": "ANALISTA",
+            "email": "persona056@fresnillo.gob.mx",
+            "start_date": "01/09/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Raúl Flores Navarro",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona057@fresnillo.gob.mx",
+            "start_date": "02/10/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Carlos Mendoza Ruiz",
+            "position": "COORDINADOR(A)",
+            "email": "persona058@fresnillo.gob.mx",
+            "start_date": "03/11/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Patricia García Torres",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona059@fresnillo.gob.mx",
+            "start_date": "04/12/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "María González Martínez",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona060@fresnillo.gob.mx",
+            "start_date": "05/01/2026"
+          }
+        ]
+      },
+      {
+        "name": "OBRAS PÚBLICAS",
+        "personnel": [
+          {
+            "rank": "E5",
+            "name": "Patricia López Navarro",
+            "position": "ANALISTA",
+            "email": "persona061@fresnillo.gob.mx",
+            "start_date": "06/02/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "María Flores Ruiz",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona062@fresnillo.gob.mx",
+            "start_date": "07/03/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Diego Mendoza Torres",
+            "position": "COORDINADOR(A)",
+            "email": "persona063@fresnillo.gob.mx",
+            "start_date": "08/04/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Luis García Martínez",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona064@fresnillo.gob.mx",
+            "start_date": "09/05/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Laura González Salazar",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona065@fresnillo.gob.mx",
+            "start_date": "10/06/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Ana Vargas Castro",
+            "position": "ANALISTA",
+            "email": "persona066@fresnillo.gob.mx",
+            "start_date": "11/07/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Miguel Ortega Ramírez",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona067@fresnillo.gob.mx",
+            "start_date": "12/08/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Verónica Hernández Hernández",
+            "position": "COORDINADOR(A)",
+            "email": "persona068@fresnillo.gob.mx",
+            "start_date": "13/09/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Elena Ramírez Ortega",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona069@fresnillo.gob.mx",
+            "start_date": "14/10/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Héctor Castro Vargas",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona070@fresnillo.gob.mx",
+            "start_date": "15/11/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Jorge Salazar González",
+            "position": "ANALISTA",
+            "email": "persona071@fresnillo.gob.mx",
+            "start_date": "16/12/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Claudia Martínez García",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona072@fresnillo.gob.mx",
+            "start_date": "17/01/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Sofía Torres Mendoza",
+            "position": "COORDINADOR(A)",
+            "email": "persona073@fresnillo.gob.mx",
+            "start_date": "18/02/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Raúl Ruiz Flores",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona074@fresnillo.gob.mx",
+            "start_date": "19/03/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Carlos Navarro López",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona075@fresnillo.gob.mx",
+            "start_date": "20/04/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Patricia López Navarro",
+            "position": "ANALISTA",
+            "email": "persona076@fresnillo.gob.mx",
+            "start_date": "21/05/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "María Flores Ruiz",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona077@fresnillo.gob.mx",
+            "start_date": "22/06/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Diego Mendoza Torres",
+            "position": "COORDINADOR(A)",
+            "email": "persona078@fresnillo.gob.mx",
+            "start_date": "23/07/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Luis García Martínez",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona079@fresnillo.gob.mx",
+            "start_date": "24/08/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Laura González Salazar",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona080@fresnillo.gob.mx",
+            "start_date": "25/09/2026"
+          }
+        ]
+      },
+      {
+        "name": "DESARROLLO SOCIAL",
+        "personnel": [
+          {
+            "rank": "A1",
+            "name": "Luis López Ruiz",
+            "position": "ANALISTA",
+            "email": "persona081@fresnillo.gob.mx",
+            "start_date": "26/10/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Laura Flores Torres",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona082@fresnillo.gob.mx",
+            "start_date": "27/11/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Ana Mendoza Martínez",
+            "position": "COORDINADOR(A)",
+            "email": "persona083@fresnillo.gob.mx",
+            "start_date": "28/12/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Miguel García Salazar",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona084@fresnillo.gob.mx",
+            "start_date": "01/01/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Verónica González Castro",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona085@fresnillo.gob.mx",
+            "start_date": "02/02/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Elena Vargas Ramírez",
+            "position": "ANALISTA",
+            "email": "persona086@fresnillo.gob.mx",
+            "start_date": "03/03/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Héctor Ortega Hernández",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona087@fresnillo.gob.mx",
+            "start_date": "04/04/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Jorge Hernández Ortega",
+            "position": "COORDINADOR(A)",
+            "email": "persona088@fresnillo.gob.mx",
+            "start_date": "05/05/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Claudia Ramírez Vargas",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona089@fresnillo.gob.mx",
+            "start_date": "06/06/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Sofía Castro González",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona090@fresnillo.gob.mx",
+            "start_date": "07/07/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Raúl Salazar García",
+            "position": "ANALISTA",
+            "email": "persona091@fresnillo.gob.mx",
+            "start_date": "08/08/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Carlos Martínez Mendoza",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona092@fresnillo.gob.mx",
+            "start_date": "09/09/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Patricia Torres Flores",
+            "position": "COORDINADOR(A)",
+            "email": "persona093@fresnillo.gob.mx",
+            "start_date": "10/10/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "María Ruiz López",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona094@fresnillo.gob.mx",
+            "start_date": "11/11/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Diego Navarro Navarro",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona095@fresnillo.gob.mx",
+            "start_date": "12/12/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Luis López Ruiz",
+            "position": "ANALISTA",
+            "email": "persona096@fresnillo.gob.mx",
+            "start_date": "13/01/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Laura Flores Torres",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona097@fresnillo.gob.mx",
+            "start_date": "14/02/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Ana Mendoza Martínez",
+            "position": "COORDINADOR(A)",
+            "email": "persona098@fresnillo.gob.mx",
+            "start_date": "15/03/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Miguel García Salazar",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona099@fresnillo.gob.mx",
+            "start_date": "16/04/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Verónica González Castro",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona100@fresnillo.gob.mx",
+            "start_date": "17/05/2026"
+          }
+        ]
+      },
+      {
+        "name": "SEGURIDAD PÚBLICA",
+        "personnel": [
+          {
+            "rank": "B2",
+            "name": "Miguel López Torres",
+            "position": "ANALISTA",
+            "email": "persona101@fresnillo.gob.mx",
+            "start_date": "18/06/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Verónica Flores Martínez",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona102@fresnillo.gob.mx",
+            "start_date": "19/07/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Elena Mendoza Salazar",
+            "position": "COORDINADOR(A)",
+            "email": "persona103@fresnillo.gob.mx",
+            "start_date": "20/08/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Héctor García Castro",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona104@fresnillo.gob.mx",
+            "start_date": "21/09/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Jorge González Ramírez",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona105@fresnillo.gob.mx",
+            "start_date": "22/10/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Claudia Vargas Hernández",
+            "position": "ANALISTA",
+            "email": "persona106@fresnillo.gob.mx",
+            "start_date": "23/11/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Sofía Ortega Ortega",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona107@fresnillo.gob.mx",
+            "start_date": "24/12/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Raúl Hernández Vargas",
+            "position": "COORDINADOR(A)",
+            "email": "persona108@fresnillo.gob.mx",
+            "start_date": "25/01/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Carlos Ramírez González",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona109@fresnillo.gob.mx",
+            "start_date": "26/02/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Patricia Castro García",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona110@fresnillo.gob.mx",
+            "start_date": "27/03/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "María Salazar Mendoza",
+            "position": "ANALISTA",
+            "email": "persona111@fresnillo.gob.mx",
+            "start_date": "28/04/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Diego Martínez Flores",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona112@fresnillo.gob.mx",
+            "start_date": "01/05/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Luis Torres López",
+            "position": "COORDINADOR(A)",
+            "email": "persona113@fresnillo.gob.mx",
+            "start_date": "02/06/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Laura Ruiz Navarro",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona114@fresnillo.gob.mx",
+            "start_date": "03/07/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Ana Navarro Ruiz",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona115@fresnillo.gob.mx",
+            "start_date": "04/08/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Miguel López Torres",
+            "position": "ANALISTA",
+            "email": "persona116@fresnillo.gob.mx",
+            "start_date": "05/09/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Verónica Flores Martínez",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona117@fresnillo.gob.mx",
+            "start_date": "06/10/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Elena Mendoza Salazar",
+            "position": "COORDINADOR(A)",
+            "email": "persona118@fresnillo.gob.mx",
+            "start_date": "07/11/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Héctor García Castro",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona119@fresnillo.gob.mx",
+            "start_date": "08/12/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Jorge González Ramírez",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona120@fresnillo.gob.mx",
+            "start_date": "09/01/2026"
+          }
+        ]
+      },
+      {
+        "name": "SERVICIOS PÚBLICOS",
+        "personnel": [
+          {
+            "rank": "C3",
+            "name": "Héctor López Martínez",
+            "position": "ANALISTA",
+            "email": "persona121@fresnillo.gob.mx",
+            "start_date": "10/02/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Jorge Flores Salazar",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona122@fresnillo.gob.mx",
+            "start_date": "11/03/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Claudia Mendoza Castro",
+            "position": "COORDINADOR(A)",
+            "email": "persona123@fresnillo.gob.mx",
+            "start_date": "12/04/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Sofía García Ramírez",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona124@fresnillo.gob.mx",
+            "start_date": "13/05/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Raúl González Hernández",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona125@fresnillo.gob.mx",
+            "start_date": "14/06/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Carlos Vargas Ortega",
+            "position": "ANALISTA",
+            "email": "persona126@fresnillo.gob.mx",
+            "start_date": "15/07/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Patricia Ortega Vargas",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona127@fresnillo.gob.mx",
+            "start_date": "16/08/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "María Hernández González",
+            "position": "COORDINADOR(A)",
+            "email": "persona128@fresnillo.gob.mx",
+            "start_date": "17/09/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Diego Ramírez García",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona129@fresnillo.gob.mx",
+            "start_date": "18/10/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Luis Castro Mendoza",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona130@fresnillo.gob.mx",
+            "start_date": "19/11/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Laura Salazar Flores",
+            "position": "ANALISTA",
+            "email": "persona131@fresnillo.gob.mx",
+            "start_date": "20/12/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Ana Martínez López",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona132@fresnillo.gob.mx",
+            "start_date": "21/01/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Miguel Torres Navarro",
+            "position": "COORDINADOR(A)",
+            "email": "persona133@fresnillo.gob.mx",
+            "start_date": "22/02/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Verónica Ruiz Ruiz",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona134@fresnillo.gob.mx",
+            "start_date": "23/03/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Elena Navarro Torres",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona135@fresnillo.gob.mx",
+            "start_date": "24/04/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Héctor López Martínez",
+            "position": "ANALISTA",
+            "email": "persona136@fresnillo.gob.mx",
+            "start_date": "25/05/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Jorge Flores Salazar",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona137@fresnillo.gob.mx",
+            "start_date": "26/06/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Claudia Mendoza Castro",
+            "position": "COORDINADOR(A)",
+            "email": "persona138@fresnillo.gob.mx",
+            "start_date": "27/07/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Sofía García Ramírez",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona139@fresnillo.gob.mx",
+            "start_date": "28/08/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Raúl González Hernández",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona140@fresnillo.gob.mx",
+            "start_date": "01/09/2026"
+          }
+        ]
+      },
+      {
+        "name": "DESARROLLO URBANO",
+        "personnel": [
+          {
+            "rank": "D4",
+            "name": "Sofía López Salazar",
+            "position": "ANALISTA",
+            "email": "persona141@fresnillo.gob.mx",
+            "start_date": "02/10/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Raúl Flores Castro",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona142@fresnillo.gob.mx",
+            "start_date": "03/11/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Carlos Mendoza Ramírez",
+            "position": "COORDINADOR(A)",
+            "email": "persona143@fresnillo.gob.mx",
+            "start_date": "04/12/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Patricia García Hernández",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona144@fresnillo.gob.mx",
+            "start_date": "05/01/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "María González Ortega",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona145@fresnillo.gob.mx",
+            "start_date": "06/02/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Diego Vargas Vargas",
+            "position": "ANALISTA",
+            "email": "persona146@fresnillo.gob.mx",
+            "start_date": "07/03/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Luis Ortega González",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona147@fresnillo.gob.mx",
+            "start_date": "08/04/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Laura Hernández García",
+            "position": "COORDINADOR(A)",
+            "email": "persona148@fresnillo.gob.mx",
+            "start_date": "09/05/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Ana Ramírez Mendoza",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona149@fresnillo.gob.mx",
+            "start_date": "10/06/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Miguel Castro Flores",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona150@fresnillo.gob.mx",
+            "start_date": "11/07/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Verónica Salazar López",
+            "position": "ANALISTA",
+            "email": "persona151@fresnillo.gob.mx",
+            "start_date": "12/08/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Elena Martínez Navarro",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona152@fresnillo.gob.mx",
+            "start_date": "13/09/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Héctor Torres Ruiz",
+            "position": "COORDINADOR(A)",
+            "email": "persona153@fresnillo.gob.mx",
+            "start_date": "14/10/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Jorge Ruiz Torres",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona154@fresnillo.gob.mx",
+            "start_date": "15/11/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Claudia Navarro Martínez",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona155@fresnillo.gob.mx",
+            "start_date": "16/12/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Sofía López Salazar",
+            "position": "ANALISTA",
+            "email": "persona156@fresnillo.gob.mx",
+            "start_date": "17/01/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Raúl Flores Castro",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona157@fresnillo.gob.mx",
+            "start_date": "18/02/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Carlos Mendoza Ramírez",
+            "position": "COORDINADOR(A)",
+            "email": "persona158@fresnillo.gob.mx",
+            "start_date": "19/03/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Patricia García Hernández",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona159@fresnillo.gob.mx",
+            "start_date": "20/04/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "María González Ortega",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona160@fresnillo.gob.mx",
+            "start_date": "21/05/2026"
+          }
+        ]
+      },
+      {
+        "name": "CONTRALORÍA INTERNA",
+        "personnel": [
+          {
+            "rank": "E5",
+            "name": "Patricia López Castro",
+            "position": "ANALISTA",
+            "email": "persona161@fresnillo.gob.mx",
+            "start_date": "22/06/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "María Flores Ramírez",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona162@fresnillo.gob.mx",
+            "start_date": "23/07/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Diego Mendoza Hernández",
+            "position": "COORDINADOR(A)",
+            "email": "persona163@fresnillo.gob.mx",
+            "start_date": "24/08/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Luis García Ortega",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona164@fresnillo.gob.mx",
+            "start_date": "25/09/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Laura González Vargas",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona165@fresnillo.gob.mx",
+            "start_date": "26/10/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Ana Vargas González",
+            "position": "ANALISTA",
+            "email": "persona166@fresnillo.gob.mx",
+            "start_date": "27/11/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Miguel Ortega García",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona167@fresnillo.gob.mx",
+            "start_date": "28/12/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Verónica Hernández Mendoza",
+            "position": "COORDINADOR(A)",
+            "email": "persona168@fresnillo.gob.mx",
+            "start_date": "01/01/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Elena Ramírez Flores",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona169@fresnillo.gob.mx",
+            "start_date": "02/02/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Héctor Castro López",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona170@fresnillo.gob.mx",
+            "start_date": "03/03/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Jorge Salazar Navarro",
+            "position": "ANALISTA",
+            "email": "persona171@fresnillo.gob.mx",
+            "start_date": "04/04/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Claudia Martínez Ruiz",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona172@fresnillo.gob.mx",
+            "start_date": "05/05/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Sofía Torres Torres",
+            "position": "COORDINADOR(A)",
+            "email": "persona173@fresnillo.gob.mx",
+            "start_date": "06/06/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Raúl Ruiz Martínez",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona174@fresnillo.gob.mx",
+            "start_date": "07/07/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Carlos Navarro Salazar",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona175@fresnillo.gob.mx",
+            "start_date": "08/08/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Patricia López Castro",
+            "position": "ANALISTA",
+            "email": "persona176@fresnillo.gob.mx",
+            "start_date": "09/09/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "María Flores Ramírez",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona177@fresnillo.gob.mx",
+            "start_date": "10/10/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Diego Mendoza Hernández",
+            "position": "COORDINADOR(A)",
+            "email": "persona178@fresnillo.gob.mx",
+            "start_date": "11/11/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Luis García Ortega",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona179@fresnillo.gob.mx",
+            "start_date": "12/12/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Laura González Vargas",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona180@fresnillo.gob.mx",
+            "start_date": "13/01/2026"
+          }
+        ]
+      },
+      {
+        "name": "RECURSOS HUMANOS",
+        "personnel": [
+          {
+            "rank": "A1",
+            "name": "Luis López Ramírez",
+            "position": "ANALISTA",
+            "email": "persona181@fresnillo.gob.mx",
+            "start_date": "14/02/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Laura Flores Hernández",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona182@fresnillo.gob.mx",
+            "start_date": "15/03/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Ana Mendoza Ortega",
+            "position": "COORDINADOR(A)",
+            "email": "persona183@fresnillo.gob.mx",
+            "start_date": "16/04/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Miguel García Vargas",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona184@fresnillo.gob.mx",
+            "start_date": "17/05/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Verónica González González",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona185@fresnillo.gob.mx",
+            "start_date": "18/06/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Elena Vargas García",
+            "position": "ANALISTA",
+            "email": "persona186@fresnillo.gob.mx",
+            "start_date": "19/07/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Héctor Ortega Mendoza",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona187@fresnillo.gob.mx",
+            "start_date": "20/08/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Jorge Hernández Flores",
+            "position": "COORDINADOR(A)",
+            "email": "persona188@fresnillo.gob.mx",
+            "start_date": "21/09/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Claudia Ramírez López",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona189@fresnillo.gob.mx",
+            "start_date": "22/10/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Sofía Castro Navarro",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona190@fresnillo.gob.mx",
+            "start_date": "23/11/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Raúl Salazar Ruiz",
+            "position": "ANALISTA",
+            "email": "persona191@fresnillo.gob.mx",
+            "start_date": "24/12/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Carlos Martínez Torres",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona192@fresnillo.gob.mx",
+            "start_date": "25/01/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Patricia Torres Martínez",
+            "position": "COORDINADOR(A)",
+            "email": "persona193@fresnillo.gob.mx",
+            "start_date": "26/02/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "María Ruiz Salazar",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona194@fresnillo.gob.mx",
+            "start_date": "27/03/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Diego Navarro Castro",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona195@fresnillo.gob.mx",
+            "start_date": "28/04/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Luis López Ramírez",
+            "position": "ANALISTA",
+            "email": "persona196@fresnillo.gob.mx",
+            "start_date": "01/05/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Laura Flores Hernández",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona197@fresnillo.gob.mx",
+            "start_date": "02/06/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Ana Mendoza Ortega",
+            "position": "COORDINADOR(A)",
+            "email": "persona198@fresnillo.gob.mx",
+            "start_date": "03/07/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Miguel García Vargas",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona199@fresnillo.gob.mx",
+            "start_date": "04/08/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Verónica González González",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona200@fresnillo.gob.mx",
+            "start_date": "05/09/2026"
+          }
+        ]
+      },
+      {
+        "name": "COMUNICACIÓN SOCIAL",
+        "personnel": [
+          {
+            "rank": "B2",
+            "name": "Miguel López Hernández",
+            "position": "ANALISTA",
+            "email": "persona201@fresnillo.gob.mx",
+            "start_date": "06/10/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Verónica Flores Ortega",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona202@fresnillo.gob.mx",
+            "start_date": "07/11/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Elena Mendoza Vargas",
+            "position": "COORDINADOR(A)",
+            "email": "persona203@fresnillo.gob.mx",
+            "start_date": "08/12/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Héctor García González",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona204@fresnillo.gob.mx",
+            "start_date": "09/01/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Jorge González García",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona205@fresnillo.gob.mx",
+            "start_date": "10/02/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Claudia Vargas Mendoza",
+            "position": "ANALISTA",
+            "email": "persona206@fresnillo.gob.mx",
+            "start_date": "11/03/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Sofía Ortega Flores",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona207@fresnillo.gob.mx",
+            "start_date": "12/04/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Raúl Hernández López",
+            "position": "COORDINADOR(A)",
+            "email": "persona208@fresnillo.gob.mx",
+            "start_date": "13/05/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Carlos Ramírez Navarro",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona209@fresnillo.gob.mx",
+            "start_date": "14/06/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Patricia Castro Ruiz",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona210@fresnillo.gob.mx",
+            "start_date": "15/07/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "María Salazar Torres",
+            "position": "ANALISTA",
+            "email": "persona211@fresnillo.gob.mx",
+            "start_date": "16/08/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Diego Martínez Martínez",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona212@fresnillo.gob.mx",
+            "start_date": "17/09/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Luis Torres Salazar",
+            "position": "COORDINADOR(A)",
+            "email": "persona213@fresnillo.gob.mx",
+            "start_date": "18/10/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Laura Ruiz Castro",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona214@fresnillo.gob.mx",
+            "start_date": "19/11/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Ana Navarro Ramírez",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona215@fresnillo.gob.mx",
+            "start_date": "20/12/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Miguel López Hernández",
+            "position": "ANALISTA",
+            "email": "persona216@fresnillo.gob.mx",
+            "start_date": "21/01/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Verónica Flores Ortega",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona217@fresnillo.gob.mx",
+            "start_date": "22/02/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Elena Mendoza Vargas",
+            "position": "COORDINADOR(A)",
+            "email": "persona218@fresnillo.gob.mx",
+            "start_date": "23/03/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Héctor García González",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona219@fresnillo.gob.mx",
+            "start_date": "24/04/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Jorge González García",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona220@fresnillo.gob.mx",
+            "start_date": "25/05/2026"
+          }
+        ]
+      },
+      {
+        "name": "JURÍDICO",
+        "personnel": [
+          {
+            "rank": "C3",
+            "name": "Héctor López Ortega",
+            "position": "ANALISTA",
+            "email": "persona221@fresnillo.gob.mx",
+            "start_date": "26/06/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Jorge Flores Vargas",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona222@fresnillo.gob.mx",
+            "start_date": "27/07/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Claudia Mendoza González",
+            "position": "COORDINADOR(A)",
+            "email": "persona223@fresnillo.gob.mx",
+            "start_date": "28/08/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Sofía García García",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona224@fresnillo.gob.mx",
+            "start_date": "01/09/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Raúl González Mendoza",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona225@fresnillo.gob.mx",
+            "start_date": "02/10/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Carlos Vargas Flores",
+            "position": "ANALISTA",
+            "email": "persona226@fresnillo.gob.mx",
+            "start_date": "03/11/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Patricia Ortega López",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona227@fresnillo.gob.mx",
+            "start_date": "04/12/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "María Hernández Navarro",
+            "position": "COORDINADOR(A)",
+            "email": "persona228@fresnillo.gob.mx",
+            "start_date": "05/01/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Diego Ramírez Ruiz",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona229@fresnillo.gob.mx",
+            "start_date": "06/02/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Luis Castro Torres",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona230@fresnillo.gob.mx",
+            "start_date": "07/03/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Laura Salazar Martínez",
+            "position": "ANALISTA",
+            "email": "persona231@fresnillo.gob.mx",
+            "start_date": "08/04/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Ana Martínez Salazar",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona232@fresnillo.gob.mx",
+            "start_date": "09/05/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Miguel Torres Castro",
+            "position": "COORDINADOR(A)",
+            "email": "persona233@fresnillo.gob.mx",
+            "start_date": "10/06/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Verónica Ruiz Ramírez",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona234@fresnillo.gob.mx",
+            "start_date": "11/07/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Elena Navarro Hernández",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona235@fresnillo.gob.mx",
+            "start_date": "12/08/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Héctor López Ortega",
+            "position": "ANALISTA",
+            "email": "persona236@fresnillo.gob.mx",
+            "start_date": "13/09/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Jorge Flores Vargas",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona237@fresnillo.gob.mx",
+            "start_date": "14/10/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Claudia Mendoza González",
+            "position": "COORDINADOR(A)",
+            "email": "persona238@fresnillo.gob.mx",
+            "start_date": "15/11/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Sofía García García",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona239@fresnillo.gob.mx",
+            "start_date": "16/12/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Raúl González Mendoza",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona240@fresnillo.gob.mx",
+            "start_date": "17/01/2026"
+          }
+        ]
+      },
+      {
+        "name": "CULTURA",
+        "personnel": [
+          {
+            "rank": "D4",
+            "name": "Sofía López Vargas",
+            "position": "ANALISTA",
+            "email": "persona241@fresnillo.gob.mx",
+            "start_date": "18/02/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Raúl Flores González",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona242@fresnillo.gob.mx",
+            "start_date": "19/03/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Carlos Mendoza García",
+            "position": "COORDINADOR(A)",
+            "email": "persona243@fresnillo.gob.mx",
+            "start_date": "20/04/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Patricia García Mendoza",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona244@fresnillo.gob.mx",
+            "start_date": "21/05/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "María González Flores",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona245@fresnillo.gob.mx",
+            "start_date": "22/06/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Diego Vargas López",
+            "position": "ANALISTA",
+            "email": "persona246@fresnillo.gob.mx",
+            "start_date": "23/07/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Luis Ortega Navarro",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona247@fresnillo.gob.mx",
+            "start_date": "24/08/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Laura Hernández Ruiz",
+            "position": "COORDINADOR(A)",
+            "email": "persona248@fresnillo.gob.mx",
+            "start_date": "25/09/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Ana Ramírez Torres",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona249@fresnillo.gob.mx",
+            "start_date": "26/10/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Miguel Castro Martínez",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona250@fresnillo.gob.mx",
+            "start_date": "27/11/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Verónica Salazar Salazar",
+            "position": "ANALISTA",
+            "email": "persona251@fresnillo.gob.mx",
+            "start_date": "28/12/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Elena Martínez Castro",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona252@fresnillo.gob.mx",
+            "start_date": "01/01/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Héctor Torres Ramírez",
+            "position": "COORDINADOR(A)",
+            "email": "persona253@fresnillo.gob.mx",
+            "start_date": "02/02/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Jorge Ruiz Hernández",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona254@fresnillo.gob.mx",
+            "start_date": "03/03/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Claudia Navarro Ortega",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona255@fresnillo.gob.mx",
+            "start_date": "04/04/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Sofía López Vargas",
+            "position": "ANALISTA",
+            "email": "persona256@fresnillo.gob.mx",
+            "start_date": "05/05/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Raúl Flores González",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona257@fresnillo.gob.mx",
+            "start_date": "06/06/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Carlos Mendoza García",
+            "position": "COORDINADOR(A)",
+            "email": "persona258@fresnillo.gob.mx",
+            "start_date": "07/07/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Patricia García Mendoza",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona259@fresnillo.gob.mx",
+            "start_date": "08/08/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "María González Flores",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona260@fresnillo.gob.mx",
+            "start_date": "09/09/2026"
+          }
+        ]
+      },
+      {
+        "name": "DEPORTES",
+        "personnel": [
+          {
+            "rank": "E5",
+            "name": "Patricia López González",
+            "position": "ANALISTA",
+            "email": "persona261@fresnillo.gob.mx",
+            "start_date": "10/10/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "María Flores García",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona262@fresnillo.gob.mx",
+            "start_date": "11/11/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Diego Mendoza Mendoza",
+            "position": "COORDINADOR(A)",
+            "email": "persona263@fresnillo.gob.mx",
+            "start_date": "12/12/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Luis García Flores",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona264@fresnillo.gob.mx",
+            "start_date": "13/01/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Laura González López",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona265@fresnillo.gob.mx",
+            "start_date": "14/02/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Ana Vargas Navarro",
+            "position": "ANALISTA",
+            "email": "persona266@fresnillo.gob.mx",
+            "start_date": "15/03/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Miguel Ortega Ruiz",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona267@fresnillo.gob.mx",
+            "start_date": "16/04/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Verónica Hernández Torres",
+            "position": "COORDINADOR(A)",
+            "email": "persona268@fresnillo.gob.mx",
+            "start_date": "17/05/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Elena Ramírez Martínez",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona269@fresnillo.gob.mx",
+            "start_date": "18/06/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Héctor Castro Salazar",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona270@fresnillo.gob.mx",
+            "start_date": "19/07/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Jorge Salazar Castro",
+            "position": "ANALISTA",
+            "email": "persona271@fresnillo.gob.mx",
+            "start_date": "20/08/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Claudia Martínez Ramírez",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona272@fresnillo.gob.mx",
+            "start_date": "21/09/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Sofía Torres Hernández",
+            "position": "COORDINADOR(A)",
+            "email": "persona273@fresnillo.gob.mx",
+            "start_date": "22/10/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Raúl Ruiz Ortega",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona274@fresnillo.gob.mx",
+            "start_date": "23/11/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Carlos Navarro Vargas",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona275@fresnillo.gob.mx",
+            "start_date": "24/12/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Patricia López González",
+            "position": "ANALISTA",
+            "email": "persona276@fresnillo.gob.mx",
+            "start_date": "25/01/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "María Flores García",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona277@fresnillo.gob.mx",
+            "start_date": "26/02/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Diego Mendoza Mendoza",
+            "position": "COORDINADOR(A)",
+            "email": "persona278@fresnillo.gob.mx",
+            "start_date": "27/03/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Luis García Flores",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona279@fresnillo.gob.mx",
+            "start_date": "28/04/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Laura González López",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona280@fresnillo.gob.mx",
+            "start_date": "01/05/2026"
+          }
+        ]
+      },
+      {
+        "name": "TECNOLOGÍAS DE LA INFORMACIÓN",
+        "personnel": [
+          {
+            "rank": "A1",
+            "name": "Luis López García",
+            "position": "ANALISTA",
+            "email": "persona281@fresnillo.gob.mx",
+            "start_date": "02/06/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Laura Flores Mendoza",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona282@fresnillo.gob.mx",
+            "start_date": "03/07/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Ana Mendoza Flores",
+            "position": "COORDINADOR(A)",
+            "email": "persona283@fresnillo.gob.mx",
+            "start_date": "04/08/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Miguel García López",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona284@fresnillo.gob.mx",
+            "start_date": "05/09/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Verónica González Navarro",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona285@fresnillo.gob.mx",
+            "start_date": "06/10/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Elena Vargas Ruiz",
+            "position": "ANALISTA",
+            "email": "persona286@fresnillo.gob.mx",
+            "start_date": "07/11/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Héctor Ortega Torres",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona287@fresnillo.gob.mx",
+            "start_date": "08/12/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Jorge Hernández Martínez",
+            "position": "COORDINADOR(A)",
+            "email": "persona288@fresnillo.gob.mx",
+            "start_date": "09/01/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Claudia Ramírez Salazar",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona289@fresnillo.gob.mx",
+            "start_date": "10/02/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Sofía Castro Castro",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona290@fresnillo.gob.mx",
+            "start_date": "11/03/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Raúl Salazar Ramírez",
+            "position": "ANALISTA",
+            "email": "persona291@fresnillo.gob.mx",
+            "start_date": "12/04/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Carlos Martínez Hernández",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona292@fresnillo.gob.mx",
+            "start_date": "13/05/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Patricia Torres Ortega",
+            "position": "COORDINADOR(A)",
+            "email": "persona293@fresnillo.gob.mx",
+            "start_date": "14/06/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "María Ruiz Vargas",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona294@fresnillo.gob.mx",
+            "start_date": "15/07/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Diego Navarro González",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona295@fresnillo.gob.mx",
+            "start_date": "16/08/2026"
+          },
+          {
+            "rank": "A1",
+            "name": "Luis López García",
+            "position": "ANALISTA",
+            "email": "persona296@fresnillo.gob.mx",
+            "start_date": "17/09/2026"
+          },
+          {
+            "rank": "B2",
+            "name": "Laura Flores Mendoza",
+            "position": "JEFE(A) DE DEPARTAMENTO",
+            "email": "persona297@fresnillo.gob.mx",
+            "start_date": "18/10/2026"
+          },
+          {
+            "rank": "C3",
+            "name": "Ana Mendoza Flores",
+            "position": "COORDINADOR(A)",
+            "email": "persona298@fresnillo.gob.mx",
+            "start_date": "19/11/2026"
+          },
+          {
+            "rank": "D4",
+            "name": "Miguel García López",
+            "position": "AUXILIAR ADMINISTRATIVO",
+            "email": "persona299@fresnillo.gob.mx",
+            "start_date": "20/12/2026"
+          },
+          {
+            "rank": "E5",
+            "name": "Verónica González Navarro",
+            "position": "ENLACE OPERATIVO",
+            "email": "persona300@fresnillo.gob.mx",
+            "start_date": "21/01/2026"
+          }
+        ]
+      }
+    ]
+  }
+}

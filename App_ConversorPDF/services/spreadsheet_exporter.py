@@ -8,7 +8,11 @@ import subprocess
 import tempfile
 import textwrap
 
-from App_ConversorPDF.services.libreoffice import require_soffice_path
+from App_ConversorPDF.services.libreoffice import (
+    build_libreoffice_subprocess_env,
+    get_libreoffice_python_path,
+    require_soffice_path,
+)
 from App_ConversorPDF.services.process_control import run_cancellable_process
 
 
@@ -186,11 +190,12 @@ class SpreadsheetPdfExporter:
         cancel_check=None,
     ) -> Path:
         soffice_path = require_soffice_path()
-        python_path = soffice_path.parent / "python.exe"
-        if not python_path.is_file():
+        python_path = get_libreoffice_python_path(soffice_path)
+        if python_path is None:
             raise FileNotFoundError(
-                f"La copia de LibreOffice no incluye su intérprete Python: {python_path}"
+                "La copia de LibreOffice no incluye un interprete Python compatible con UNO."
             )
+        worker_env = build_libreoffice_subprocess_env(soffice_path)
 
         with tempfile.TemporaryDirectory(prefix="calc-export-") as temp_dir:
             temp_root = Path(temp_dir)
@@ -212,12 +217,12 @@ class SpreadsheetPdfExporter:
                 profile_dir.as_uri(),
                 str(port),
             ]
-            completed = _run_worker(command, cancel_check=cancel_check)
+            completed = _run_worker(command, env=worker_env, cancel_check=cancel_check)
 
         if not target_path.is_file():
             details = _format_process_output(completed.stdout, completed.stderr)
             raise RuntimeError(
-                "LibreOffice terminó, pero no generó el PDF de las hojas seleccionadas."
+                "LibreOffice termino, pero no genero el PDF de las hojas seleccionadas."
                 + details
             )
         return target_path
@@ -232,21 +237,23 @@ def _find_available_port() -> int:
 def _run_worker(
     command: list[str],
     *,
+    env: dict[str, str] | None = None,
     cancel_check=None,
 ) -> subprocess.CompletedProcess[str]:
     try:
         completed = run_cancellable_process(
             command,
+            env=env,
             timeout_seconds=SPREADSHEET_EXPORT_TIMEOUT_SECONDS,
             cancel_check=cancel_check,
         )
     except subprocess.TimeoutExpired as error:
         raise TimeoutError(
-            "LibreOffice excedió el tiempo límite al exportar las hojas seleccionadas."
+            "LibreOffice excedio el tiempo limite al exportar las hojas seleccionadas."
         ) from error
     except PermissionError as error:
         raise PermissionError(
-            "No se pudo ejecutar el intérprete interno de LibreOffice por permisos."
+            "No se pudo ejecutar el interprete interno de LibreOffice por permisos."
         ) from error
 
     if completed.returncode != 0:
@@ -261,7 +268,7 @@ def _format_process_output(stdout: str | None, stderr: str | None) -> str:
         parts.append(f"Error: {stderr.strip()}")
     if stdout and stdout.strip():
         parts.append(f"Salida: {stdout.strip()}")
-    return " " + " ".join(parts) if parts else " LibreOffice no devolvió detalles."
+    return " " + " ".join(parts) if parts else " LibreOffice no devolvio detalles."
 
 
 __all__ = ["SpreadsheetPdfExporter"]

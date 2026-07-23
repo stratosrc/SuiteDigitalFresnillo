@@ -20,12 +20,13 @@ SECONDARY_CLICK_SEQUENCES = (
 def primary_shortcut_sequences(key: str, *, shift: bool = False) -> tuple[str, ...]:
     """Return native shortcut bindings plus a Control fallback on macOS."""
     normalized_key = key.strip()
+    binding_key = normalized_key.upper() if shift else normalized_key
     modifiers = f"{PRIMARY_MODIFIER}-{'Shift-' if shift else ''}"
-    sequences = [f"<{modifiers}{normalized_key}>"]
+    sequences = [f"<{modifiers}{binding_key}>"]
 
     if IS_MACOS:
         control_modifiers = f"Control-{'Shift-' if shift else ''}"
-        sequences.append(f"<{control_modifiers}{normalized_key}>")
+        sequences.append(f"<{control_modifiers}{binding_key}>")
 
     return tuple(sequences)
 

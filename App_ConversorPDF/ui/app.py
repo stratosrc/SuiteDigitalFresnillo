@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import sys
 
 from App_ConversorPDF.config import APP_TITLE
 from App_ConversorPDF.ui.main_frame import PdfConverterMainFrame
@@ -12,10 +13,13 @@ from App_ConversorPDF.ui.theme import (
 )
 from components.shared.windowing import center_window, prepare_window_for_open, reveal_window_maximized
 
-try:
-    from tkinterdnd2 import TkinterDnD
-except ImportError:
+if sys.platform == "darwin":
     TkinterDnD = None
+else:
+    try:
+        from tkinterdnd2 import TkinterDnD
+    except ImportError:
+        TkinterDnD = None
 
 
 class PdfConverterApplication(ctk.CTk):

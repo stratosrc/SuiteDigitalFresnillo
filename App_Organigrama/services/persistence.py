@@ -15,7 +15,7 @@ class PersistenceManager:
         path = Path(target_path)
         payload = {
             "app": PROJECT_APP_ID,
-            "schema_version": 3,
+            "schema_version": 4,
             "document": document.to_dict(),
         }
         return atomic_write_json(path, payload)
@@ -44,10 +44,6 @@ class PersistenceManager:
                 for point in connection_data.get("manual_points", [])
             )
             connections.append(Connection(**connection_data))
-        blocked_points = [
-            (float(point[0]), float(point[1]))
-            for point in raw_document.get("blocked_points", [])
-        ]
         raw_title = str(raw_document.get("title", "") or "")
         normalized_title = (
             ""
@@ -62,7 +58,6 @@ class PersistenceManager:
             show_logos=bool(raw_document.get("show_logos", True)),
             nodes=nodes,
             connections=connections,
-            blocked_points=blocked_points,
         )
 
 

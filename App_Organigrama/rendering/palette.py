@@ -13,12 +13,23 @@ NODE_COLOR_CHOICES: tuple[tuple[str, str], ...] = (
     ("Personal Administrativo", NEUTRAL_GRAY),
 )
 
-NODE_HIERARCHY_RANK_BY_COLOR: dict[str, int] = {
-    PRIMARY_BLUE: 4,
-    SECONDARY_BLUE: 3,
-    LIGHT_BLUE: 2,
-    NEUTRAL_GRAY: 1,
+HIERARCHY_LEVEL_BY_COLOR = {
+    color: level
+    for level, (_label, color) in enumerate(NODE_COLOR_CHOICES)
 }
+HIERARCHY_LABEL_BY_COLOR = {
+    color: label
+    for label, color in NODE_COLOR_CHOICES
+}
+
+
+def is_inverse_hierarchy(source_color: str, target_color: str) -> bool:
+    """Return whether a connection points from a lower to a higher hierarchy."""
+    source_level = HIERARCHY_LEVEL_BY_COLOR.get(source_color)
+    target_level = HIERARCHY_LEVEL_BY_COLOR.get(target_color)
+    if source_level is None or target_level is None:
+        return False
+    return source_level > target_level
 
 
 @dataclass(frozen=True, slots=True)

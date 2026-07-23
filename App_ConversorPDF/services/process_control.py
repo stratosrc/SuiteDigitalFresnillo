@@ -13,6 +13,7 @@ from components.shared.atomic_output import OutputCancelled
 def run_cancellable_process(
     command: Sequence[str],
     *,
+    env: dict[str, str] | None = None,
     timeout_seconds: float,
     cancel_check: Callable[[], bool] | None = None,
 ) -> subprocess.CompletedProcess[str]:
@@ -29,6 +30,7 @@ def run_cancellable_process(
             stderr=subprocess.PIPE,
             text=True,
             creationflags=creationflags,
+            env=env,
         )
     except PermissionError as error:
         raise PermissionError("No se pudo ejecutar LibreOffice por permisos.") from error

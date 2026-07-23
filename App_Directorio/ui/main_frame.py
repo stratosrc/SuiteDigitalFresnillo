@@ -46,11 +46,12 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.master = master
         self.header_icon_image: ctk.CTkImage | None = None
         self.current_project_path: Path | None = None
+        self._dirty_hint = False
         self.persistence_manager = DirectoryPersistenceManager()
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="directory-worker")
-        self._pending_export: Future[Path] | None = None
+        self._pending_operation: Future | None = None
         self._build_layout()
-        self.export_progress_overlay = ProgressOverlay(self, color=PRIMARY_BUTTON)
+        self.progress_overlay = ProgressOverlay(self, color=PRIMARY_BUTTON)
         self.project_lifecycle = ProjectLifecycle(
             "directorio",
             snapshot=lambda: asdict(self.directory_form.get_report_data()),
@@ -83,6 +84,7 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self._build_form_body()
 
     def _build_menu(self) -> None:
+        self.file_menu_command_indices: list[int] = []
         self.file_menu = tk.Menu(
             self.master,
             tearoff=0,
@@ -92,12 +94,16 @@ class DirectoryMainFrame(ctk.CTkFrame):
             activeforeground=TEXT_LIGHT,
         )
         self.file_menu.add_command(label="Nuevo Proyecto", command=self.new_project)
+        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_command(label="Abrir Proyecto", command=self.open_project)
+        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.recent_menu = tk.Menu(self.file_menu, tearoff=0)
         self.file_menu.add_cascade(label="Archivos recientes", menu=self.recent_menu)
         self.file_menu.add_command(label="Guardar proyecto", command=self.save_project)
+        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exportar PDF", command=self.export_pdf)
+        self.file_menu_command_indices.append(int(self.file_menu.index("end")))
         self._refresh_recent_menu()
 
     def _build_topbar(self) -> None:
@@ -186,6 +192,9 @@ class DirectoryMainFrame(ctk.CTkFrame):
         show_help_dialog(self)
 
     def export_pdf(self) -> None:
+        if self._is_operation_running():
+            self._show_operation_warning()
+            return
         if not self.directory_form.validate_required_data():
             messagebox.showerror(
                 "Datos incompletos",
@@ -218,15 +227,15 @@ class DirectoryMainFrame(ctk.CTkFrame):
         if not target:
             return
 
-        self._set_export_busy("disabled")
-        self.export_progress_overlay.show("Generando PDF...")
+        self._set_busy_state("disabled")
+        self.progress_overlay.show("Generando PDF...")
         if IS_MACOS:
             self.update_idletasks()
             try:
                 output_path = DirectoryPdfExporter().export(data, Path(target))
                 messagebox.showinfo(
                     "PDF guardado",
-                    f"El reporte se guardÃ³ correctamente en:\n{output_path}",
+                    f"El reporte se guardó correctamente en:\n{output_path}",
                     parent=self,
                 )
             except Exception as error:  # noqa: BLE001
@@ -237,12 +246,12 @@ class DirectoryMainFrame(ctk.CTkFrame):
                     parent=self,
                 )
             finally:
-                self.export_progress_overlay.hide()
-                self._set_export_busy("normal")
+                self.progress_overlay.hide()
+                self._set_busy_state("normal")
             return
 
         future = self._executor.submit(DirectoryPdfExporter().export, data, Path(target))
-        self._pending_export = future
+        self._pending_operation = future
         self.after(100, lambda: self._poll_pdf_export(future))
 
     def _poll_pdf_export(self, future: Future[Path]) -> None:
@@ -264,18 +273,16 @@ class DirectoryMainFrame(ctk.CTkFrame):
                 parent=self,
             )
         finally:
-            if self._pending_export is future:
-                self._pending_export = None
-            self.export_progress_overlay.hide()
-            self._set_export_busy("normal")
+            if self._pending_operation is future:
+                self._pending_operation = None
+            self.progress_overlay.hide()
+            self._set_busy_state("normal")
 
-    def _set_export_busy(self, state: str) -> None:
+    def _set_busy_state(self, state: str) -> None:
         self.file_button.configure(state=state)
         self.help_button.configure(state=state)
-        try:
-            self.file_menu.entryconfig("Exportar PDF", state=state)
-        except tk.TclError:
-            pass
+        for index in self.file_menu_command_indices:
+            self.file_menu.entryconfig(index, state=state)
 
     def _confirm_export_preview(self) -> bool:
         summary = self.directory_form.get_preview_summary()
@@ -302,15 +309,21 @@ class DirectoryMainFrame(ctk.CTkFrame):
         return messagebox.askyesno("Vista previa", "\n".join(lines), parent=self)
 
     def new_project(self) -> None:
+        if self._is_operation_running():
+            self._show_operation_warning()
+            return
         if not self.project_lifecycle.confirm_discard(self, "crear un proyecto nuevo"):
             return
         self.directory_form.reset_form()
         self.current_project_path = None
         self.project_lifecycle.reset(mark_saved=True)
         self._reset_history()
-        self._update_window_title()
+        self._mark_clean_hint()
 
     def open_project(self) -> None:
+        if self._is_operation_running():
+            self._show_operation_warning()
+            return
         if not self.project_lifecycle.confirm_discard(self, "abrir otro proyecto"):
             return
         source_path = filedialog.askopenfilename(
@@ -321,24 +334,80 @@ class DirectoryMainFrame(ctk.CTkFrame):
         if not source_path:
             return
 
+        self._start_project_load(source_path)
+
+    def _start_project_load(
+        self,
+        source_path: str | Path,
+        *,
+        remove_recent_on_error: bool = False,
+    ) -> None:
+        self._set_busy_state("disabled")
+        self.progress_overlay.show("Cargando proyecto...")
+        future = self._executor.submit(self.persistence_manager.load, source_path)
+        self._pending_operation = future
+        self.after(
+            100,
+            lambda: self._poll_project_load(
+                future,
+                Path(source_path),
+                remove_recent_on_error,
+            ),
+        )
+
+    def _poll_project_load(
+        self,
+        future: Future,
+        source_path: Path,
+        remove_recent_on_error: bool,
+    ) -> None:
+        if not future.done():
+            self.after(
+                100,
+                lambda: self._poll_project_load(
+                    future,
+                    source_path,
+                    remove_recent_on_error,
+                ),
+            )
+            return
+
         try:
-            data = self.persistence_manager.load(source_path)
-        except Exception as error:
+            data = future.result()
+            self.current_project_path = source_path
+            self.directory_form.set_report_data(data)
+            self.project_lifecycle.mark_saved(source_path)
+            self._reset_history()
+            self._mark_clean_hint()
+        except Exception as error:  # noqa: BLE001
+            if remove_recent_on_error:
+                self.project_lifecycle.recent_files.remove(source_path)
             LOGGER.exception("Unable to load directory project from %s", source_path)
             messagebox.showerror(
                 "No se pudo abrir",
                 f"No fue posible cargar el proyecto.\n\n{error}",
                 parent=self,
             )
-            return
+        finally:
+            if self._pending_operation is future:
+                self._pending_operation = None
+            self.progress_overlay.hide()
+            self._set_busy_state("normal")
 
-        self.current_project_path = Path(source_path)
-        self.directory_form.set_report_data(data)
-        self.project_lifecycle.mark_saved(self.current_project_path)
-        self._reset_history()
-        self._update_window_title()
+    def _is_operation_running(self) -> bool:
+        return self._pending_operation is not None
+
+    def _show_operation_warning(self) -> None:
+        messagebox.showwarning(
+            "Operación en curso",
+            "Espera a que termine la operación actual antes de iniciar otra.",
+            parent=self,
+        )
 
     def save_project(self) -> bool:
+        if self._is_operation_running():
+            self._show_operation_warning()
+            return False
         if self.current_project_path is None:
             return self.save_project_as()
         return self._save_project_to_path(self.current_project_path)
@@ -374,23 +443,20 @@ class DirectoryMainFrame(ctk.CTkFrame):
             return False
         self.current_project_path = saved_path
         self.project_lifecycle.mark_saved(saved_path)
-        self._update_window_title()
+        self._mark_clean_hint()
         messagebox.showinfo("Proyecto guardado", f"Proyecto guardado en:\n{saved_path}", parent=self)
         return True
 
     def confirm_exit(self) -> None:
-        if self._pending_export is not None and not self._pending_export.done():
-            messagebox.showwarning(
-                "Exportación en curso",
-                "Espera a que termine la generación del PDF antes de cerrar.",
-                parent=self,
-            )
+        if self._is_operation_running():
+            self._show_operation_warning()
             return
         if not self.project_lifecycle.confirm_discard(self, f"salir de {APP_TITLE}"):
             return
         self.master.destroy()
 
     def _on_directory_changed(self, _event=None) -> None:
+        self._dirty_hint = True
         self._update_window_title()
         if self._history_paused:
             return
@@ -431,8 +497,18 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self._redo_history.clear()
 
     def _update_window_title(self) -> None:
-        marker = " *" if self.project_lifecycle.is_dirty else ""
+        marker = " *" if self._dirty_hint else ""
         self.master.title(f"{APP_TITLE}{marker}")
+
+    def _mark_clean_hint(self) -> None:
+        """Update the title without serializing a large directory on every keypress."""
+        self._dirty_hint = False
+        self._update_window_title()
+        self.after_idle(self._clear_deferred_dirty_hint)
+
+    def _clear_deferred_dirty_hint(self) -> None:
+        self._dirty_hint = False
+        self._update_window_title()
 
     def _refresh_recent_menu(self) -> None:
         if not hasattr(self, "recent_menu"):
@@ -449,24 +525,12 @@ class DirectoryMainFrame(ctk.CTkFrame):
             )
 
     def _open_project_path(self, source_path: str | Path) -> None:
+        if self._is_operation_running():
+            self._show_operation_warning()
+            return
         if not self.project_lifecycle.confirm_discard(self, "abrir otro proyecto"):
             return
-        try:
-            data = self.persistence_manager.load(source_path)
-        except Exception as error:
-            self.project_lifecycle.recent_files.remove(source_path)
-            LOGGER.exception("Unable to load directory project from %s", source_path)
-            messagebox.showerror(
-                "No se pudo abrir",
-                f"No fue posible cargar el proyecto.\n\n{error}",
-                parent=self,
-            )
-            return
-        self.current_project_path = Path(source_path)
-        self.directory_form.set_report_data(data)
-        self.project_lifecycle.mark_saved(self.current_project_path)
-        self._reset_history()
-        self._update_window_title()
+        self._start_project_load(source_path, remove_recent_on_error=True)
 
     def _restore_autosave(self, snapshot: object, path: Path | None) -> None:
         if not isinstance(snapshot, dict):
@@ -475,6 +539,8 @@ class DirectoryMainFrame(ctk.CTkFrame):
         self.current_project_path = path
         self._history = [snapshot]
         self._redo_history.clear()
+        self._dirty_hint = True
+        self._update_window_title()
 
     def destroy(self) -> None:
         self.project_lifecycle.stop_autosave()

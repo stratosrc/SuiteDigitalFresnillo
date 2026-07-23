@@ -1,4 +1,4 @@
-"""Node, obstacle, layout, and node-image controller."""
+"""Node, layout, and node-image controller."""
 
 from __future__ import annotations
 
@@ -10,12 +10,11 @@ from PIL import Image, ImageTk
 from App_Organigrama.config.assets import CROSS_CURSOR_PATH, NODE_LOGO_PATH
 from App_Organigrama.models.document import OrgNode
 from App_Organigrama.rendering.engine import NodeLayout
-from App_Organigrama.ui.canvas_hit_testing import find_blocked_point_at_screen
+from App_Organigrama.ui.canvas_hit_testing import find_tagged_entity_ids
 from App_Organigrama.ui.canvas_image_cache import get_resized_photo, load_rgba_image
 from App_Organigrama.ui.modals import NodeEditorDialog
 
 
-GridPoint = tuple[float, float]
 NODE_PROXIMITY_RADIUS = 34.0
 
 
@@ -56,7 +55,7 @@ class CanvasNodeController:
         self._set_selection(node_id=duplicate.id)
         self._mark_document_changed()
 
-    def _show_context_menu(self, event: tk.Event) -> None:
+    def _show_context_menu(self, event: tk.Event[tk.Canvas]) -> None:
         node = self._node_at_screen(event.x, event.y)
         connection = None if node is not None else self._connection_at_screen(event.x, event.y)
         if node is None and connection is None and getattr(event, "keyboard", False):
@@ -95,12 +94,16 @@ class CanvasNodeController:
 
     def _open_node_dialog(self, node: OrgNode) -> None:
         def save(name: str, role: str, color: str) -> None:
-            layout_dirty = node.name != name or node.role != role
+            layout_dirty = (
+                node.name != name
+                or node.role != role
+                or node.color != color
+            )
             self.document.update_node(node.id, name, role, color)
             self._mark_recent_node(node.id)
             self._set_selection(node_id=node.id)
             self._mark_document_changed(
-                routes_dirty=False,
+                routes_dirty=layout_dirty,
                 layout_dirty=layout_dirty,
             )
 
@@ -113,7 +116,7 @@ class CanvasNodeController:
             selected_color=node.color,
         )
 
-    def _delete_selected(self, _event: tk.Event | None = None) -> None:
+    def _delete_selected(self, _event: tk.Event[tk.Canvas] | None = None) -> None:
         if self.selected_node_id is not None:
             node_id = self.selected_node_id
             self.document.remove_node(node_id)
@@ -125,49 +128,35 @@ class CanvasNodeController:
             self._mark_document_changed()
             return
         if self.selected_connection_id is not None:
+            connection_index = next(
+                (
+                    index
+                    for index, connection in enumerate(self.document.connections)
+                    if connection.id == self.selected_connection_id
+                ),
+                0,
+            )
             removed = self.document.remove_connection(self.selected_connection_id)
             self.pending_connection_source_id = None
             self.pending_source_port = None
             self._set_selection()
             if removed:
-                self._mark_document_changed()
+                self._mark_document_changed(
+                    routes_dirty_from=connection_index,
+                    layout_dirty=False,
+                )
             else:
                 self.request_redraw()
-        if self.selected_blocked_point is not None:
-            blocked_point = self.selected_blocked_point
-            self.pending_connection_source_id = None
-            self.pending_source_port = None
-            self._set_selection()
-            if self.document.remove_blocked_point(blocked_point):
-                self._mark_document_changed()
-            else:
-                self.request_redraw()
-
-    def _select_or_add_blocked_point(self, screen_x: int, screen_y: int) -> None:
-        existing = self._blocked_point_at_screen(screen_x, screen_y)
-        if existing is not None:
-            self.preview_obstacle = existing
-            self._set_selection(blocked_point=existing)
-            self.request_redraw()
-            return
-        obstacle = self._screen_to_subgrid(screen_x, screen_y)
-        if self._obstacle_hits_node(obstacle):
-            return
-        self.document.toggle_blocked_point(obstacle)
-        self.preview_obstacle = obstacle
-        self._set_selection(blocked_point=obstacle)
-        self._mark_document_changed()
-
-    def _obstacle_hits_node(self, obstacle: GridPoint) -> bool:
-        world_x, world_y = self.rendering_engine.grid_to_world(*obstacle)
-        for node in self.document.nodes.values():
-            box = self._get_node_layout(node, include_logo=False).box
-            if box.left <= world_x <= box.right and box.top <= world_y <= box.bottom:
-                return True
-        return False
-
     def _node_at_screen(self, screen_x: int, screen_y: int) -> OrgNode | None:
-        for node in self.document.nodes.values():
+        for node_id in find_tagged_entity_ids(
+            self.canvas,
+            screen_x,
+            screen_y,
+            "node",
+        ):
+            node = self.document.nodes.get(node_id)
+            if node is None:
+                continue
             layout = self._get_node_layout(node, include_logo=False)
             left, top = self._world_to_screen(layout.box.left, layout.box.top)
             right, bottom = self._world_to_screen(layout.box.right, layout.box.bottom)
@@ -179,7 +168,17 @@ class CanvasNodeController:
         max_distance = max(18.0, NODE_PROXIMITY_RADIUS * self.zoom)
         closest_node: OrgNode | None = None
         closest_distance = max_distance
-        for node in self.document.nodes.values():
+        candidate_ids = find_tagged_entity_ids(
+            self.canvas,
+            screen_x,
+            screen_y,
+            "node",
+            hit_radius=max_distance,
+        )
+        for node_id in candidate_ids:
+            node = self.document.nodes.get(node_id)
+            if node is None:
+                continue
             layout = self._get_node_layout(node, include_logo=False)
             left, top = self._world_to_screen(layout.box.left, layout.box.top)
             right, bottom = self._world_to_screen(layout.box.right, layout.box.bottom)
@@ -213,20 +212,6 @@ class CanvasNodeController:
         if node is None:
             return None
         return self._world_to_screen(*self.rendering_engine.get_node_port(node, port))
-
-    def _blocked_point_at_screen(
-        self,
-        screen_x: int,
-        screen_y: int,
-    ) -> GridPoint | None:
-        return find_blocked_point_at_screen(
-            self.document.blocked_points,
-            screen_x,
-            screen_y,
-            self.zoom,
-            self.rendering_engine,
-            self._world_to_screen,
-        )
 
     def _mark_recent_node(self, node_id: str) -> None:
         if node_id not in self.document.nodes:

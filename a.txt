@@ -1,21 +1,18 @@
-rm -rf .venv-mac10
-python3.10 -m venv .venv-mac10
-
 cd ~/Desktop/SuiteDigitalFresnilloMac
+rm -rf .venv-mac
 python3.12 -m venv .venv-mac
 source .venv-mac/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install -e ".[build]"
 
-source .venv-mac10/bin/activate
-python -m pip install PyMuPDF==1.25.5
-python -c "import fitz; print(fitz.__doc__)"
-python -m pip install -e ".[build]
-
-para compilar
+para compilar-
 rm -rf build dist
 export MACOSX_DEPLOYMENT_TARGET=13.0
-python -m PyInstaller --clean --nsourceoconfirm suite_fresnillo.spec
+python -m PyInstaller --clean --noconfirm suite_fresnillo.spec
+
+Si falla-
+xcode-select --install
+
 
 tahoe 26.5
 
