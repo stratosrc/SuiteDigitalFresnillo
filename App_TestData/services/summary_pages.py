@@ -51,6 +51,8 @@ class SummaryPagesWriter:
             return self._build_confidential_summary_line(summary_label, rect_data)
         if classification == "other_law":
             return self._build_other_law_summary_line(summary_label, rect_data)
+        if classification == "custom":
+            return f"{summary_label} {rect_data.get('custom_text', '')}"
 
         concept_name = rect_data.get("concept_name", rect_data.get("label", ""))
         rows = rect_data.get("rows", 1)
@@ -86,16 +88,21 @@ class SummaryPagesWriter:
     def _measure_line_height(self, page, line, margin_x, line_height):
         page_width = page.rect.width
         available_width = page_width - (margin_x * 2)
-        words = line.split()
-        lines = 1
-        current_line = ""
-        for word in words:
-            candidate = f"{current_line} {word}".strip()
-            if current_line and fitz_text_width(candidate, 10) > available_width:
+        lines = 0
+        for explicit_line in line.split("\n"):
+            words = explicit_line.split()
+            if not words:
                 lines += 1
-                current_line = word
-            else:
-                current_line = candidate
+                continue
+            lines += 1
+            current_line = ""
+            for word in words:
+                candidate = f"{current_line} {word}".strip()
+                if current_line and fitz_text_width(candidate, 10) > available_width:
+                    lines += 1
+                    current_line = word
+                else:
+                    current_line = candidate
         return max(line_height, lines * 13) + 10
 
     def _write_line(self, page, line, margin_x, y_position, paragraph_height):

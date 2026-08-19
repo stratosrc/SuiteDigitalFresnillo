@@ -244,6 +244,10 @@ def _build_rectangle_data(app, result, end_x, end_y):
         concept_id = None
         concept_name = result.get("object", "")
         description = ""
+    elif classification == "custom":
+        concept_id = None
+        concept_name = "Personalizado"
+        description = result.get("custom_text", "")
     else:
         concept_id = None
         concept_name = get_classification_display_name(classification)
@@ -268,6 +272,7 @@ def _build_rectangle_data(app, result, end_x, end_y):
         "object": result.get("object", ""),
         "articles": result.get("articles", ""),
         "law": result.get("law", ""),
+        "custom_text": result.get("custom_text", ""),
         "description": description,
         "rect_tag": f"rect-{rectangle_id}",
         "canvas_rect_id": app.current_rect,
@@ -294,6 +299,11 @@ def _apply_dialog_result_to_rectangle(app, rectangle, result):
         concept_name = result.get("object", "")
         category = classification
         description = ""
+    elif classification == "custom":
+        concept_id = None
+        concept_name = "Personalizado"
+        category = classification
+        description = result.get("custom_text", "")
     else:
         concept_id = None
         concept_name = get_classification_display_name(classification)
@@ -313,6 +323,7 @@ def _apply_dialog_result_to_rectangle(app, rectangle, result):
             "object": result.get("object", ""),
             "articles": result.get("articles", ""),
             "law": result.get("law", ""),
+            "custom_text": result.get("custom_text", ""),
             "description": description,
         }
     )

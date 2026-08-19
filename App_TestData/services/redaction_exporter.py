@@ -17,6 +17,11 @@ from App_TestData.services.summary_pages import SummaryPagesWriter
 from components.shared.atomic_output import write_atomic_output
 
 
+EXPORT_QUALITY_STANDARD = "standard"
+EXPORT_QUALITY_COMPACT = "compact"
+_VALID_EXPORT_QUALITIES = {EXPORT_QUALITY_STANDARD, EXPORT_QUALITY_COMPACT}
+
+
 class RedactionPdfExporter:
     def __init__(self, concept_categories: Mapping[int, str]) -> None:
         self.summary_writer = SummaryPagesWriter(concept_categories)
@@ -29,7 +34,11 @@ class RedactionPdfExporter:
         rectangles: list[RectangleData],
         committee_data: CommitteeData | None = None,
         cancel_check: Callable[[], bool] | None = None,
+        export_quality: str = EXPORT_QUALITY_STANDARD,
     ) -> None:
+        if export_quality not in _VALID_EXPORT_QUALITIES:
+            raise ValueError(f"Calidad de exportación no compatible: {export_quality}")
+
         write_atomic_output(
             output_path,
             lambda temporary: self._write_pdf(
@@ -37,6 +46,7 @@ class RedactionPdfExporter:
                 str(temporary),
                 rectangles,
                 committee_data,
+                export_quality,
             ),
             should_commit=(
                 (lambda: not cancel_check())
@@ -51,6 +61,7 @@ class RedactionPdfExporter:
         output_path: str,
         rectangles: list[RectangleData],
         committee_data: CommitteeData | None,
+        export_quality: str,
     ) -> None:
         output_document = (
             fitz.open(stream=source, filetype="pdf")
@@ -63,14 +74,43 @@ class RedactionPdfExporter:
             original_page_count = output_document.page_count
             self._assign_final_numbers(ordered_rectangles)
             self._apply_redactions(output_document, ordered_rectangles)
+            self._rewrite_images_for_quality(output_document, export_quality)
             self._draw_rectangle_labels(output_document, ordered_rectangles)
             self.summary_writer.append(output_document, ordered_rectangles)
             if committee_data:
                 self.committee_writer.append(output_document, committee_data, ordered_rectangles)
             add_institutional_footer(output_document, start_page=original_page_count)
-            output_document.save(output_path, garbage=4, deflate=True)
+            self._save_optimized(output_document, output_path)
         finally:
             output_document.close()
+
+    @staticmethod
+    def _rewrite_images_for_quality(document, export_quality):
+        if export_quality == EXPORT_QUALITY_COMPACT:
+            document.rewrite_images(
+                dpi_threshold=200,
+                dpi_target=150,
+                quality=82,
+                lossy=True,
+                lossless=True,
+                bitonal=True,
+                color=True,
+                gray=True,
+                set_to_gray=False,
+            )
+
+    @staticmethod
+    def _save_optimized(document, output_path):
+        document.subset_fonts()
+        document.save(
+            output_path,
+            garbage=4,
+            deflate=True,
+            deflate_images=True,
+            deflate_fonts=True,
+            use_objstms=1,
+            compression_effort=100,
+        )
 
     def _apply_redactions(self, document, ordered_rectangles):
         for rect_data in ordered_rectangles:
@@ -142,6 +182,7 @@ class RedactionPdfExporter:
         reserved_counter = 0
         confidential_counter = 0
         other_law_counter = 0
+        custom_counter = 0
 
         for rect_data in ordered_rectangles:
             classification = rect_data.get("classification", "general")
@@ -154,6 +195,9 @@ class RedactionPdfExporter:
             elif classification == "other_law":
                 other_law_counter += 1
                 rect_data["final_number"] = f"Otra.{other_law_counter}"
+            elif classification == "custom":
+                custom_counter += 1
+                rect_data["final_number"] = f"P.{custom_counter}"
             else:
                 concept_id = rect_data["concept_id"]
                 concept_counters[concept_id] = concept_counters.get(concept_id, 0) + 1

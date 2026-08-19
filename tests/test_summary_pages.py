@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 
 from App_TestData.services.summary_pages import SummaryPagesWriter
 
@@ -70,6 +71,23 @@ class SummaryPagesWriterTests(unittest.TestCase):
             "Estado de Zacatecas; lo anterior, con fundamento en: Artículo aplicable.",
             line,
         )
+
+    def test_custom_summary_preserves_user_text(self):
+        custom_text = "Texto con MAYÚSCULAS, acentos y\nun segundo renglón."
+
+        line = self.writer.build_summary_line(
+            "P.2",
+            {"classification": "custom", "custom_text": custom_text},
+        )
+
+        self.assertEqual(line, f"P.2 {custom_text}")
+
+    def test_multiline_custom_text_reserves_height_for_each_user_line(self):
+        page = SimpleNamespace(rect=SimpleNamespace(width=600))
+
+        height = self.writer._measure_line_height(page, "P.1 Primera\nSegunda\nTercera", 50, 13)
+
+        self.assertEqual(height, 49)
 
 
 if __name__ == "__main__":

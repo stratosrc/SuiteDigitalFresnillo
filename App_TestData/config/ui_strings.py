@@ -102,12 +102,17 @@ CATALOGUE_DIALOG = {
 
 EXPORT_DIALOG = {
     "title": "Exportar PDF",
+    "quality": {
+        "heading": "Calidad:",
+        "standard": "Estándar",
+        "compact": "Compacto",
+    },
     "tabs": {
         "area": "Versión pública de área generadora",
         "committee": "Versión pública del Comité de Transparencia",
     },
     "buttons": {
-        "standard": "Generar PDF estándar",
+        "standard": "Generar PDF",
         "committee": "Generar PDF para Comité",
     },
     "committee_fields": [
@@ -129,6 +134,7 @@ CONCEPT_DIALOG = {
         "reserved": "Información Reservada",
         "confidential": "Información Confidencial",
         "other_law": "Otra Ley",
+        "custom": "Personalizado",
     },
     "buttons": {
         "cancel": "Cancelar",
@@ -154,6 +160,9 @@ CONCEPT_DIALOG = {
         "rows": "Cantidad de renglones",
         "history": "Historial",
     },
+    "custom_fields": {
+        "text": "Escribe el texto que aparecerá después de la enumeración P.n:",
+    },
     "placeholders": {
         "object": "Ej: Sueldo Neto, Fotografía, Convenio...",
         "articles": "Ej: Artículo 45 Fracción II, Art. 12...",
@@ -162,6 +171,8 @@ CONCEPT_DIALOG = {
     "warnings": {
         "selection_required_title": "Selección requerida",
         "selection_required_message": "Por favor selecciona un concepto de la lista.",
+        "custom_text_required_title": "Texto requerido",
+        "custom_text_required_message": "Escribe el texto personalizado antes de continuar.",
         "invalid_value_title": "Valor inválido",
         "general_integer_message": "Renglones y párrafos deben ser números enteros.",
         "general_range_message": "Renglones y párrafos están fuera del rango permitido.",

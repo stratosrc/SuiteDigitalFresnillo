@@ -621,8 +621,11 @@ class TestDataGeneratorApp(ctk.CTk):
             self._loaded_project.close()
             self._loaded_project = None
 
-    def _generate_pdf(self, committee_data=None):
-        self.export_controller.generate_pdf(committee_data=committee_data)
+    def _generate_pdf(self, committee_data=None, export_quality="standard"):
+        self.export_controller.generate_pdf(
+            committee_data=committee_data,
+            export_quality=export_quality,
+        )
 
     def _is_export_running(self):
         return self.export_controller.is_running()

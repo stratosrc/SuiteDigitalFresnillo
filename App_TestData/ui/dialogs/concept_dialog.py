@@ -55,6 +55,7 @@ class ConceptDialog(ctk.CTkToplevel):
         self.reserved_widgets = {}
         self.confidential_widgets = {}
         self.other_law_widgets = {}
+        self.custom_textbox = None
 
         self.title(CONCEPT_DIALOG["title"])
         self.geometry(f"{max(CONCEPT_DIALOG_WIDTH, 540)}x{max(CONCEPT_DIALOG_HEIGHT, 550)}")
@@ -67,7 +68,7 @@ class ConceptDialog(ctk.CTkToplevel):
         self._filter_list()
         self._apply_initial_data()
         self.after_idle(lambda: enable_visible_focus(self))
-        self.bind("<Return>", lambda _event: self._on_accept())
+        self.bind("<Return>", self._on_return)
         self.geometry(f"+{parent.winfo_rootx() + 50}+{parent.winfo_rooty() + 50}")
 
     def _build_ui(self):
@@ -98,6 +99,7 @@ class ConceptDialog(ctk.CTkToplevel):
         reserved_tab = self.tab_view.add(CONCEPT_DIALOG["tabs"]["reserved"])
         confidential_tab = self.tab_view.add(CONCEPT_DIALOG["tabs"]["confidential"])
         other_law_tab = self.tab_view.add(CONCEPT_DIALOG["tabs"]["other_law"])
+        custom_tab = self.tab_view.add(CONCEPT_DIALOG["tabs"]["custom"])
 
         self._build_general_tab(general_tab)
         self.reserved_widgets = self._build_classification_tab(
@@ -112,6 +114,7 @@ class ConceptDialog(ctk.CTkToplevel):
             other_law_tab,
             history=getattr(self.owner_app, "other_law_history", []),
         )
+        self._build_custom_tab(custom_tab)
 
         button_frame = ctk.CTkFrame(main_frame, fg_color=APP_BG, corner_radius=0)
         button_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(12, 0))
@@ -321,6 +324,33 @@ class ConceptDialog(ctk.CTkToplevel):
         widgets["history_box"] = history_box
         return widgets
 
+    def _build_custom_tab(self, tab):
+        ctk.CTkLabel(
+            tab,
+            text=CONCEPT_DIALOG["custom_fields"]["text"],
+            fg_color=APP_BG,
+            text_color=TEXT_DARK,
+            font=build_font(12),
+            anchor=tk.W,
+        ).pack(fill=tk.X, pady=(8, 8))
+        self.custom_textbox = ctk.CTkTextbox(
+            tab,
+            fg_color=SURFACE_BG,
+            text_color=TEXT_DARK,
+            border_color=BORDER_BG,
+            border_width=1,
+            corner_radius=0,
+            font=build_font(13),
+            wrap="word",
+        )
+        self.custom_textbox.pack(fill=tk.BOTH, expand=True, pady=(0, 8))
+
+    def _on_return(self, _event):
+        if self.tab_view.get() == CONCEPT_DIALOG["tabs"]["custom"]:
+            return None
+        self._on_accept()
+        return "break"
+
     def _setup_placeholder(self, entry, placeholder_text):
         def on_focus_in(_event):
             if entry.get() == placeholder_text:
@@ -365,6 +395,9 @@ class ConceptDialog(ctk.CTkToplevel):
         elif classification == "other_law":
             self.tab_view.set(CONCEPT_DIALOG["tabs"]["other_law"])
             self._set_other_law_fields()
+        elif classification == "custom":
+            self.tab_view.set(CONCEPT_DIALOG["tabs"]["custom"])
+            self._set_custom_fields()
         else:
             self.tab_view.set(CONCEPT_DIALOG["tabs"]["general"])
             self._set_general_fields()
@@ -396,6 +429,10 @@ class ConceptDialog(ctk.CTkToplevel):
             if entry is not None and str(value).strip():
                 entry.configure(text_color=TEXT_DARK)
 
+    def _set_custom_fields(self):
+        self.custom_textbox.delete("1.0", tk.END)
+        self.custom_textbox.insert("1.0", self.initial_data.get("custom_text", ""))
+
     def _set_entry_text(self, entry, value):
         entry.delete(0, tk.END)
         entry.insert(0, str(value))
@@ -408,8 +445,10 @@ class ConceptDialog(ctk.CTkToplevel):
             self._accept_classification("reserved", self.reserved_widgets)
         elif selected_tab == CONCEPT_DIALOG["tabs"]["confidential"]:
             self._accept_classification("confidential", self.confidential_widgets)
-        else:
+        elif selected_tab == CONCEPT_DIALOG["tabs"]["other_law"]:
             self._accept_other_law()
+        else:
+            self._accept_custom()
 
     def _accept_general(self):
         selection = self.listbox.curselection()
@@ -522,6 +561,24 @@ class ConceptDialog(ctk.CTkToplevel):
         }
         self._add_history_item(self.owner_app.other_law_history, history_item)
         self.result = {"classification": "other_law", **history_item}
+        self.destroy()
+
+    def _accept_custom(self):
+        custom_text = self.custom_textbox.get("1.0", "end-1c")
+        if not custom_text.strip():
+            messagebox.showwarning(
+                CONCEPT_DIALOG["warnings"]["custom_text_required_title"],
+                CONCEPT_DIALOG["warnings"]["custom_text_required_message"],
+                parent=self,
+            )
+            return
+
+        self.result = {
+            "classification": "custom",
+            "custom_text": custom_text,
+            "rows": 1,
+            "paragraphs": 1,
+        }
         self.destroy()
 
     def _add_history_item(self, history, item):

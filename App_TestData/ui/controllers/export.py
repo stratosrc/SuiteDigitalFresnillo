@@ -37,7 +37,7 @@ class ExportController:
             return
         ExportDialog(self.app, export_callback=self.generate_pdf)
 
-    def generate_pdf(self, committee_data=None) -> None:
+    def generate_pdf(self, committee_data=None, export_quality="standard") -> None:
         if self.is_running():
             messagebox.showwarning(
                 EXPORT_MESSAGES["export_running_title"],
@@ -79,7 +79,12 @@ class ExportController:
         rectangles_snapshot = deepcopy(self.app.censored_rectangles)
         committee_snapshot = deepcopy(committee_data)
         if IS_MACOS:
-            self._generate_pdf_synchronously(output_path, committee_snapshot, rectangles_snapshot)
+            self._generate_pdf_synchronously(
+                output_path,
+                committee_snapshot,
+                rectangles_snapshot,
+                export_quality,
+            )
             return
 
         future = self.executor.submit(
@@ -89,11 +94,18 @@ class ExportController:
             source_path=self.app.current_pdf_path,
             rectangles=rectangles_snapshot,
             cancel_check=self.cancel_event.is_set,
+            export_quality=export_quality,
         )
         self.pending_future = future
         self.app.after(100, lambda: self._poll_generate_pdf(future, output_path))
 
-    def _generate_pdf_synchronously(self, output_path: str, committee_data, rectangles) -> None:
+    def _generate_pdf_synchronously(
+        self,
+        output_path: str,
+        committee_data,
+        rectangles,
+        export_quality,
+    ) -> None:
         try:
             self.app.update_idletasks()
             self.app.pdf_manager.generate_pdf(
@@ -102,6 +114,7 @@ class ExportController:
                 source_path=self.app.current_pdf_path,
                 rectangles=rectangles,
                 cancel_check=self.cancel_event.is_set,
+                export_quality=export_quality,
             )
             self.app.message_label.configure(
                 text=EXPORT_MESSAGES["generated_status"].format(output_path=output_path)
