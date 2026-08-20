@@ -63,3 +63,4 @@ Checklist minimo antes de entregar una version:
 - Convertir DOCX, XLSX y PPTX usando únicamente LibreOffice incluido.
 - Cancelar una conversión y comprobar que no queden procesos `soffice.exe`.
 - Desinstalar y comprobar que se eliminen accesos directos y archivos instalados.
+
