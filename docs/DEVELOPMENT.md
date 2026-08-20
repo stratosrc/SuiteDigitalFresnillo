@@ -38,6 +38,22 @@ python -m pytest
 
 Antes de publicar también debe completarse [QA.md](QA.md).
 
+GitHub Actions repite análisis, bytecode y pruebas en Windows/Python 3.12. También realiza un smoke build de PyInstaller sin LibreOffice para controlar tiempo y tamaño en CI.
+
+## Flujo recomendado de cambio
+
+1. Localizar la responsabilidad en [ARCHITECTURE.md](ARCHITECTURE.md).
+2. Escribir o ajustar una prueba de regresión.
+3. Implementar en la capa más baja posible.
+4. Ejecutar pruebas dirigidas.
+5. Ejecutar la verificación completa.
+6. Realizar QA visual si cambia UI/PDF.
+7. Actualizar documentación y changelog.
+
+## Depuración
+
+Ejecuta un solo módulo con `--app` para obtener errores en consola. Para problemas de empaquetado revisa `build/convertidor/warn-convertidor.txt`. Consulta [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
 ## Convenciones
 
 - Mantener reglas de negocio fuera de widgets y diálogos.
@@ -46,3 +62,10 @@ Antes de publicar también debe completarse [QA.md](QA.md).
 - Usar `pathlib.Path` y escritura atómica para archivos del usuario.
 - Agregar pruebas para regresiones, serialización y cálculos que no dependan de una ventana real.
 - No editar el código incluido en `App_ConversorPDF/vendor` salvo al actualizar explícitamente la dependencia.
+
+## Referencias
+
+- [APIs internas](API_REFERENCE.md)
+- [Formatos y migraciones](DATA_FORMATS.md)
+- [Cómo extender](EXTENDING.md)
+- [Rendimiento](PERFORMANCE.md)

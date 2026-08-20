@@ -33,6 +33,23 @@ main.py
                                                 +--> UI/controladores
 ```
 
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant M as main.py
+    participant R as app_registry
+    participant A as Aplicación
+    participant S as Servicios
+    U->>M: Ejecutar launcher o --app
+    M->>R: Resolver app_id
+    R->>A: Importar y llamar main()
+    A->>A: Construir UI y controladores
+    U->>A: Operación
+    A->>S: Validar/procesar/persistir
+    S-->>A: Resultado o error
+    A-->>U: Actualizar interfaz
+```
+
 ### Reglas de dependencias
 
 - La UI puede depender de configuración, modelos, dominio, servicios y componentes compartidos.
@@ -448,3 +465,11 @@ Las pruebas de geometría, modelos y servicios evitan crear ventanas cuando es p
 - Toda exportación debe evitar sobrescrituras parciales y responder a cancelación cuando ejecute tareas largas.
 - Las funciones puras de geometría, validación y planificación deben permanecer fuera de widgets para facilitar pruebas.
 - Un archivo pequeño se conserva cuando representa una frontera clara de API, configuración o una regla reutilizable; se unifica solo si duplica responsabilidad.
+
+## 13. Documentos relacionados
+
+- [API_REFERENCE.md](API_REFERENCE.md): contratos reutilizables.
+- [DATA_FORMATS.md](DATA_FORMATS.md): esquemas y migraciones.
+- [EXTENDING.md](EXTENDING.md): procedimiento para ampliar módulos.
+- [PERFORMANCE.md](PERFORMANCE.md): decisiones y medición de rendimiento.
+- [SECURITY_AND_PRIVACY.md](SECURITY_AND_PRIVACY.md): controles y límites.

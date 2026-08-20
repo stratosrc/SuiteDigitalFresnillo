@@ -57,3 +57,20 @@ installer_output/SuiteDigitalFresnillo-Setup-1.1.3.exe
 - Firmar digitalmente el instalador cuando exista un certificado de firma de código.
 
 Los directorios `build/`, `dist/` e `installer_output/` son artefactos locales y no se versionan.
+
+## 6. Verificar metadatos y hash
+
+```powershell
+$installer = Get-Item .\installer_output\SuiteDigitalFresnillo-Setup-1.1.3.exe
+$installer.VersionInfo | Select-Object ProductVersion,FileVersion
+Get-FileHash $installer.FullName -Algorithm SHA256
+Get-AuthenticodeSignature $installer.FullName
+```
+
+Publicar nombre, tamaño, versión, SHA-256 y estado de firma. No reutilizar el hash de una compilación anterior.
+
+## 7. Firma y entrega
+
+La firma debe aplicarse con certificado de firma de código y timestamp confiable antes de la distribución final. Tras firmar, recalcular SHA-256 y repetir la prueba de instalación. Conservar el instalador, hash, changelog y evidencia de QA como conjunto de release.
+
+Consulta también [COMPATIBILITY.md](COMPATIBILITY.md), [SECURITY_AND_PRIVACY.md](SECURITY_AND_PRIVACY.md) y [QA.md](QA.md).
