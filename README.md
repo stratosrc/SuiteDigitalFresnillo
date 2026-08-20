@@ -76,6 +76,13 @@ El instalador esperado es `installer_output/SuiteDigitalFresnillo-Setup-1.1.3.ex
 - [Compilación y publicación](docs/BUILD_AND_RELEASE.md)
 - [Registro de cambios](docs/CHANGELOG.md)
 - [Plan de pruebas manuales](docs/QA.md)
+- [Formatos de proyecto](docs/DATA_FORMATS.md)
+- [Solución de problemas](docs/TROUBLESHOOTING.md)
+- [Seguridad y privacidad](docs/SECURITY_AND_PRIVACY.md)
+- [Compatibilidad](docs/COMPATIBILITY.md)
+- [Referencia de APIs](docs/API_REFERENCE.md)
+- [Extender la suite](docs/EXTENDING.md)
+- [Rendimiento](docs/PERFORMANCE.md)
 
 ## Notas
 

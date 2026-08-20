@@ -58,9 +58,31 @@ Checklist minimo antes de entregar una version:
 ## Instalador en Windows limpio
 
 - Ejecutar el instalador en una VM de Windows 10/11 sin Python ni LibreOffice.
-- Confirmar que el ejecutable muestra icono y versión `1.0.0`.
+- Confirmar que el ejecutable muestra icono y versión `1.1.3`.
 - Abrir los cuatro módulos desde el launcher.
 - Convertir DOCX, XLSX y PPTX usando únicamente LibreOffice incluido.
 - Cancelar una conversión y comprobar que no queden procesos `soffice.exe`.
 - Desinstalar y comprobar que se eliminen accesos directos y archivos instalados.
 
+## Conversor a PDF
+
+- Cargar imágenes, PDF, DOCX, XLSX y PPTX.
+- Probar selección vacía, `1` y `2-4`.
+- Probar salida separada e individual/lote.
+- Reordenar y combinar PDFs.
+- Cancelar Office y confirmar que no quede `soffice.exe`.
+- Confirmar que nombres existentes no se sobrescriban.
+
+## Test Data 1.1.3
+
+- Crear al menos tres conceptos Personalizado y comprobar `P.1`, `P.2`, `P.3`.
+- Editar un personalizado y confirmar texto literal en resumen.
+- Exportar Estándar y Compacta; comparar legibilidad y tamaño.
+- Confirmar marca de agua en páginas agregadas y originales.
+
+## Evidencia de release
+
+- Registrar fecha, equipo/VM, Windows, versión y responsable.
+- Guardar resultado de pruebas automáticas.
+- Guardar SHA-256 y estado Authenticode.
+- Documentar desviaciones aceptadas antes de distribuir.

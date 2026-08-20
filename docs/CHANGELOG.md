@@ -18,6 +18,9 @@
 - Separación del flujo de proyecto y exportación del controlador visual de Organigrama.
 - Versión de ejecución visible y metadatos de distribución actualizados.
 - Documentación técnica y operativa reorganizada en `docs/`.
+- Referencia completa de arquitectura y APIs internas.
+- Especificación de formatos `.td`, `.og` y `.dir`.
+- Guías de seguridad, compatibilidad, rendimiento, extensión y solución de problemas.
 
 ## 1.1.0
 
