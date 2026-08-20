@@ -1,7 +1,8 @@
 from components.shared.app_registry import get_launcher_applications
+from components.version import VERSION
 
 
-WINDOW_TITLE = "Suite Digital - Presidencia Fresnillo"
+WINDOW_TITLE = f"Suite Digital {VERSION} - Presidencia Fresnillo"
 WINDOW_SUBTITLE = "Unidad de Transparencia y Acceso a la Información Pública"
 WINDOW_SIZE = (850, 600)
 WINDOW_MIN_SIZE = (720, 520)

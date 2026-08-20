@@ -63,13 +63,13 @@ class CanvasViewportController:
             self.pan_y = 320.0
             self.route_cache = []
             self._routes_dirty = False
+            self._routes_dirty_from = None
             self.request_redraw()
             return
         routes = self.router.route_document(self.document)
         bounds = self.rendering_engine.compute_document_bounds(
             self.document,
             [list(route.points) for route in routes],
-            include_blocked_points=False,
         )
         canvas_width = max(self.canvas.winfo_width(), 1)
         content_width = max(bounds.width * self.zoom, 1.0)
@@ -77,6 +77,7 @@ class CanvasViewportController:
         self.pan_y = self.rendering_engine.content_top_margin - (bounds.top * self.zoom)
         self.route_cache = routes
         self._routes_dirty = False
+        self._routes_dirty_from = None
         self.request_redraw()
 
     def _on_pan_press(self, event: tk.Event[tk.Canvas]) -> str:
@@ -87,14 +88,6 @@ class CanvasViewportController:
             pass
         self.pan_dragged = False
         self.pan_drag_press = (event.x, event.y, self.pan_x, self.pan_y)
-        if self.block_mode:
-            self.drag_node_id = None
-            self.drag_screen_point = None
-            self.drag_node_offset = None
-            self.interaction.transition(InteractionMode.PANNING)
-            self._update_custom_cursor(visible=False)
-            self._emit_context_change("Arrastra con clic derecho para desplazar el lienzo")
-            return "break"
         node = self._node_at_screen(event.x, event.y)
         self.drag_node_id = node.id if node is not None else None
         self.drag_screen_point = None
@@ -133,10 +126,15 @@ class CanvasViewportController:
         if self.drag_node_id is not None:
             offset_x, offset_y = self.drag_node_offset or (0.0, 0.0)
             self.drag_screen_point = (int(event.x + offset_x), int(event.y + offset_y))
+            self.request_overlay_redraw()
         else:
-            self.pan_x = initial_pan_x + dx
-            self.pan_y = initial_pan_y + dy
-        self.request_redraw()
+            next_pan_x = initial_pan_x + dx
+            next_pan_y = initial_pan_y + dy
+            screen_delta_x = next_pan_x - self.pan_x
+            screen_delta_y = next_pan_y - self.pan_y
+            self.pan_x = next_pan_x
+            self.pan_y = next_pan_y
+            self.canvas.move("all", screen_delta_x, screen_delta_y)
         return "break"
 
     def _on_pan_release(self, event: tk.Event[tk.Canvas]) -> str:
@@ -157,13 +155,10 @@ class CanvasViewportController:
                 self._mark_document_changed()
             self._set_selection(node_id=drag_node_id)
         elif not self.pan_dragged:
-            if not self.block_mode:
-                self._show_context_menu(event)
+            self._show_context_menu(event)
         self.pan_drag_press = None
         self.pan_dragged = False
-        self.interaction.transition(
-            InteractionMode.BLOCKING if self.block_mode else InteractionMode.IDLE
-        )
+        self.interaction.transition(InteractionMode.IDLE)
         self.request_redraw()
         self._emit_context_change()
         return "break"

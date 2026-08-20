@@ -281,6 +281,7 @@ class PDFManager:
         source_path: str | None = None,
         rectangles: list[RectangleData] | None = None,
         cancel_check: Callable[[], bool] | None = None,
+        export_quality: str = "standard",
     ) -> None:
         """Generate the exported PDF including redactions and summary pages."""
         if pdf_bytes is None and source_path is None and (not self._state.current_pdf_path or not self._state.pdf_document):
@@ -293,5 +294,6 @@ class PDFManager:
             rectangles or self._state.censored_rectangles,
             committee_data,
             cancel_check,
+            export_quality,
         )
 

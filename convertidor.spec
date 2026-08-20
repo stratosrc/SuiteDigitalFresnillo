@@ -54,8 +54,8 @@ hiddenimports = [
 
 version_info = VSVersionInfo(
     ffi=FixedFileInfo(
-        filevers=(1, 1, 0, 0),
-        prodvers=(1, 1, 0, 0),
+        filevers=(1, 1, 3, 0),
+        prodvers=(1, 1, 3, 0),
         mask=0x3F,
         flags=0x0,
         OS=0x40004,
@@ -71,11 +71,11 @@ version_info = VSVersionInfo(
                     [
                         StringStruct("CompanyName", "Municipio de Fresnillo"),
                         StringStruct("FileDescription", "Suite Digital Fresnillo"),
-                        StringStruct("FileVersion", "1.1.0"),
+                        StringStruct("FileVersion", "1.1.3"),
                         StringStruct("InternalName", "SuiteFresnillo"),
                         StringStruct("OriginalFilename", "SuiteFresnillo.exe"),
                         StringStruct("ProductName", "Suite Digital Fresnillo"),
-                        StringStruct("ProductVersion", "1.1.0"),
+                        StringStruct("ProductVersion", "1.1.3"),
                     ],
                 )
             ]

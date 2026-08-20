@@ -231,7 +231,7 @@ class RenderingEngine:
                     line_height=font_size * 1.22,
                     is_bold=False,
                     align="center",
-                    is_underlined=True,
+                    is_underlined=False,
                 )
             )
             cursor_y += font_size * 1.22
@@ -278,16 +278,6 @@ class RenderingEngine:
     def get_node_port_grid_position(self, node: OrgNode, port: str) -> tuple[float, float]:
         port_x, port_y = self.get_node_port(node, port)
         return (port_x / self.base_cell_width, port_y / self.base_cell_height)
-
-    def get_obstacle_box(self, grid_x: float, grid_y: float) -> Box:
-        center_x, center_y = self.grid_to_world(grid_x, grid_y)
-        radius = 12.0
-        return Box(
-            left=center_x - radius,
-            top=center_y - radius,
-            right=center_x + radius,
-            bottom=center_y + radius,
-        )
 
     def _fit_node_text_size(
         self,
@@ -375,18 +365,12 @@ class RenderingEngine:
         self,
         document: OrgGridDocument,
         routes: list[list[tuple[float, float]]] | None = None,
-        include_blocked_points: bool = True,
     ) -> DocumentBounds:
         bounds: DocumentBounds | None = None
 
         for node in document.nodes.values():
             node_box = self.get_node_box(node, include_logo=document.show_logos)
             bounds = DocumentBounds.from_box(node_box) if bounds is None else bounds.include_box(node_box)
-
-        if include_blocked_points:
-            for point_x, point_y in document.blocked_points:
-                obstacle_box = self.get_obstacle_box(point_x, point_y)
-                bounds = DocumentBounds.from_box(obstacle_box) if bounds is None else bounds.include_box(obstacle_box)
 
         if routes:
             for route in routes:

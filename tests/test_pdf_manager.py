@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import Mock
 
 import fitz
 
@@ -38,6 +39,26 @@ class DummyCallbacks:
 
 
 class PdfManagerTests(unittest.TestCase):
+    def test_generate_pdf_forwards_compact_quality(self):
+        manager = PDFManager(DocumentState(), DummyCallbacks(), {})
+        manager._redaction_exporter = Mock()
+
+        manager.generate_pdf(
+            "output.pdf",
+            pdf_bytes=b"pdf",
+            rectangles=[],
+            export_quality="compact",
+        )
+
+        manager._redaction_exporter.export.assert_called_once_with(
+            b"pdf",
+            "output.pdf",
+            [],
+            None,
+            None,
+            "compact",
+        )
+
     def test_canvas_to_pdf_rect_clamps_to_current_page(self):
         state = DocumentState()
         state.pdf_document = fitz.open()

@@ -33,6 +33,7 @@ class RectangleData(TypedDict, total=False):
     object: str
     articles: str
     law: str
+    custom_text: str
     description: str
     label: str
     display_text: str

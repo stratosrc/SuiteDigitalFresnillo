@@ -47,6 +47,23 @@ class RedactionHistoryTests(unittest.TestCase):
         self.assertEqual(rectangle_data["concept_name"], "Información Reservada")
         self.assertEqual(rectangle_data["display_text"], "Información Reservada")
 
+    def test_editing_custom_rectangle_preserves_text(self):
+        rectangle_data = rectangle()
+        _apply_dialog_result_to_rectangle(
+            None,
+            rectangle_data,
+            {
+                "classification": "custom",
+                "rows": 1,
+                "paragraphs": 1,
+                "custom_text": "Texto exactamente como lo escribí.",
+            },
+        )
+
+        self.assertEqual(rectangle_data["label"], "P")
+        self.assertEqual(rectangle_data["display_text"], "Personalizado")
+        self.assertEqual(rectangle_data["custom_text"], "Texto exactamente como lo escribí.")
+
     def test_undo_and_redo_create(self):
         created = rectangle()
         action = make_history_action("create", rectangle=created)

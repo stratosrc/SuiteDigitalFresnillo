@@ -37,11 +37,11 @@ HELP_SECTIONS: tuple[HelpSection, ...] = (
         "2. CONTROLES DE EDICION Y CONEXIONES",
         (
             "Clic izquierdo en un espacio vacio: Crea un nuevo nodo en la celda seleccionada.\n",
-            "Clic izquierdo en un nodo, conector u obstaculo: Selecciona el elemento.\n",
+            "Clic izquierdo en un nodo o conector: Selecciona el elemento.\n",
             "Indicador de conexion: Al acercar el cursor a un nodo aparece el puerto disponible para conectar.\n",
             "Conectar con clic: Haz clic izquierdo en el indicador del nodo origen y despues en el indicador del nodo destino.\n",
             "Conectar arrastrando: Arrastra desde el indicador de origen hasta otro nodo; la linea fantasma muestra la previsualizacion.\n",
-            "Las conexiones muestran una flecha cerca del nodo destino y la barra inferior indica el flujo origen → destino.\n",
+            "Las conexiones muestran una flecha cerca del nodo destino para indicar el sentido del flujo.\n",
             "Ruta manual: Selecciona una conexión para mostrar puntos circulares en cada doblez. Los extremos unidos a los nodos permanecen bloqueados para conservar los puertos.\n",
             "Movimiento de rutas: Arrastra un tramo intermedio para desplazarlo sobre su eje perpendicular, o arrastra un punto de doblez para cambiar libremente la formación ortogonal del conector.\n",
             "Ghost de ruta: Durante el arrastre, la línea original permanece como referencia. Un ghost verde muestra cómo quedará una modificación válida; uno rojo muestra la ruta rechazada y resalta los nodos que atravesaría.\n",
@@ -69,9 +69,8 @@ HELP_SECTIONS: tuple[HelpSection, ...] = (
         ),
     ),
     (
-        "4. CONTROLES DE SEGURIDAD",
+        "4. VISUALIZACION",
         (
-            "Obstaculos de Ruta: Permite colocar puntos de obstruccion para forzar rutas alternativas en las conexiones.\n",
             "Boton de Escudos: Activa o desactiva la visualizacion global de los escudos institucionales.\n",
         ),
     ),

@@ -11,21 +11,6 @@ class ManhattanRouterTests(unittest.TestCase):
         self.engine = RenderingEngine()
         self.router = ManhattanRouter(self.engine)
 
-    def test_route_avoids_custom_obstacles(self):
-        source = self._node(0, 0)
-        target = self._node(2, 0)
-
-        route = self.router.route(
-            source,
-            target,
-            occupied={(0, 0), (2, 0)},
-            source_port="right",
-            target_port="left",
-            custom_obstacles={(1.0, 0.0)},
-        )
-
-        self.assertNotIn((1.0, 0.0), self.router.route_traffic_points(route))
-
     def test_route_avoids_occupied_nodes_between_endpoints(self):
         source = self._node(0, 0)
         middle = self._node(1, 0)
@@ -85,6 +70,28 @@ class ManhattanRouterTests(unittest.TestCase):
 
         self.assertFalse(route_crosses_boxes(route, obstacle_boxes))
         self.assertEqual(connection.manual_points, ((0.5, 0.0), (1.5, 0.0)))
+
+    def test_reusable_prefix_matches_a_complete_reroute(self):
+        document = OrgGridDocument()
+        source = document.add_node("A", "Superior", 0, 0, "#09519F")
+        first_target = document.add_node("B", "Uno", -2, 3, "#3C8AC9")
+        second_target = document.add_node("C", "Dos", 2, 3, "#3C8AC9")
+        document.add_connection(source.id, first_target.id)
+
+        cached_routes = self.router.route_document(document)
+        document.add_connection(source.id, second_target.id)
+
+        incremental = self.router.route_document(
+            document,
+            reusable_prefix=cached_routes,
+        )
+        complete = self.router.route_document(document)
+
+        self.assertEqual(
+            [route.points for route in incremental],
+            [route.points for route in complete],
+        )
+        self.assertEqual(incremental[0].points, cached_routes[0].points)
 
     def _node(self, grid_x, grid_y):
         return OrgGridDocument().add_node("Nombre", "Cargo", grid_x, grid_y, "#09519F")

@@ -4,20 +4,22 @@ from __future__ import annotations
 
 import math
 
-from App_Organigrama.models.document import OrgGridDocument
 from App_Organigrama.rendering.connection_arrows import (
     build_arrow_triangle,
     flatten_points,
 )
 from App_Organigrama.routing.manhattan_router import ConnectionRoute
 from App_Organigrama.ui.canvas_shapes import create_rounded_rectangle
+from App_Organigrama.ui.canvas_visibility import (
+    screen_box_intersects_viewport,
+    screen_points_intersect_viewport,
+)
 from App_Organigrama.ui.theme import (
     GHOST_AVAILABLE_FILL,
     GHOST_OCCUPIED_FILL,
     GRID_AXIS,
     GRID_LINE,
-    OBSTACLE_COLOR,
-    OBSTACLE_PREVIEW_COLOR,
+    INVALID_ROUTE_COLOR,
     PORT_ACTIVE_COLOR,
     PORT_HOVER_COLOR,
     PORT_MARKER_OUTLINE,
@@ -28,9 +30,24 @@ from App_Organigrama.ui.theme import (
     TEXT_LIGHT,
 )
 
-
 class CanvasDrawingMixin:
     """Render canvas content without owning document interaction state."""
+
+    def _screen_box_is_visible(
+        self,
+        left: float,
+        top: float,
+        right: float,
+        bottom: float,
+    ) -> bool:
+        return screen_box_intersects_viewport(
+            left,
+            top,
+            right,
+            bottom,
+            max(self.canvas.winfo_width(), 1),
+            max(self.canvas.winfo_height(), 1),
+        )
 
     def _draw_grid(self) -> None:
         width = max(self.canvas.winfo_width(), 1)
@@ -45,14 +62,31 @@ class CanvasDrawingMixin:
         for column in range(start_column, end_column + 1):
             x = self.pan_x + (column * cell_width)
             color = GRID_AXIS if column == 0 else GRID_LINE
-            self.canvas.create_line(x, 0, x, height, fill=color, tags="grid")
+            self.canvas.create_line(
+                x,
+                0,
+                x,
+                height,
+                fill=color,
+                tags=("grid", "document-content"),
+            )
 
         for row in range(start_row, end_row + 1):
             y = self.pan_y + (row * cell_height)
             color = GRID_AXIS if row == 0 else GRID_LINE
-            self.canvas.create_line(0, y, width, y, fill=color, tags="grid")
+            self.canvas.create_line(
+                0,
+                y,
+                width,
+                y,
+                fill=color,
+                tags=("grid", "document-content"),
+            )
 
     def _draw_connections(self, routes: list[ConnectionRoute]) -> None:
+        self._visible_connection_ids.clear()
+        viewport_width = max(self.canvas.winfo_width(), 1)
+        viewport_height = max(self.canvas.winfo_height(), 1)
         for route in routes:
             points: list[float] = []
             screen_points: list[tuple[float, float]] = []
@@ -61,7 +95,18 @@ class CanvasDrawingMixin:
                 screen_x, screen_y = self._world_to_screen(world_x, world_y)
                 screen_points.append((screen_x, screen_y))
                 points.extend((screen_x, screen_y))
-            connection_tags = ("connection", f"connection:{route.connection.id}")
+            if not screen_points_intersect_viewport(
+                screen_points,
+                viewport_width,
+                viewport_height,
+            ):
+                continue
+            self._visible_connection_ids.add(route.connection.id)
+            connection_tags = (
+                "connection",
+                f"connection:{route.connection.id}",
+                "document-content",
+            )
             self.canvas.create_line(
                 *points,
                 fill=PRIMARY_BUTTON,
@@ -108,7 +153,7 @@ class CanvasDrawingMixin:
             width=max(2, int(2 * self.zoom)),
             dash=(8, 5),
             arrow="last",
-            tags=("connection-drag-preview", "ghost"),
+            tags=("connection-drag-preview", "ghost", "interaction-overlay"),
         )
 
     def _draw_manual_route_ghost(self) -> None:
@@ -116,7 +161,7 @@ class CanvasDrawingMixin:
         if route is None:
             return
         points: list[float] = []
-        color = OBSTACLE_COLOR if self.manual_drag_collision_node_ids else SELECTION_COLOR
+        color = INVALID_ROUTE_COLOR if self.manual_drag_collision_node_ids else SELECTION_COLOR
         for grid_x, grid_y in route:
             world_x, world_y = self.rendering_engine.grid_to_world(grid_x, grid_y)
             screen_x, screen_y = self._world_to_screen(world_x, world_y)
@@ -128,7 +173,7 @@ class CanvasDrawingMixin:
             dash=(8, 5),
             capstyle="round",
             joinstyle="round",
-            tags=("manual-route-ghost", "ghost"),
+            tags=("manual-route-ghost", "ghost", "interaction-overlay"),
         )
 
     def _draw_manual_route_handles(self) -> None:
@@ -151,7 +196,7 @@ class CanvasDrawingMixin:
                 fill=SELECTION_COLOR if active else SURFACE_BACKGROUND,
                 outline=SELECTION_COLOR,
                 width=max(2, int(2 * self.zoom)),
-                tags=("manual-route-handle", "connection-editor"),
+                tags=("manual-route-handle", "connection-editor", "interaction-overlay"),
             )
 
         for node_id in self.manual_drag_collision_node_ids:
@@ -167,15 +212,25 @@ class CanvasDrawingMixin:
                 layout.box.bottom,
                 radius=max(0, int(12 * self.zoom)),
                 fill="",
-                outline=OBSTACLE_COLOR,
+                outline=INVALID_ROUTE_COLOR,
                 width=max(3, int(3 * self.zoom)),
-                tags=("manual-route-collision", "connection-editor"),
+                tags=("manual-route-collision", "connection-editor", "interaction-overlay"),
             )
 
     def _draw_nodes(self) -> None:
+        self._visible_node_ids.clear()
         for node in self.document.nodes.values():
             layout = self._get_node_layout(node, include_logo=self.document.show_logos)
             screen_layout = self._to_screen_layout(layout)
+            visual_box = self._scale_box(layout.visual_box)
+            if not self._screen_box_is_visible(
+                visual_box.left,
+                visual_box.top,
+                visual_box.right,
+                visual_box.bottom,
+            ):
+                continue
+            self._visible_node_ids.add(node.id)
             if node.id == self.drag_node_id and self.drag_screen_point is not None:
                 delta_x = self.drag_screen_point[0] - screen_layout.center_x
                 delta_y = self.drag_screen_point[1] - screen_layout.center_y
@@ -183,7 +238,7 @@ class CanvasDrawingMixin:
             pending_connection_source = node.id == self.pending_connection_source_id
             outline = SELECTION_COLOR if pending_connection_source else node.color
             outline_width = 3 if pending_connection_source else 1
-            tag = ("node", f"node:{node.id}")
+            tag = ("node", f"node:{node.id}", "document-content")
             create_rounded_rectangle(
                 self.canvas,
                 screen_layout.box.left,
@@ -251,70 +306,6 @@ class CanvasDrawingMixin:
                             tags=tag,
                         )
 
-    def _draw_blocked_points(self) -> None:
-        size = max(5, int(7 * self.zoom))
-        width = max(2, int(2 * self.zoom))
-        for grid_x, grid_y in self.document.blocked_points:
-            world_x, world_y = self.rendering_engine.grid_to_world(grid_x, grid_y)
-            center_x, center_y = self._world_to_screen(world_x, world_y)
-            self.canvas.create_line(
-                center_x - size,
-                center_y - size,
-                center_x + size,
-                center_y + size,
-                fill=OBSTACLE_COLOR,
-                width=width,
-                tags="blocked-point",
-            )
-            self.canvas.create_line(
-                center_x - size,
-                center_y + size,
-                center_x + size,
-                center_y - size,
-                fill=OBSTACLE_COLOR,
-                width=width,
-                tags="blocked-point",
-            )
-
-    def _draw_preview_routes(self) -> None:
-        if not self.block_mode or self.preview_obstacle is None:
-            return
-
-        preview_points = list(self.document.blocked_points)
-        if self.document.has_blocked_point(self.preview_obstacle):
-            preview_points = [item for item in preview_points if item != self.preview_obstacle]
-        elif not self._obstacle_hits_node(self.preview_obstacle):
-            preview_points.append(self.preview_obstacle)
-        else:
-            return
-
-        preview_document = OrgGridDocument(
-            title=self.document.title,
-            period=self.document.period,
-            page_orientation=self.document.page_orientation,
-            show_logos=self.document.show_logos,
-            nodes=self.document.nodes,
-            connections=self.document.connections,
-            blocked_points=preview_points,
-        )
-        preview_routes = self.router.route_document(preview_document)
-        current_routes = {route.connection.id: route.points for route in self.route_cache}
-        for route in preview_routes:
-            if current_routes.get(route.connection.id) == route.points:
-                continue
-            screen_points: list[float] = []
-            for grid_x, grid_y in route.points:
-                world_x, world_y = self.rendering_engine.grid_to_world(grid_x, grid_y)
-                screen_x, screen_y = self._world_to_screen(world_x, world_y)
-                screen_points.extend((screen_x, screen_y))
-            self.canvas.create_line(
-                *screen_points,
-                fill=ROUTE_PREVIEW_COLOR,
-                width=max(2, int(self.rendering_engine.base_line_width * self.zoom * 1.35)),
-                dash=(10, 6),
-                tags=("route-preview", f"route-preview:{route.connection.id}"),
-            )
-
     def _draw_hover_port(self) -> None:
         if self.pending_connection_source_id is not None:
             pending_port = self.pending_source_port or "bottom"
@@ -351,7 +342,7 @@ class CanvasDrawingMixin:
             fill=color,
             outline="",
             stipple="gray50",
-            tags=tag,
+            tags=(tag, "interaction-overlay"),
         )
         self.canvas.create_oval(
             center_x - radius,
@@ -361,7 +352,7 @@ class CanvasDrawingMixin:
             fill=color,
             outline=PORT_MARKER_OUTLINE,
             width=width,
-            tags=tag,
+            tags=(tag, "interaction-overlay"),
         )
         center_radius = max(2, int(radius * 0.28))
         self.canvas.create_oval(
@@ -371,37 +362,41 @@ class CanvasDrawingMixin:
             center_y + center_radius,
             fill=PORT_MARKER_OUTLINE,
             outline="",
-            tags=tag,
+            tags=(tag, "interaction-overlay"),
         )
 
     def _draw_ghost(self) -> None:
-        if self.block_mode and self.preview_obstacle is not None:
-            world_x, world_y = self.rendering_engine.grid_to_world(*self.preview_obstacle)
-            center_x, center_y = self._world_to_screen(world_x, world_y)
-            size = max(8, int(12 * self.zoom))
-            width = max(2, int(2 * self.zoom))
-            hits_node = self._obstacle_hits_node(self.preview_obstacle)
-            removing = self.preview_obstacle in self.document.blocked_points
-            color = OBSTACLE_COLOR if hits_node else OBSTACLE_PREVIEW_COLOR
-            label = "No disponible" if hits_node else ("Quitar bloqueo" if removing else "Bloquear")
-            self.canvas.create_oval(
-                center_x - size,
-                center_y - size,
-                center_x + size,
-                center_y + size,
-                fill=color,
-                outline=TEXT_LIGHT,
-                width=width,
-                stipple="gray25",
-                tags="ghost",
+        if self.drag_node_id is not None and self.drag_screen_point is not None:
+            node = self.document.nodes.get(self.drag_node_id)
+            if node is None:
+                return
+            layout = self._to_screen_layout(
+                self._get_node_layout(node, include_logo=False)
+            )
+            delta_x = self.drag_screen_point[0] - layout.center_x
+            delta_y = self.drag_screen_point[1] - layout.center_y
+            layout = self._offset_screen_layout(layout, delta_x, delta_y)
+            create_rounded_rectangle(
+                self.canvas,
+                layout.box.left,
+                layout.box.top,
+                layout.box.right,
+                layout.box.bottom,
+                radius=max(0, int(12 * self.zoom)),
+                fill=node.color,
+                outline=SELECTION_COLOR,
+                width=max(2, int(3 * self.zoom)),
+                stipple="gray50",
+                tags=("ghost", "node-drag-ghost", "interaction-overlay"),
             )
             self.canvas.create_text(
-                center_x,
-                center_y + size + max(10, int(10 * self.zoom)),
-                text=label,
-                fill=color,
-                font=("Segoe UI", max(6, int(8 * self.zoom)), "bold"),
-                tags="ghost",
+                layout.center_x,
+                layout.center_y,
+                text=node.name or "ASIGNAR NOMBRE",
+                fill=TEXT_LIGHT,
+                font=("Segoe UI", max(6, int(10 * self.zoom)), "bold"),
+                width=max(40, int(layout.box.width - 24)),
+                tags=("ghost", "node-drag-ghost", "interaction-overlay"),
             )
             return
 
@@ -419,7 +414,7 @@ class CanvasDrawingMixin:
         x2 = center_x + (width / 2)
         y2 = center_y + (min_height / 2)
         fill = GHOST_OCCUPIED_FILL if occupied else GHOST_AVAILABLE_FILL
-        outline = OBSTACLE_COLOR if occupied else PRIMARY_BUTTON
+        outline = INVALID_ROUTE_COLOR if occupied else PRIMARY_BUTTON
         self.canvas.create_rectangle(
             x1,
             y1,
@@ -430,7 +425,7 @@ class CanvasDrawingMixin:
             width=2,
             dash=(6, 4),
             stipple="gray25",
-            tags="ghost",
+            tags=("ghost", "interaction-overlay"),
         )
         self.canvas.create_text(
             center_x,
@@ -438,7 +433,7 @@ class CanvasDrawingMixin:
             text="Ocupado" if occupied else "Nuevo nodo",
             fill=outline,
             font=("Segoe UI", max(6, int(8 * self.zoom)), "bold"),
-            tags="ghost",
+            tags=("ghost", "interaction-overlay"),
         )
 
 

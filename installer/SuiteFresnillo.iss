@@ -1,5 +1,5 @@
 #define AppName "Suite Digital Fresnillo"
-#define AppVersion "1.1.0"
+#define AppVersion "1.1.3"
 #define AppPublisher "Municipio de Fresnillo"
 #define AppExeName "SuiteFresnillo.exe"
 

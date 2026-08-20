@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from tkinter import messagebox
+
 from App_Organigrama.models.document import OrgNode
+from App_Organigrama.rendering.palette import (
+    HIERARCHY_LABEL_BY_COLOR,
+    is_inverse_hierarchy,
+)
 from App_Organigrama.routing.manhattan_router import ConnectionRoute
 from App_Organigrama.routing.manual_routes import (
     GridBox,
@@ -13,6 +19,7 @@ from App_Organigrama.routing.manual_routes import (
 from App_Organigrama.ui.canvas_hit_testing import (
     find_bend_point_at_screen,
     find_connection_at_screen,
+    find_tagged_entity_ids,
     find_movable_segment_at_screen,
     nearest_port,
 )
@@ -30,8 +37,16 @@ class CanvasConnectionController:
     def reset_selected_route(self) -> None:
         if self.selected_connection_id is None:
             return
+        connection_index = next(
+            (
+                index
+                for index, connection in enumerate(self.document.connections)
+                if connection.id == self.selected_connection_id
+            ),
+            0,
+        )
         if self.document.reset_connection_route(self.selected_connection_id):
-            self._mark_document_changed()
+            self._mark_document_changed(routes_dirty_from=connection_index)
             self._emit_selection_change()
 
     def _selected_movable_segment_at_screen(
@@ -92,7 +107,7 @@ class CanvasConnectionController:
             if self.manual_drag_collision_node_ids
             else "Ghost verde: suelta para guardar esta ruta"
         )
-        self.request_redraw()
+        self.request_overlay_redraw()
 
     def _finish_manual_segment_drag(self) -> None:
         connection_id = self.manual_drag_connection_id
@@ -117,8 +132,16 @@ class CanvasConnectionController:
         collision_node_ids = self.manual_drag_collision_node_ids
         self._clear_manual_drag()
         if changed and connection_id is not None and candidate is not None:
+            connection_index = next(
+                (
+                    index
+                    for index, connection in enumerate(self.document.connections)
+                    if connection.id == connection_id
+                ),
+                0,
+            )
             self.document.set_connection_manual_points(connection_id, candidate[1:-1])
-            self._mark_document_changed()
+            self._mark_document_changed(routes_dirty_from=connection_index)
             self._emit_selection_change()
         elif invalid_candidate is not None:
             self.manual_drag_candidate_route = invalid_candidate
@@ -127,12 +150,10 @@ class CanvasConnectionController:
                 1400,
                 self._expire_retained_manual_ghost,
             )
-            self.request_redraw()
+            self.request_overlay_redraw()
         else:
-            self.request_redraw()
-        self.interaction.transition(
-            InteractionMode.BLOCKING if self.block_mode else InteractionMode.IDLE
-        )
+            self.request_overlay_redraw()
+        self.interaction.transition(InteractionMode.IDLE)
         self._emit_context_change()
 
     def _clear_manual_drag(self) -> None:
@@ -154,13 +175,13 @@ class CanvasConnectionController:
         if self.manual_drag_connection_id is None:
             self.manual_drag_candidate_route = None
             self.manual_drag_collision_node_ids = ()
-            self.request_redraw()
+            self.request_overlay_redraw()
 
     def _expire_retained_manual_ghost(self) -> None:
         self.manual_ghost_after_id = None
         self.manual_drag_candidate_route = None
         self.manual_drag_collision_node_ids = ()
-        self.request_redraw()
+        self.request_overlay_redraw()
 
     def _routes_for_display(self) -> list[ConnectionRoute]:
         return self.route_cache
@@ -202,8 +223,23 @@ class CanvasConnectionController:
         screen_x: int,
         screen_y: int,
     ) -> ConnectionRoute | None:
+        candidate_ids = find_tagged_entity_ids(
+            self.canvas,
+            screen_x,
+            screen_y,
+            "connection",
+            hit_radius=max(10.0, 10.0 * self.zoom),
+        )
+        if not candidate_ids:
+            return None
+        candidate_id_set = set(candidate_ids)
+        candidate_routes = [
+            route
+            for route in self.route_cache
+            if route.connection.id in candidate_id_set
+        ]
         return find_connection_at_screen(
-            self.route_cache,
+            candidate_routes,
             screen_x,
             screen_y,
             self.rendering_engine,
@@ -284,7 +320,19 @@ class CanvasConnectionController:
         source_id = self.pending_connection_source_id
         if source_id is None:
             return
+        source_node = self.document.nodes.get(source_id)
+        if source_node is None:
+            return
+        if not self._confirm_hierarchy_direction(source_node, target_node):
+            self.pending_connection_source_id = None
+            self.pending_source_port = None
+            self.hover_port = None
+            self._set_selection(node_id=source_node.id)
+            self.request_overlay_redraw()
+            self._emit_context_change("Conexión cancelada: revisa el sentido de la jerarquía")
+            return
         target_port = self._nearest_port(target_node, screen_x, screen_y)
+        previous_connection_count = len(self.document.connections)
         new_connection = self.document.add_connection(
             source_id,
             target_node.id,
@@ -296,7 +344,36 @@ class CanvasConnectionController:
         self.hover_port = None
         if new_connection is not None:
             self._set_selection(connection_id=new_connection.id)
-            self._mark_document_changed()
+            if len(self.document.connections) > previous_connection_count:
+                self._mark_document_changed(
+                    routes_dirty_from=previous_connection_count,
+                    layout_dirty=False,
+                )
+            else:
+                self.request_overlay_redraw()
+
+    def _confirm_hierarchy_direction(
+        self,
+        source_node: OrgNode,
+        target_node: OrgNode,
+    ) -> bool:
+        if not is_inverse_hierarchy(source_node.color, target_node.color):
+            return True
+        source_level = HIERARCHY_LABEL_BY_COLOR.get(source_node.color, "nivel inferior")
+        target_level = HIERARCHY_LABEL_BY_COLOR.get(target_node.color, "nivel superior")
+        return messagebox.askyesno(
+            "Conexión jerárquica inversa",
+            (
+                "Esta conexión va de un nivel jerárquico inferior hacia uno superior.\n\n"
+                f"Origen: {self._node_flow_label(source_node)}\n"
+                f"Nivel recomendado: {source_level}\n\n"
+                f"Destino: {self._node_flow_label(target_node)}\n"
+                f"Nivel recomendado: {target_level}\n\n"
+                "Normalmente las conexiones del organigrama van del superior hacia "
+                "el personal que depende de él. ¿Deseas crearla de todos modos?"
+            ),
+            parent=self.winfo_toplevel(),
+        )
 
     def _hover_target_id(self, source_id: str) -> str | None:
         if self.hover_port is None or self.hover_port[0] == source_id:

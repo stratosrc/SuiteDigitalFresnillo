@@ -65,6 +65,8 @@ def build_rectangle_metadata(rectangle):
         label_text = "Confidencial"
     elif classification == "other_law":
         label_text = "Otra"
+    elif classification == "custom":
+        label_text = "P"
     else:
         label_text = f"#{concept_id}"
 
